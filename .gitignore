@@ -1,0 +1,11 @@
+build
+out
+.vs
+.vscode
+imgui.ini
+output/*
+
+# vim backup and temp files
+*~
+.*.sw*
+.sw*
