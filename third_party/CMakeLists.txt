@@ -31,3 +31,22 @@ elseif (VKB_WSI_SELECTION STREQUAL WAYLAND)
 endif()
 
 set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
+
+# spdlog
+add_subdirectory(spdlog)
+set_property(TARGET spdlog PROPERTY FOLDER "ThirdParty")
+
+# GLFW
+option(GLFW_BUILD_DOCS OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_BUILD_EXAMPLES OFF)
+option(GLFW_BUILD_TESTS OFF)
+option(GLFW_INSTALL OFF)
+option(BUILD_SHARED_LIBS ON)
+if (VKB_WSI_SELECTION STREQUAL WAYLAND)
+    set(GLFW_USE_WAYLAND ON)
+endif()
+
+add_subdirectory(glfw)
+
+set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
