@@ -1,9 +1,14 @@
 #pragma once
 
+#include <vk_mem_alloc.h>
+
+#include "backend/command_pool.h"
 #include "backend/debug.h"
+#include "backend/fence_pool.h"
 #include "backend/physical_device.h"
-#include "backend/vulkan_resource.h"
+#include "backend/queue.h"
 #include "backend/resource_cache.h"
+#include "backend/vulkan_resource.h"
 
 namespace xihe
 {
@@ -17,27 +22,41 @@ class Device : public backend::VulkanResource<vk::Device>
 	       std::unique_ptr<DebugUtils>          &&debug_utils,
 	       std::unordered_map<const char *, bool> requested_extensions = {});
 
-	Device(const Device &) = delete;
-	Device(Device &&) = delete;
+	Device(const Device &)            = delete;
+	Device(Device &&)                 = delete;
 	Device &operator=(const Device &) = delete;
-	Device &operator=(Device &&) = delete;
+	Device &operator=(Device &&)      = delete;
 
 	~Device();
 
-	//PhysicalDevice const &get_gpu() const;
+	bool is_extension_supported(std::string const &extension) const;
+	bool is_enabled(std::string const &extension) const;
 
-
+	PhysicalDevice const &get_gpu() const;
 
 	DebugUtils const &get_debug_utils() const;
 
+	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
+
+	Queue const &get_queue(uint32_t queue_family_index, uint32_t queue_index) const;
+	Queue const &get_queue_by_flags(vk::QueueFlags required_queue_flags, uint32_t queue_index) const;
+
   private:
 	PhysicalDevice const &gpu_;
-	vk::SurfaceKHR surface_{nullptr};
-	ResourceCache resource_cache_;
+	vk::SurfaceKHR        surface_{nullptr};
+	ResourceCache         resource_cache_;
 
+	std::vector<vk::ExtensionProperties> device_extensions_;
+	std::vector<const char *>            enabled_extensions_;
+
+	VmaAllocator memory_allocator_{VK_NULL_HANDLE};
+
+	std::vector<std::vector<Queue>> queues_;
 
 	std::unique_ptr<DebugUtils> debug_utils_{nullptr};
 
+	std::unique_ptr<CommandPool> command_pool_{nullptr};
+	std::unique_ptr<FencePool>   fence_pool_{nullptr};
 };
 }        // namespace backend
 }        // namespace xihe

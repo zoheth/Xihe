@@ -23,10 +23,49 @@ class PhysicalDevice
 
 	vk::PhysicalDevice get_handle() const;
 
+	Instance &get_instance() const;
+
 	const vk::PhysicalDeviceProperties           &get_properties() const;
 	const std::vector<vk::QueueFamilyProperties> &get_queue_family_properties() const;
 	vk::PhysicalDeviceFeatures                    get_requested_features() const;
 	vk::PhysicalDeviceFeatures                   &get_mutable_requested_features();
+
+	bool has_high_priority_graphics_queue() const;
+
+	template <typename StructureType>
+	StructureType &request_extension_features()
+	{
+		if (!instance_.is_enabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
+		{
+			throw std::runtime_error("Couldn't request feature from device as " + std::string(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) + " isn't enabled!");
+		}
+
+		const vk::StructureType structure_type = StructureType::structureType;
+
+		const auto it = extension_features_.find(structure_type);
+		if (it != extension_features_.end())
+		{
+			return *static_cast<StructureType *>(it->second.get());
+		}
+
+		vk::StructureChain<vk::PhysicalDeviceFeatures2KHR, StructureType> feature_chain =
+			handle_.getFeatures2<vk::PhysicalDeviceFeatures2KHR, StructureType>();
+
+		// .template get<StructureType>() <=> .get<StructureType>()
+		// Use 'template' keyword to clarify that 'get<StructureType>()' is a template method call in 'vk::StructureChain',
+		// avoiding confusion with comparison operators '<' and '>'.
+		extension_features_.insert({structure_type, std::make_shared<StructureType>(feature_chain.template get<StructureType>())});
+
+		auto *extension_ptr = static_cast<StructureType *>(extension_features_.at(structure_type).get());
+
+		if (last_requested_extension_feature_)
+		{
+			extension_ptr->pNext = last_requested_extension_feature_;
+		}
+		last_requested_extension_feature_ = extension_ptr;
+
+		return *extension_ptr;
+	}
 
   private:
 	Instance &instance_;

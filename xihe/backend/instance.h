@@ -30,6 +30,8 @@ class Instance
 
 	PhysicalDevice &get_suitable_gpu(vk::SurfaceKHR) const;
 
+	bool is_enabled(const char *extension) const;
+
   private:
 	void query_gpus();
 

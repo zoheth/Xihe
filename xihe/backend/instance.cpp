@@ -302,6 +302,13 @@ PhysicalDevice &Instance::get_suitable_gpu(vk::SurfaceKHR surface) const
 	return *gpus_[0];
 }
 
+bool Instance::is_enabled(const char *extension) const
+{
+	return std::ranges::find_if(
+	           enabled_extensions_,
+	           [extension](const char *enabled_extension) { return strcmp(extension, enabled_extension) == 0; }) != enabled_extensions_.end();
+}
+
 void Instance::query_gpus()
 {
 	// Querying valid physical devices on the machine
