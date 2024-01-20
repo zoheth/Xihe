@@ -4,6 +4,8 @@
 #include <unordered_map>
 
 #include "backend/debug.h"
+#include "backend/device.h"
+#include "backend/physical_device.h"
 #include "backend/instance.h"
 #include "platform/window.h"
 
@@ -25,7 +27,9 @@ class XiheApp
 		return name_;
 	}
 
+	std::unique_ptr<backend::Device> const       &get_device() const;
 	std::vector<const char *> const              &get_validation_layers() const;
+	std::unordered_map<const char *, bool> const &get_device_extensions() const;
 	std::unordered_map<const char *, bool> const &get_instance_extensions() const;
 	std::unique_ptr<backend::Instance> const     &get_instance() const;
 
@@ -38,6 +42,8 @@ class XiheApp
 	 * @brief Request features from the gpu based on what is supported
 	 */
 	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
+
+	void create_render_context();
 
 
   private:

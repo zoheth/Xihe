@@ -6,7 +6,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "backend/debug.h"
-#include "backend/physical_device.h"
 #include "common/error.h"
 #include "common/logging.h"
 
@@ -24,8 +23,7 @@ void XiheApp::init(Window *window)
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr"));
 
 	// for non-vulkan.hpp stuff, we need to initialize volk as well !!
-	VkResult result = volkInitialize();
-	if (result)
+	if (VkResult result = volkInitialize())
 	{
 		throw VulkanException(result, "Failed to initialize volk.");
 	}
@@ -72,7 +70,7 @@ void XiheApp::init(Window *window)
 
 	add_device_extension(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-	if (instance_extensions_.find(VK_KHR_DISPLAY_EXTENSION_NAME) != instance_extensions_.end())
+	if (instance_extensions_.contains(VK_KHR_DISPLAY_EXTENSION_NAME))
 	{
 		add_device_extension(VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME, /*optional=*/true);
 	}
@@ -104,13 +102,25 @@ void XiheApp::init(Window *window)
 		debug_utils = std::make_unique<backend::DummyDebugUtils>();
 	}
 
-	device_
+	device_ = std::make_unique<backend::Device>(gpu, surface_, std::move(debug_utils), get_device_extensions());
+
+	VULKAN_HPP_DEFAULT_DISPATCHER.init(get_device()->get_handle());
+}
+
+std::unique_ptr<backend::Device> const &XiheApp::get_device() const
+{
+	return device_;
 }
 
 std::vector<const char *> const &XiheApp::get_validation_layers() const
 {
 	static std::vector<const char *> validation_layers;
 	return validation_layers;
+}
+
+std::unordered_map<const char *, bool> const &XiheApp::get_device_extensions() const
+{
+	return device_extensions_;
 }
 
 std::unordered_map<const char *, bool> const &XiheApp::get_instance_extensions() const
@@ -135,5 +145,17 @@ void XiheApp::add_device_extension(const char *extension, bool optional)
 
 void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
+}
+
+void XiheApp::create_render_context()
+{
+	auto surface_priority_list = std::vector<vk::SurfaceFormatKHR>{
+	    {vk::Format::eR8G8B8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear},
+	    {vk::Format::eB8G8R8A8Srgb, vk::ColorSpaceKHR::eSrgbNonlinear}};
+
+	vk::PresentModeKHR              present_mode = (window_->get_properties().vsync == Window::Vsync::ON) ? vk::PresentModeKHR::eFifo : vk::PresentModeKHR::eMailbox;
+	std::vector<vk::PresentModeKHR> present_mode_priority_list{vk::PresentModeKHR::eMailbox, vk::PresentModeKHR::eFifo, vk::PresentModeKHR::eImmediate};
+
+	render_context_
 }
 }        // namespace xihe

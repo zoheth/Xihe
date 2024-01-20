@@ -22,7 +22,7 @@ public:
 
 	const Device &get_device() const;
 
-	vk::Queue &get_handle() const;
+	vk::Queue get_handle() const;
 
 	uint32_t get_family_index() const;
 	uint32_t get_index() const;

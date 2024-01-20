@@ -26,5 +26,34 @@ Queue::Queue(Queue &&other) noexcept :
 {
 }
 
+const Device &Queue::get_device() const
+{
+	return device_;
+}
+
+vk::Queue Queue::get_handle() const
+{
+	return handle_;
+}
+
+uint32_t Queue::get_family_index() const
+{
+	return family_index_;
+}
+
+uint32_t Queue::get_index() const
+{
+	return index_;
+}
+
+const vk::QueueFamilyProperties &Queue::get_properties() const
+{
+	return properties_;
+}
+
+vk::Bool32 Queue::support_present() const
+{
+	return can_present_;
+}
 }        // namespace backend
 }        // namespace xihe

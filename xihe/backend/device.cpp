@@ -274,6 +274,23 @@ Queue const &Device::get_queue_by_flags(vk::QueueFlags required_queue_flags, uin
 	throw std::runtime_error("Could not find a matching queue family index");
 }
 
+Queue const &Device::get_suitable_graphics_queue() const
+{
+	for (const auto &queue : queues_)
+	{
+		Queue const &first_queue = queue[0];
+
+		const uint32_t queue_count = first_queue.get_properties().queueCount;
+
+		if (first_queue.support_present() && queue_count > 0)
+		{
+			return queue[0];
+		}
+	}
+
+	return get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
+}
+
 bool Device::is_extension_supported(std::string const &extension) const
 {
 	return std::ranges::find_if(
