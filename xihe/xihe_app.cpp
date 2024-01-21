@@ -156,6 +156,9 @@ void XiheApp::create_render_context()
 	vk::PresentModeKHR              present_mode = (window_->get_properties().vsync == Window::Vsync::ON) ? vk::PresentModeKHR::eFifo : vk::PresentModeKHR::eMailbox;
 	std::vector<vk::PresentModeKHR> present_mode_priority_list{vk::PresentModeKHR::eMailbox, vk::PresentModeKHR::eFifo, vk::PresentModeKHR::eImmediate};
 
-	render_context_
+	render_context_ = std::make_unique<rendering::RenderContext>(*get_device(), surface_, *window_, present_mode, present_mode_priority_list, surface_priority_list);
 }
+
+void XiheApp::prepare_render_context()
+{}
 }        // namespace xihe

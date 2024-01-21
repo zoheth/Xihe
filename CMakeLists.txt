@@ -13,7 +13,7 @@ add_compile_definitions($<$<CONFIG:DEBUG>:XH_DEBUG>)
 
 project ("Xihe")
 
-add_subdirectory(third_party)
+add_subdirectory("third_party")
 
 # Include sub-projects.
 add_subdirectory ("xihe")

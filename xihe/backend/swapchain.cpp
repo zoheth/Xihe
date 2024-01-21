@@ -275,4 +275,14 @@ Swapchain::~Swapchain()
 		device_.get_handle().destroySwapchainKHR(handle_);
 	}
 }
+
+const vk::Extent2D & Swapchain::get_extent() const
+{
+	return properties_.extent;
+}
+
+const std::vector<vk::Image> & Swapchain::get_images() const
+{
+	return images_;
+}
 }        // namespace xihe::backend

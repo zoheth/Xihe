@@ -8,6 +8,7 @@
 #include "backend/physical_device.h"
 #include "backend/instance.h"
 #include "platform/window.h"
+#include "rendering/render_context.h"
 
 namespace xihe
 {
@@ -50,6 +51,8 @@ class XiheApp
 	std::unique_ptr<backend::Instance> instance_;
 
 	std::unique_ptr<backend::Device> device_;
+
+	std::unique_ptr<rendering::RenderContext> render_context_;
 
 	std::string name_{};
 
