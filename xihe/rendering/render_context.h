@@ -3,6 +3,7 @@
 #include "backend/device.h"
 #include "backend/swapchain.h"
 #include "platform/window.h"
+#include "rendering/render_target.h"
 
 namespace xihe::rendering
 {
@@ -25,6 +26,8 @@ class RenderContext
 	RenderContext &operator=(const RenderContext &) = delete;
 	RenderContext &operator=(RenderContext &&)      = delete;
 
+	void prepare(size_t thread_count = 1, RenderTarget::CreateFunc create_render_target_func = RenderTarget::kDefaultCreateFunc);
+
   private:
 	backend::Device &device_;
 
@@ -34,5 +37,19 @@ class RenderContext
 	const backend::Queue &queue_;
 
 	std::unique_ptr<backend::Swapchain> swapchain_;
+
+	std::vector<std::unique_ptr<RenderFrame>> frames_;
+
+	vk::Semaphore acquired_semaphore_;
+
+	bool     prepared_{false};
+	bool     frame_active_{false};
+	uint32_t active_frame_index_{0};
+
+	RenderTarget::CreateFunc create_render_target_func_ = RenderTarget::kDefaultCreateFunc;
+
+	vk::SurfaceTransformFlagBitsKHR pre_transform_{vk::SurfaceTransformFlagBitsKHR::eIdentity};
+
+	size_t thread_count_{1};
 };
 }        // namespace xihe::rendering

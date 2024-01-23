@@ -41,6 +41,17 @@ class Swapchain
 
 	~Swapchain();
 
+	Device const    &get_device() const;
+	vk::SwapchainKHR get_handle() const;
+
+	const vk::Extent2D             &get_extent() const;
+	vk::Format                      get_format() const;
+	const std::vector<vk::Image>   &get_images() const;
+	vk::ImageUsageFlags             get_image_usage() const;
+	vk::SurfaceTransformFlagBitsKHR get_transform() const;
+	vk::SurfaceKHR                  get_surface() const;
+	vk::PresentModeKHR              get_present_mode() const;
+
   private:
 	Device &device_;
 

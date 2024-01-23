@@ -276,6 +276,41 @@ Swapchain::~Swapchain()
 	}
 }
 
+Device const & Swapchain::get_device() const
+{
+	return device_;
+}
+
+vk::SwapchainKHR Swapchain::get_handle() const
+{
+	return handle_;
+}
+
+vk::Format Swapchain::get_format() const
+{
+	return properties_.surface_format.format;
+}
+
+vk::ImageUsageFlags Swapchain::get_image_usage() const
+{
+	return properties_.image_usage;
+}
+
+vk::SurfaceTransformFlagBitsKHR Swapchain::get_transform() const
+{
+	return properties_.pre_transform;
+}
+
+vk::SurfaceKHR Swapchain::get_surface() const
+{
+	return surface_;
+}
+
+vk::PresentModeKHR Swapchain::get_present_mode() const
+{
+	return properties_.present_mode;
+}
+
 const vk::Extent2D & Swapchain::get_extent() const
 {
 	return properties_.extent;

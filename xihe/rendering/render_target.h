@@ -17,7 +17,7 @@ class RenderTarget
 {
 public:
 	using CreateFunc = std::function<std::unique_ptr<RenderTarget>(backend::Image &&)>;
-
+	static const CreateFunc kDefaultCreateFunc;
 
 };
 }
