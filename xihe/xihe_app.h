@@ -45,7 +45,7 @@ class XiheApp
 	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
 
 	void create_render_context();
-
+	void prepare_render_context() const;
 
   private:
 	std::unique_ptr<backend::Instance> instance_;

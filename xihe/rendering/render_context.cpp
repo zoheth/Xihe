@@ -9,6 +9,8 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 {
 	vk::SurfaceCapabilitiesKHR surface_capabilities = device_.get_gpu().get_handle().getSurfaceCapabilitiesKHR(surface);
 
+	assert(surface);
+
 	if (surface_capabilities.currentExtent.width == 0xFFFFFFFF)
 	{
 		swapchain_ =
@@ -27,6 +29,8 @@ void RenderContext::prepare(size_t thread_count, RenderTarget::CreateFunc create
 	surface_extent_ = swapchain_->get_extent();
 
 	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
+
+	assert(swapchain_);
 
 	for (auto &image_handle : swapchain_->get_images())
 	{

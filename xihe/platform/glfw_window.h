@@ -6,10 +6,12 @@ struct GLFWwindow;
 
 namespace xihe
 {
+class Platform;
+
 class GlfwWindow : public Window
 {
   public:
-	GlfwWindow(const Window::Properties &properties);
+	GlfwWindow(Platform *platform, Window::Properties &properties);
 
 	virtual ~GlfwWindow();
 

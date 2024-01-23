@@ -105,6 +105,9 @@ void XiheApp::init(Window *window)
 	device_ = std::make_unique<backend::Device>(gpu, surface_, std::move(debug_utils), get_device_extensions());
 
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(get_device()->get_handle());
+
+	create_render_context();
+	prepare_render_context();
 }
 
 std::unique_ptr<backend::Device> const &XiheApp::get_device() const
@@ -159,6 +162,8 @@ void XiheApp::create_render_context()
 	render_context_ = std::make_unique<rendering::RenderContext>(*get_device(), surface_, *window_, present_mode, present_mode_priority_list, surface_priority_list);
 }
 
-void XiheApp::prepare_render_context()
-{}
+void XiheApp::prepare_render_context() const
+{
+	render_context_->prepare();
+}
 }        // namespace xihe
