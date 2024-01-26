@@ -271,6 +271,38 @@ Instance::Instance(const std::string &application_name, const std::unordered_map
 	query_gpus();
 }
 
+Instance::Instance(vk::Instance instance) :
+    handle_(instance)
+{
+	if (handle_)
+	{
+		query_gpus();
+	}
+	else
+	{
+		throw std::runtime_error("Invalid Vulkan instance.");
+	}
+}
+
+Instance::~Instance()
+{
+#ifdef USE_VALIDATION_LAYERS
+	if (debug_utils_messenger_)
+	{
+		handle_.destroyDebugUtilsMessengerEXT(debug_utils_messenger_);
+	}
+	if (debug_report_callback_)
+	{
+		handle_.destroyDebugReportCallbackEXT(debug_report_callback_);
+	}
+#endif
+
+	if (handle_)
+	{
+		handle_.destroy();
+	}
+}
+
 VkInstance Instance::get_handle() const
 {
 	return handle_;

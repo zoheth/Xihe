@@ -41,14 +41,20 @@ class Window
 		Extent      extent    = {1280, 720};
 	};
 
+	Window(const Properties &properties);
+
 	virtual VkSurfaceKHR create_surface(backend::Instance &instance) = 0;
+
+	virtual bool should_close() = 0;
+
+	virtual void process_events();
+
+	Extent resize(const Extent &extent);
 
 	virtual std::vector<const char *> get_required_surface_extensions() const = 0;
 
-	const Extent &get_extent() const;
-
-	Mode get_window_mode() const;
-
+	const Extent     &get_extent() const;
+	Mode              get_window_mode() const;
 	const Properties &get_properties() const
 	{
 		return properties_;

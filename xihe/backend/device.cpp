@@ -291,6 +291,26 @@ Queue const &Device::get_suitable_graphics_queue() const
 	return get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
 }
 
+Device::~Device()
+{
+	resource_cache_.clear();
+
+	command_pool_.reset();
+	fence_pool_.reset();
+
+	if (memory_allocator_ != nullptr)
+	{
+
+		vmaDestroyAllocator(memory_allocator_);
+		memory_allocator_ = nullptr;
+	}
+
+	if (get_handle())
+	{
+		get_handle().destroy();
+	}
+}
+
 bool Device::is_extension_supported(std::string const &extension) const
 {
 	return std::ranges::find_if(
@@ -308,6 +328,11 @@ bool Device::is_enabled(std::string const &extension) const
 PhysicalDevice const &Device::get_gpu() const
 {
 	return gpu_;
+}
+
+VmaAllocator const & Device::get_memory_allocator() const
+{
+	return memory_allocator_;
 }
 
 DebugUtils const &Device::get_debug_utils() const

@@ -44,7 +44,7 @@ class VulkanResource
 		return Handle::NativeType;
 	}
 
-	Handle get_handle()
+	Handle &get_handle()
 	{
 		return handle_;
 	}
@@ -55,12 +55,12 @@ class VulkanResource
 	XhDevice &get_device()
 	{
 		assert(device_ && "VKBDevice handle not set");
-		return device_;
+		return *device_;
 	}
 	XhDevice const &get_device() const
 	{
 		assert(device_ && "VKBDevice handle not set");
-		return device_;
+		return *device_;
 	}
 
 	uint64_t get_handle_u64() const

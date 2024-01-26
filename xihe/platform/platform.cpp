@@ -1,12 +1,16 @@
 #include "platform.h"
 
-#include "common/logging.h"
-
 #include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
+#include "common/logging.h"
+#include "common/timer.h"
+
+#include <iostream>
+
 namespace xihe
 {
+
 ExitCode Platform::initialize()
 {
 	auto sinks = get_platform_sinks();
@@ -36,6 +40,110 @@ ExitCode Platform::initialize()
 	}
 
 	return ExitCode::kSuccess;
+}
+
+bool Platform::start_app(const std::string &app_name, const std::function<std::unique_ptr<Application>()> &create_func)
+{
+	application_ = create_func();
+
+	application_->set_name(app_name);
+
+	if (!application_)
+	{
+		LOGE("Failed to create a valid app.");
+		return false;
+	}
+
+	if (!application_->prepare(window_.get()))
+	{
+		LOGE("Failed to prepare app.");
+		return false;
+	}
+
+	return true;
+}
+
+ExitCode Platform::main_loop()
+{
+	while (!window_->should_close() && !close_requested_)
+	{
+		try
+		{
+			update();
+
+			if (application_ && application_->should_close())
+			{
+				std::string id = application_->get_name();
+				application_->finish();
+			}
+
+			window_->process_events();
+		}
+		catch (std::exception &e)
+		{
+			LOGE("Error Message: {}", e.what());
+			LOGE("Failed when running application {}", application_->get_name());
+
+
+			return ExitCode::kFatalError;
+		}
+	}
+
+	return ExitCode::kSuccess;
+}
+
+void Platform::update()
+{
+	auto delta_time = static_cast<float>(timer_.tick<Timer::Seconds>());
+
+	if (focused_)
+	{
+		application_->update(delta_time);
+	}
+}
+
+void Platform::terminate(ExitCode code)
+{
+	if (application_)
+	{
+		application_->finish();
+	}
+
+	application_.reset();
+	window_.reset();
+
+	spdlog::drop_all();
+
+	if (code != ExitCode::kSuccess)
+	{
+		std::cout << "Press return to continue";
+		std::cin.get();
+	}
+}
+
+void Platform::resize(uint32_t width, uint32_t height)
+{
+	auto extent = Window::Extent{
+	    std::max<uint32_t>(width, kMinWindowWidth),
+	    std::max<uint32_t>(height, kMinWindowHeight)};
+
+	if ((window_) && (width > 0) && (height > 0))
+	{
+		const auto actual_extent = window_->resize(extent);
+
+		if (application_)
+		{
+			application_->resize(actual_extent.width, actual_extent.height);
+		}
+	}
+}
+
+void Platform::input_event(const InputEvent &input_event)
+{}
+
+void Platform::set_focus(const bool focused)
+{
+	focused_ = focused;
 }
 
 std::vector<spdlog::sink_ptr> Platform::get_platform_sinks()

@@ -22,7 +22,7 @@ class CommandPool
 	            size_t                   thread_index = 0,
 	            CommandBuffer::ResetMode reset_mode   = CommandBuffer::ResetMode::kResetPool);
 	CommandPool(const CommandPool &) = delete;
-	CommandPool(CommandPool &&other) noexcept;
+	// CommandPool(CommandPool &&other) noexcept;
 	~CommandPool();
 
 	CommandPool &operator=(const CommandPool &) = delete;

@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include <vector>
 
-#include <vulkan/vulkan.hpp>>
+#include <vulkan/vulkan.hpp>
 
 namespace xihe::backend
 {
@@ -29,6 +29,6 @@ class DescriptorPool
 	uint32_t pool_max_sets_{0};
 	uint32_t pool_index_{0};
 
-	std::unordered_map<vk::DescriptorSetLayout, uint32_t> set_pool_mapping_;
+	std::unordered_map<VkDescriptorSet, uint32_t> set_pool_mapping_;
 };
 }        // namespace xihe::backend

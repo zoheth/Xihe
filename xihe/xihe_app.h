@@ -8,20 +8,21 @@
 #include "backend/physical_device.h"
 #include "backend/instance.h"
 #include "platform/window.h"
+#include "platform/application.h"
 #include "rendering/render_context.h"
 
 namespace xihe
 {
 
-class XiheApp
+class XiheApp : public Application
 {
   public:
 	XiheApp() = default;
 	~XiheApp();
 
-	void init(Window *window);
+	bool prepare(Window *window) override;
 
-	void run();
+	void update(float delta_time) override;
 
 	const std::string &get_name() const
 	{
@@ -57,8 +58,6 @@ class XiheApp
 	std::string name_{};
 
 	uint32_t                               api_version_ = VK_API_VERSION_1_0;
-
-	Window *window_{nullptr};
 
 	vk::SurfaceKHR surface_{};
 

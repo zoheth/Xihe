@@ -13,6 +13,8 @@ class ResourceCache
 	ResourceCache(ResourceCache &&)                 = delete;
 	ResourceCache &operator=(ResourceCache &&)      = delete;
 
+	void clear();
+
   private:
 	Device &device_;
 };

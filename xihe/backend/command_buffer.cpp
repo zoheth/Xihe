@@ -17,5 +17,11 @@ CommandBuffer::CommandBuffer(CommandPool &command_pool, vk::CommandBufferLevel l
     set_handle(get_device().get_handle().allocateCommandBuffers(allocate_info).front());
 }
 
-
+CommandBuffer::~CommandBuffer()
+{
+	if (get_handle())
+	{
+		get_device().get_handle().freeCommandBuffers(command_pool_.get_handle(), get_handle());
+	}
+}
 }        // namespace xihe::backend

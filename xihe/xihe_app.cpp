@@ -11,7 +11,10 @@
 
 namespace xihe
 {
-void XiheApp::init(Window *window)
+XiheApp::~XiheApp()
+{}
+
+bool XiheApp::prepare(Window *window)
 {
 	assert(window != nullptr && "Window must be valid");
 	window_ = window;
@@ -108,7 +111,12 @@ void XiheApp::init(Window *window)
 
 	create_render_context();
 	prepare_render_context();
+
+	return true;
 }
+
+void XiheApp::update(float delta_time)
+{}
 
 std::unique_ptr<backend::Device> const &XiheApp::get_device() const
 {
@@ -167,3 +175,8 @@ void XiheApp::prepare_render_context() const
 	render_context_->prepare();
 }
 }        // namespace xihe
+
+std::unique_ptr<xihe::Application> create_application()
+{
+	return std::make_unique<xihe::XiheApp>();
+}

@@ -14,6 +14,8 @@ namespace xihe
 
 namespace
 {
+using namespace xihe;
+
 void error_callback(int error, const char *description)
 {
 	LOGE("GLFW Error (code {}): {}", error, description);
@@ -242,14 +244,73 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int /*mod
 
 }        // namespace
 
-GlfwWindow::GlfwWindow(Platform *platform, Window::Properties &properties)
+GlfwWindow::GlfwWindow(Platform *platform, const Window::Properties &properties)
+	: Window(properties)
 {
 	if (!glfwInit())
 	{
 		throw std::runtime_error("Failed to initialize GLFW");
 	}
 
-	glfwSetErrorCallback()
+	glfwSetErrorCallback(error_callback);
+	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+
+	switch (properties.mode)
+	{
+		case Mode::kFullscreen:
+		{
+			auto       *monitor = glfwGetPrimaryMonitor();
+			const auto *mode    = glfwGetVideoMode(monitor);
+			handle_              = glfwCreateWindow(mode->width, mode->height, properties.title.c_str(), monitor, nullptr);
+			break;
+		}
+
+		case Mode::kFullscreenBorderless:
+		{
+			auto       *monitor = glfwGetPrimaryMonitor();
+			const auto *mode    = glfwGetVideoMode(monitor);
+			glfwWindowHint(GLFW_RED_BITS, mode->redBits);
+			glfwWindowHint(GLFW_GREEN_BITS, mode->greenBits);
+			glfwWindowHint(GLFW_BLUE_BITS, mode->blueBits);
+			glfwWindowHint(GLFW_REFRESH_RATE, mode->refreshRate);
+			handle_ = glfwCreateWindow(mode->width, mode->height, properties.title.c_str(), monitor, nullptr);
+			break;
+		}
+
+		case Window::Mode::kFullscreenStretch:
+		{
+			throw std::runtime_error("Cannot support stretch mode on this platform.");
+			break;
+		}
+
+		default:
+			handle_ = glfwCreateWindow(properties.extent.width, properties.extent.height, properties.title.c_str(), nullptr, nullptr);
+			break;
+	}
+	resize(Extent{properties.extent.width, properties.extent.height});
+
+	if (!handle_)
+	{
+		throw std::runtime_error("Couldn't create glfw window.");
+	}
+
+	glfwSetWindowUserPointer(handle_, platform);
+
+	glfwSetWindowCloseCallback(handle_, window_close_callback);
+	glfwSetWindowSizeCallback(handle_, window_size_callback);
+	glfwSetWindowFocusCallback(handle_, window_focus_callback);
+	glfwSetKeyCallback(handle_, key_callback);
+	glfwSetCursorPosCallback(handle_, cursor_position_callback);
+	glfwSetMouseButtonCallback(handle_, mouse_button_callback);
+
+	glfwSetInputMode(handle_, GLFW_STICKY_KEYS, 1);
+	glfwSetInputMode(handle_, GLFW_STICKY_MOUSE_BUTTONS, 1);
+}
+
+GlfwWindow::~GlfwWindow()
+{
+	glfwDestroyWindow(handle_);
+	glfwTerminate();
 }
 
 VkSurfaceKHR GlfwWindow::create_surface(backend::Instance &instance)
@@ -275,5 +336,10 @@ std::vector<const char *> GlfwWindow::get_required_surface_extensions() const
 	uint32_t     glfw_extension_count{0};
 	const char **names = glfwGetRequiredInstanceExtensions(&glfw_extension_count);
 	return {names, names + glfw_extension_count};
+}
+
+bool GlfwWindow::should_close()
+{
+	return glfwWindowShouldClose(handle_);
 }
 }        // namespace xihe

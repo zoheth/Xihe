@@ -19,7 +19,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
   public:
 	CommandBuffer(CommandPool &command_pool, vk::CommandBufferLevel level);
 	CommandBuffer(const CommandBuffer &) = delete;
-	CommandBuffer(CommandBuffer &&other) noexcept;
+	// CommandBuffer(CommandBuffer &&other) noexcept;
 
 	~CommandBuffer() override;
 

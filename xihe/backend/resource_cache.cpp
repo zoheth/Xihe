@@ -6,4 +6,9 @@ ResourceCache::ResourceCache(Device &device) :
     device_(device)
 {
 }
+
+void ResourceCache::clear()
+{
+	
+}
 }        // namespace xihe::backend
