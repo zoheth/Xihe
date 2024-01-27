@@ -1,5 +1,6 @@
 #pragma once
 
+#include "backend/command_buffer.h"
 #include "backend/device.h"
 #include "backend/swapchain.h"
 #include "platform/window.h"
@@ -26,7 +27,21 @@ class RenderContext
 	RenderContext &operator=(const RenderContext &) = delete;
 	RenderContext &operator=(RenderContext &&)      = delete;
 
+	/**
+	 * \brief Prepares the RenderFrames for rendering
+	 * \param thread_count The number of threads in the application, necessary to allocate this many resource pools for each RenderFrame
+	 * \param create_render_target_func A function delegate, used to create a RenderTarget
+	 */
 	void prepare(size_t thread_count = 1, RenderTarget::CreateFunc create_render_target_func = RenderTarget::kDefaultCreateFunc);
+
+	backend::CommandBuffer &begin(backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool);
+
+  private:
+	void begin_frame();
+
+	void handle_surface_changes(bool force_update = false);
+
+	void update_swapchain(const vk::Extent2D &extent, const vk::SurfaceTransformFlagBitsKHR transform);
 
   private:
 	backend::Device &device_;

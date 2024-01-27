@@ -11,6 +11,8 @@
 namespace xihe
 {
 
+std::string Platform::work
+
 ExitCode Platform::initialize()
 {
 	auto sinks = get_platform_sinks();
@@ -144,6 +146,16 @@ void Platform::input_event(const InputEvent &input_event)
 void Platform::set_focus(const bool focused)
 {
 	focused_ = focused;
+}
+
+const std::string & Platform::get_working_directory()
+{
+	return working_directory_;
+}
+
+const std::string & Platform::get_temp_directory()
+{
+	return temp_directory_;
 }
 
 std::vector<spdlog::sink_ptr> Platform::get_platform_sinks()

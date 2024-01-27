@@ -117,7 +117,14 @@ bool XiheApp::prepare(Window *window)
 }
 
 void XiheApp::update(float delta_time)
-{}
+{
+	auto &command_buffer = render_context_
+}
+
+const std::string & XiheApp::get_name() const
+{
+	return name_;
+}
 
 std::unique_ptr<backend::Device> const &XiheApp::get_device() const
 {

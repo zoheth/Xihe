@@ -50,6 +50,8 @@ class Device : public backend::VulkanResource<vk::Device>
 	 */
 	Queue const &get_suitable_graphics_queue() const;
 
+	ResourceCache &get_resource_cache();
+
   private:
 	PhysicalDevice const &gpu_;
 	vk::SurfaceKHR        surface_{nullptr};

@@ -296,6 +296,11 @@ Queue const &Device::get_suitable_graphics_queue() const
 	return get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
 }
 
+ResourceCache & Device::get_resource_cache()
+{
+	return resource_cache_;
+}
+
 Device::~Device()
 {
 	resource_cache_.clear();

@@ -1,8 +1,24 @@
 #pragma once
+#include <unordered_map>
 
-namespace xihe::backend
+namespace xihe
+
+{
+
+namespace rendering
+{
+class RenderTarget;
+}
+
+namespace backend
 {
 class Device;
+
+struct ResourceCacheState
+{
+	std::unordered_map<std::size_t, ShaderModule> shader_modules;
+};
+
 class ResourceCache
 {
   public:
@@ -17,5 +33,8 @@ class ResourceCache
 
   private:
 	Device &device_;
+
+
 };
-}        // namespace xihe::backend
+}        // namespace backend
+}        // namespace xihe

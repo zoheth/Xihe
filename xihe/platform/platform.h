@@ -35,6 +35,13 @@ public:
 
 	void set_focus(bool focused);
 
+	/**
+	 * \brief Returns the working directory of the application set by the platform
+	 */
+	static const std::string &get_working_directory();
+
+	static const std::string &get_temp_directory();
+
 	static constexpr uint32_t kMinWindowWidth = 640;
 	static constexpr uint32_t kMinWindowHeight = 480;
 
@@ -57,5 +64,8 @@ protected:
 
 private:
 	Timer timer_;
+
+	static std::string working_directory_;
+	static std::string temp_directory_;
 };
 }        // namespace xihe

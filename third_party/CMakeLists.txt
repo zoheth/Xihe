@@ -62,3 +62,50 @@ endif()
 add_subdirectory(glfw)
 
 set_property(TARGET glfw PROPERTY FOLDER "ThirdParty")
+
+# glslang
+option(ENABLE_SPVREMAPPER OFF)
+option(ENABLE_GLSLANG_BINARIES OFF)
+set(ENABLE_HLSL ON)
+option(ENABLE_OPT OFF)
+option(BUILD_TESTING OFF)
+option(BUILD_EXTERNAL OFF)
+
+add_subdirectory(glslang)
+
+if (NOT TARGET glslang-default-resource-limits)
+    add_library(glslang-default-resource-limits
+                glslang/StandAlone/ResourceLimits.cpp)
+
+    set_target_properties(glslang-default-resource-limits PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+
+    target_include_directories(glslang-default-resource-limits
+            PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/glslang)
+endif()
+
+if(NOT MSVC)
+    target_compile_options(glslang PRIVATE
+        "-Wno-logical-op-parentheses"
+        "-Wno-unused-parameter")
+
+    target_compile_options(SPIRV PRIVATE
+        "-Wno-logical-op-parentheses"
+        "-Wno-unused-parameter")
+endif()
+
+set_target_properties(glslang PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(OGLCompiler PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(OSDependent PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(SPIRV PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+
+# spirv-cross
+add_subdirectory(spirv-cross)
+
+set_target_properties(spirv-cross PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-core PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-glsl PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-cpp PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-hlsl PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-msl PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-reflect PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+set_target_properties(spirv-cross-util PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)

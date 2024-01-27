@@ -43,4 +43,44 @@ void RenderContext::prepare(size_t thread_count, RenderTarget::CreateFunc create
 	thread_count_              = thread_count;
 	prepared_                  = true;
 }
+
+backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode reset_mode)
+{
+	assert(prepared_ && "RenderContext is not prepared");
+
+	if (!frame_active_)
+	{
+		begin_frame();
+	}
+}
+
+void RenderContext::begin_frame()
+{
+	handle_surface_changes();
+}
+
+void RenderContext::handle_surface_changes(bool force_update)
+{
+	const vk::SurfaceCapabilitiesKHR surface_capabilities = device_.get_gpu().get_handle().getSurfaceCapabilitiesKHR(swapchain_->get_surface());
+
+	if (surface_capabilities.currentExtent.width == 0xFFFFFFFF)
+	{
+		return;
+	}
+
+	if (surface_capabilities.currentExtent.width != surface_extent_.width || surface_capabilities.currentExtent.height != surface_extent_.height)
+	{
+		// Recreate swapchain
+		device_.get_handle().waitIdle();
+
+		
+
+		surface_extent_ = surface_capabilities.currentExtent;
+	}
+}
+
+void RenderContext::update_swapchain(const vk::Extent2D &extent, const vk::SurfaceTransformFlagBitsKHR transform)
+{
+	device_.get_resource_cache()
+}
 }        // namespace xihe::rendering

@@ -1,0 +1,131 @@
+#include "shader_module.h"
+
+#include <fmt/format.h>
+
+#include "backend/shader_compiler/glsl_compiler.h"
+#include "common/error.h"
+#include "common/logging.h"
+#include "common/strings.h"
+#include "platform/filesystem.h"
+
+namespace xihe::backend
+{
+
+inline std::vector<std::string> precompile_shader(const std::string &source)
+{
+	std::vector<std::string> final_file;
+
+	auto lines = split(source, "\n");
+
+	for (auto &line : lines)
+	{
+		if (line.find("#include \"") == 0)
+		{
+			// Include paths are relative to the base shader directory
+			std::string  include_path = line.substr(10);
+			const size_t last_quote   = include_path.find('\"');
+			if (!include_path.empty() && last_quote != std::string::npos)
+			{
+				include_path = include_path.substr(0, last_quote);
+			}
+
+			auto include_file = precompile_shader(fs::read_shader(include_path));
+			for (auto &include_file_line : include_file)
+			{
+				final_file.push_back(include_file_line);
+			}
+		}
+		else
+		{
+			final_file.push_back(line);
+		}
+	}
+
+	return final_file;
+}
+
+inline std::vector<uint8_t> convert_to_bytes(std::vector<std::string> &lines)
+{
+	std::vector<uint8_t> bytes;
+	for (auto &line : lines)
+	{
+		line += '\n';
+		std::vector<uint8_t> line_bytes{line.begin(), line.end()};
+		bytes.insert(bytes.end(), line_bytes.begin(), line_bytes.end());
+	}
+
+	return bytes;
+}
+
+ShaderVariant::ShaderVariant(std::string &&preamble, std::vector<std::string> &&processes) :
+    preamble_{std::move(preamble)},
+    processes_{std::move(processes)}
+{
+	update_id();
+}
+
+size_t ShaderVariant::get_id() const
+{
+	return id_;
+}
+
+void ShaderVariant::update_id()
+{
+	constexpr std::hash<std::string> hasher{};
+	id_ = hasher(preamble_);
+}
+
+ShaderSource::ShaderSource(const std::string &filename) :
+    filename_{filename},
+    source_{fs::read_shader(filename)}
+{
+	constexpr std::hash<std::string> hasher{};
+	id_ = hasher(source_);
+}
+
+std::string ShaderSource::get_filename() const
+{
+	return filename_;
+}
+
+const std::string &ShaderSource::get_source() const
+{
+	return source_;
+}
+
+ShaderModule::ShaderModule(Device &device, vk::ShaderStageFlagBits stage, const ShaderSource &glsl_source, const std::string &entry_point, const ShaderVariant &shader_variant) :
+    device_{device},
+    stage_{stage},
+    entry_point_{entry_point}
+{
+	debug_name_ = fmt::format("{} [variant {:X}] [entrypoint {}]",
+	                          glsl_source.get_filename(),
+	                          shader_variant.get_id(),
+	                          entry_point);
+
+	if (entry_point.empty())
+	{
+		throw VulkanException{vk::Result::eErrorInitializationFailed};
+	}
+
+	auto &source = glsl_source.get_source();
+
+	if (source.empty())
+	{
+		throw VulkanException{vk::Result::eErrorInitializationFailed};
+	}
+
+	auto glsl_final_source = precompile_shader(source);
+
+	GlslCompiler glsl_compiler;
+
+	if (!glsl_compiler.compile_to_spirv(stage, convert_to_bytes(glsl_final_source), entry_point, shader_variant, spirv_, info_log_))
+	{
+		LOGE("Shader compilation failed for shader \"{}\"", glsl_source.get_filename());
+		LOGE("{}", info_log_);
+		throw VulkanException{vk::Result::eErrorInitializationFailed};
+	}
+
+
+}
+}        // namespace xihe::backend
