@@ -17,6 +17,11 @@ PhysicalDevice::PhysicalDevice(Instance &instance, vk::PhysicalDevice physical_d
 	LOGI("Found GPU: {}", properties_.deviceName.data());
 }
 
+void * PhysicalDevice::get_extension_feature_chain() const
+{
+	return last_requested_extension_feature_;
+}
+
 vk::PhysicalDevice PhysicalDevice::get_handle() const
 {
 	return handle_;

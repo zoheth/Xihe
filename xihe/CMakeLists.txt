@@ -20,6 +20,8 @@ add_executable (xihe WIN32 "xihe_app.cpp" "xihe_app.h" "backend/instance.h" "bac
 set_property(TARGET xihe PROPERTY CXX_STANDARD 20)
 #endif()
 
+# target_compile_definitions(xihe PRIVATE VULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1)
+
 # Link third party libraries
 target_link_libraries(xihe PUBLIC
     volk

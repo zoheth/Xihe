@@ -34,12 +34,17 @@ set_property(TARGET volk PROPERTY FOLDER "ThirdParty")
 
 # vma
 add_library(vma INTERFACE)
-set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma/include)
+set(VMA_DIR ${CMAKE_CURRENT_SOURCE_DIR}/vma/src)
 target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
 target_include_directories(vma INTERFACE ${VMA_DIR})
 target_link_libraries(vma INTERFACE vulkan)
 
+# fmt
+add_subdirectory(fmt)
+set_property(TARGET fmt PROPERTY FOLDER "ThirdParty")
+
 # spdlog
+set(SPDLOG_FMT_EXTERNAL ON)
 add_subdirectory(spdlog)
 set_property(TARGET spdlog PROPERTY FOLDER "ThirdParty")
 

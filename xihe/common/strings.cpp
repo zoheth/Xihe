@@ -1,6 +1,6 @@
 #include "strings.h"
 
-#include <spdlog/fmt/fmt.h>
+#include <fmt/format.h>
 
 namespace xihe
 {

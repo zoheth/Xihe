@@ -44,7 +44,7 @@ inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physi
 	{
 		throw std::runtime_error("failed to find a suitable depth format!");
 	}
-	LOGI("depth format: %s", vk::to_string(depth_format).c_str());
+	LOGI("depth format: {}", vk::to_string(depth_format).c_str());
 
 	return depth_format;
 }

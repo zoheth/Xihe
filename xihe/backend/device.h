@@ -2,6 +2,7 @@
 
 #include <vk_mem_alloc.h>
 
+#include "common/error.h"
 #include "backend/command_pool.h"
 #include "backend/debug.h"
 #include "backend/fence_pool.h"

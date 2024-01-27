@@ -1,15 +1,25 @@
 #include <Windows.h>
-#undef max
-#undef min
-
-#define VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 #include "platform/windows/windows_platform.h"
+#include <fstream>
+#include <iostream>
 
 extern std::unique_ptr<xihe::Application> create_application();
 
 int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLine, INT nCmdShow)
 {
+	AllocConsole();
+
+	FILE *fDummy;
+	freopen_s(&fDummy, "CONIN$", "r", stdin);
+	freopen_s(&fDummy, "CONOUT$", "w", stderr);
+	freopen_s(&fDummy, "CONOUT$", "w", stdout);
+
+	if (fDummy)
+	{
+		fclose(fDummy);
+	}
+
 	xihe::WindowsPlatform platform{};
 
 	auto code = platform.initialize();
@@ -21,6 +31,8 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 	}
 
 	platform.terminate(code);
+
+	FreeConsole();
 
 	return 0;
 }

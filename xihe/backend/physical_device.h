@@ -21,10 +21,14 @@ class PhysicalDevice
 	PhysicalDevice &operator=(const PhysicalDevice &) = delete;
 	PhysicalDevice &operator=(PhysicalDevice &&)      = delete;
 
-	vk::PhysicalDevice get_handle() const;
+	/**
+	 * \brief Used at logical device creation time to pass the extensions feature chain to vkCreateDevice
+	 * \return 
+	 */
+	void *get_extension_feature_chain() const;
 
-	Instance &get_instance() const;
-
+	vk::PhysicalDevice                            get_handle() const;
+	Instance                                     &get_instance() const;
 	const vk::PhysicalDeviceProperties           &get_properties() const;
 	const std::vector<vk::QueueFamilyProperties> &get_queue_family_properties() const;
 	vk::PhysicalDeviceFeatures                    get_requested_features() const;
@@ -49,7 +53,7 @@ class PhysicalDevice
 		}
 
 		vk::StructureChain<vk::PhysicalDeviceFeatures2KHR, StructureType> feature_chain =
-			handle_.getFeatures2<vk::PhysicalDeviceFeatures2KHR, StructureType>();
+		    handle_.getFeatures2<vk::PhysicalDeviceFeatures2KHR, StructureType>();
 
 		// .template get<StructureType>() <=> .get<StructureType>()
 		// Use 'template' keyword to clarify that 'get<StructureType>()' is a template method call in 'vk::StructureChain',

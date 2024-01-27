@@ -5,6 +5,11 @@
 #include "common/error.h"
 #include "common/logging.h"
 
+XH_DISABLE_WARNINGS()
+#define VMA_IMPLEMENTATION
+#include <vk_mem_alloc.h>
+XH_ENABLE_WARNINGS()
+
 namespace xihe
 {
 namespace backend
@@ -140,7 +145,7 @@ Device::Device(PhysicalDevice &gpu, vk::SurfaceKHR surface, std::unique_ptr<Debu
 
 	vk::DeviceCreateInfo create_info({}, queue_create_infos, {}, enabled_extensions_, &gpu.get_mutable_requested_features());
 
-	create_info.pNext = &gpu.get_mutable_requested_features();
+	create_info.pNext = gpu.get_extension_feature_chain();
 
 	set_handle(gpu_.get_handle().createDevice(create_info));
 
