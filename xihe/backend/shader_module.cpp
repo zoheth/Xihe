@@ -3,6 +3,7 @@
 #include <fmt/format.h>
 
 #include "backend/shader_compiler/glsl_compiler.h"
+#include "backend/shader_compiler/spirv_reflection.h"
 #include "common/error.h"
 #include "common/logging.h"
 #include "common/strings.h"
@@ -69,6 +70,29 @@ size_t ShaderVariant::get_id() const
 	return id_;
 }
 
+const std::string & ShaderVariant::get_preamble() const
+{
+	return preamble_;
+}
+
+const std::vector<std::string> & ShaderVariant::get_processes() const
+{
+	return processes_;
+}
+
+const std::unordered_map<std::string, size_t> & ShaderVariant::get_runtime_array_sizes() const
+{
+	return runtime_array_sizes_;
+}
+
+void ShaderVariant::clear()
+{
+	preamble_.clear();
+	processes_.clear();
+	runtime_array_sizes_.clear();
+	update_id();
+}
+
 void ShaderVariant::update_id()
 {
 	constexpr std::hash<std::string> hasher{};
@@ -126,6 +150,14 @@ ShaderModule::ShaderModule(Device &device, vk::ShaderStageFlagBits stage, const 
 		throw VulkanException{vk::Result::eErrorInitializationFailed};
 	}
 
+	if (!SpirvReflection::reflect_shader_resources(stage_, spirv_, resources_, shader_variant))
+	{
+		LOGE("Shader reflection failed for shader \"{}\"", glsl_source.get_filename());
+		throw VulkanException{vk::Result::eErrorInitializationFailed};
+	}
 
+	constexpr std::hash<std::string> hasher{};
+	id_ = hasher(std::string{reinterpret_cast<const char *>(spirv_.data()),
+	                        reinterpret_cast<const char *>(spirv_.data() + spirv_.size())});
 }
 }        // namespace xihe::backend

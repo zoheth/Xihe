@@ -1,6 +1,11 @@
 #pragma once
 #include <unordered_map>
 
+#include "backend/shader_module.h"
+#include "backend/pipeline_layout.h"
+#include "backend/descriptor_set_layout.h"
+#include "backend/descriptor_pool.h"
+
 namespace xihe
 
 {
@@ -17,6 +22,10 @@ class Device;
 struct ResourceCacheState
 {
 	std::unordered_map<std::size_t, ShaderModule> shader_modules;
+	std::unordered_map<std::size_t, PipelineLayout> pipeline_layouts;
+	std::unordered_map<std::size_t, DescriptorSetLayout> descriptor_set_layouts;
+	std::unordered_map<std::size_t, DescriptorPool> descriptor_pools;
+
 };
 
 class ResourceCache

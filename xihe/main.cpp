@@ -22,7 +22,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 
 	xihe::WindowsPlatform platform{};
 
-	auto code = platform.initialize();
+	const auto code = platform.initialize();
 	platform.start_app("xihe", create_application);
 
 	if (code == xihe::ExitCode::kSuccess)
