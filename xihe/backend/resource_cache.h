@@ -5,6 +5,7 @@
 #include "backend/pipeline_layout.h"
 #include "backend/descriptor_set_layout.h"
 #include "backend/descriptor_pool.h"
+#include "backend/render_pass.h"
 
 namespace xihe
 
@@ -25,6 +26,8 @@ struct ResourceCacheState
 	std::unordered_map<std::size_t, PipelineLayout> pipeline_layouts;
 	std::unordered_map<std::size_t, DescriptorSetLayout> descriptor_set_layouts;
 	std::unordered_map<std::size_t, DescriptorPool> descriptor_pools;
+	std::unordered_map<std::size_t, RenderPass> render_passes;
+	std::unordered_map<std::size_t, 
 
 };
 
