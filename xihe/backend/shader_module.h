@@ -114,6 +114,37 @@ class ShaderModule
 	             const std::string      &entry_point,
 	             const ShaderVariant    &shader_variant);
 
+	ShaderModule(const ShaderModule &) = delete;
+	ShaderModule(ShaderModule &&other);
+
+	ShaderModule &operator=(const ShaderModule &) = delete;
+	ShaderModule &operator=(ShaderModule &&) = delete;
+
+	size_t get_id() const;
+
+	vk::ShaderStageFlagBits get_stage() const;
+
+	const std::string &get_entry_point() const;
+
+	const std::vector<ShaderResource> &get_resources() const;
+
+	const std::string &get_info_log() const;
+
+	const std::vector<uint32_t> &get_binary() const;
+
+	const std::string &get_debug_name() const
+	{
+		return debug_name_;
+	}
+
+	void set_debug_name(const std::string &name)
+	{
+		debug_name_ = name;
+	}
+
+	void set_resource_mode(const std::string &name, const ShaderResourceMode &resource_mode);
+
+
   private:
 	Device &device_;
 

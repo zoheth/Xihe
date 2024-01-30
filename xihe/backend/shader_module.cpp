@@ -1,5 +1,6 @@
 #include "shader_module.h"
 
+#include <ranges>
 #include <fmt/format.h>
 
 #include "backend/shader_compiler/glsl_compiler.h"
@@ -159,5 +160,78 @@ ShaderModule::ShaderModule(Device &device, vk::ShaderStageFlagBits stage, const 
 	constexpr std::hash<std::string> hasher{};
 	id_ = hasher(std::string{reinterpret_cast<const char *>(spirv_.data()),
 	                        reinterpret_cast<const char *>(spirv_.data() + spirv_.size())});
+}
+
+ShaderModule::ShaderModule(ShaderModule &&other) :
+	device_{other.device_},
+	id_{other.id_},
+	stage_{other.stage_},
+	entry_point_{std::move(other.entry_point_)},
+	debug_name_{std::move(other.debug_name_)},
+	spirv_{std::move(other.spirv_)},
+	resources_{std::move(other.resources_)},
+	info_log_{std::move(other.info_log_)}
+{
+	other.stage_ = {};
+}
+
+size_t ShaderModule::get_id() const
+{
+	return id_;
+}
+
+vk::ShaderStageFlagBits ShaderModule::get_stage() const
+{
+	return stage_;
+}
+
+const std::string & ShaderModule::get_entry_point() const
+{
+	return entry_point_;
+}
+
+const std::vector<ShaderResource> & ShaderModule::get_resources() const
+{
+	return resources_;
+}
+
+const std::string & ShaderModule::get_info_log() const
+{
+	return info_log_;
+}
+
+const std::vector<uint32_t> & ShaderModule::get_binary() const
+{
+	return spirv_;
+}
+
+void ShaderModule::set_resource_mode(const std::string &name, const ShaderResourceMode &resource_mode)
+{
+	const auto it = std::ranges::find_if(resources_, [&name](const ShaderResource &resource) {
+		return resource.name == name;
+	});
+
+	if (it != resources_.end())
+	{
+		if (resource_mode == ShaderResourceMode::kDynamic)
+		{
+			if (it->type == ShaderResourceType::kBufferUniform || it->type ==ShaderResourceType::kBufferStorage)
+			{
+				it->mode = resource_mode;
+			}
+			else
+			{
+				LOGW("Cannot set resource mode to dynamic for resource \"{}\" in shader \"{}\". Only uniform and storage buffers can be dynamic.", name, debug_name_);
+			}
+		}
+		else
+		{
+			it->mode = resource_mode;
+		}
+	}
+	else
+	{
+		LOGW("Cannot set resource mode for resource \"{}\" in shader \"{}\". Resource not found.", name, debug_name_);
+	}
 }
 }        // namespace xihe::backend
