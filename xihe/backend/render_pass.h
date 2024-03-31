@@ -2,6 +2,8 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include "backend/vulkan_resource.h"
+
 namespace xihe::backend
 {
 struct SubpassInfo

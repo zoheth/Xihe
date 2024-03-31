@@ -9,4 +9,9 @@ DescriptorSetLayout::DescriptorSetLayout(Device &device, const uint32_t set_inde
 {
 	
 }
+
+vk::DescriptorSetLayout DescriptorSetLayout::get_handle() const
+{
+	return handle_;
+}
 }        // namespace xihe::backend

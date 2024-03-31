@@ -54,14 +54,6 @@ struct MultisampleState
 	vk::Bool32 alpha_to_one_enable{VK_FALSE};
 };
 
-struct StencilOpState
-{
-	vk::StencilOp fail_op{vk::StencilOp::eReplace};
-	vk::StencilOp pass_op{vk::StencilOp::eReplace};
-	vk::StencilOp depth_fail_op{vk::StencilOp::eReplace};
-	vk::CompareOp compare_op{vk::CompareOp::eNever};
-};
-
 struct DepthStencilState
 {
 	bool           depth_test_enable{VK_FALSE};
@@ -69,8 +61,8 @@ struct DepthStencilState
 	vk::CompareOp  depth_compare_op{vk::CompareOp::eGreater};
 	bool           depth_bounds_test_enable{VK_FALSE};
 	bool           stencil_test_enable{VK_FALSE};
-	StencilOpState front{};
-	StencilOpState back{};
+	vk::StencilOpState front{};
+	vk::StencilOpState back{};
 };
 
 struct ColorBlendAttachmentState

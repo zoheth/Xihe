@@ -4,8 +4,21 @@
 
 #include "common/logging.h"
 
+template <class T>
+using ShaderStageMap = std::map<VkShaderStageFlagBits, T>;
+
+template <class T>
+using BindingMap = std::map<uint32_t, std::map<uint32_t, T>>;
+
 namespace xihe
 {
+
+struct LoadStoreInfo
+{
+	vk::AttachmentLoadOp  load_op  = vk::AttachmentLoadOp::eClear;
+	vk::AttachmentStoreOp store_op = vk::AttachmentStoreOp::eStore;
+};
+
 inline bool is_depth_only_format(vk::Format format)
 {
 	switch (format)

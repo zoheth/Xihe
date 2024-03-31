@@ -19,9 +19,13 @@ class DescriptorSetLayout
 	                    const std::vector<ShaderModule *> &shader_modules,
 	                    const std::vector<ShaderResource> &resource_set);
 
+	vk::DescriptorSetLayout get_handle() const;
+
   private:
 	Device        &device_;
 	const uint32_t set_index_;
+
+	vk::DescriptorSetLayout handle_{VK_NULL_HANDLE};
 
 	std::vector<vk::DescriptorSetLayoutBinding> bindings_;
 	std::vector<vk::DescriptorBindingFlagsEXT>  binding_flags_;

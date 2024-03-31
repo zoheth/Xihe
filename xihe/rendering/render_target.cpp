@@ -1,8 +1,8 @@
 #include "render_target.h"
 
+#include "backend/device.h"
 #include "common/error.h"
 #include "common/vk_common.h"
-#include "backend/device.h"
 
 namespace xihe::rendering
 {
@@ -21,7 +21,7 @@ const RenderTarget::CreateFunc RenderTarget::kDefaultCreateFunc = [](backend::Im
 	return std::make_unique<RenderTarget>(std::move(images));
 };
 
-RenderTarget::RenderTarget(std::vector<backend::Image> &&images):
+RenderTarget::RenderTarget(std::vector<backend::Image> &&images) :
     device_{images.front().get_device()}, images_{std::move(images)}
 {
 	assert(!images_.empty() && "Should specify at least 1 image");
@@ -51,4 +51,29 @@ RenderTarget::RenderTarget(std::vector<backend::Image> &&images):
 		attachments_.emplace_back(image.get_format(), image.get_sample_count(), image.get_usage());
 	}
 }
+
+const vk::Extent2D &RenderTarget::get_extent() const
+{
+	return extent_;
 }
+
+const std::vector<backend::ImageView> & RenderTarget::get_views() const
+{
+	return image_views_;
+}
+
+const std::vector<Attachment> & RenderTarget::get_attachments() const
+{
+	return attachments_;
+}
+
+const std::vector<uint32_t> & RenderTarget::get_input_attachments() const
+{
+	return input_attachments_;
+}
+
+const std::vector<uint32_t> & RenderTarget::get_output_attachments() const
+{
+	return output_attachments_;
+}
+}        // namespace xihe::rendering

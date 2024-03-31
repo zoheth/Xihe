@@ -17,6 +17,9 @@ class DescriptorPool
 
 	DescriptorPool(Device &device, const DescriptorSetLayout &descriptor_set_layout, uint32_t pool_size = kMaxSetsPerPool);
 
+	const DescriptorSetLayout &get_descriptor_set_layout() const;
+	void                       set_descriptor_set_layout(const DescriptorSetLayout &set_layout);
+
   private:
 	Device &device_;
 
