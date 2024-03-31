@@ -26,6 +26,8 @@ public:
 
 	vk::PipelineLayout get_handle() const;
 
+	const std::vector<ShaderModule *> &get_shader_modules() const;
+
   private:
 	Device &device_;
   vk::PipelineLayout handle_{VK_NULL_HANDLE};

@@ -17,8 +17,8 @@ struct SubpassInfo
 	std::string debug_name;
 };
 
-class RenderPass
+class RenderPass : public VulkanResource<vk::RenderPass>
 {
-	
+public:
 };
 }        // namespace xihe::backend

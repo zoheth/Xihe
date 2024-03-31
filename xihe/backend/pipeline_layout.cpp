@@ -60,7 +60,7 @@ shader_modules_(shader_modules)
 	// Create a descriptor set layout for each shader set in the shader modules
 	for (auto &shader_set_it : shader_sets_)
 	{
-		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().re);
+		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().requ);
 	}
 }
 
@@ -71,5 +71,12 @@ PipelineLayout::~PipelineLayout()
 {}
 
 vk::PipelineLayout PipelineLayout::get_handle() const
-{}
+{
+	return handle_;
+}
+
+const std::vector<ShaderModule *> & PipelineLayout::get_shader_modules() const
+{
+	return shader_modules_;
+}
 }

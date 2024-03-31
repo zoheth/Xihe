@@ -27,7 +27,7 @@ struct ResourceCacheState
 	std::unordered_map<std::size_t, DescriptorSetLayout> descriptor_set_layouts;
 	std::unordered_map<std::size_t, DescriptorPool> descriptor_pools;
 	std::unordered_map<std::size_t, RenderPass> render_passes;
-	std::unordered_map<std::size_t, 
+	std::unordered_map<std::size_t, Gra
 
 };
 
