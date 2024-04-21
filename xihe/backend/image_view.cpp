@@ -31,4 +31,31 @@ ImageView::ImageView(Image &image, vk::ImageViewType view_type, vk::Format forma
 	// in order to be notified when it gets moved
 	image_->get_views().emplace(this);
 }
+
+vk::Format ImageView::get_format() const
+{
+	return format_;
+}
+
+Image const &ImageView::get_image() const
+{
+	assert(image_ && "Image view has no image");
+	return *image_;
+}
+
+void ImageView::set_image(Image &image)
+{
+	image_ = &image;
+}
+
+vk::ImageSubresourceLayers ImageView::get_subresource_layers() const
+{
+	return {subresource_range_.aspectMask, subresource_range_.baseMipLevel,
+	        subresource_range_.baseArrayLayer, subresource_range_.layerCount};
+}
+
+vk::ImageSubresourceRange ImageView::get_subresource_range() const
+{
+	return subresource_range_;
+}
 }        // namespace xihe::backend

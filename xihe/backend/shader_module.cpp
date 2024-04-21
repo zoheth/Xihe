@@ -108,6 +108,11 @@ ShaderSource::ShaderSource(const std::string &filename) :
 	id_ = hasher(source_);
 }
 
+size_t ShaderSource::get_id() const
+{
+	return id_;
+}
+
 std::string ShaderSource::get_filename() const
 {
 	return filename_;

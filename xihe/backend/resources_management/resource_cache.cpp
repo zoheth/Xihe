@@ -1,6 +1,7 @@
 #include "resource_cache.h"
 
 #include "backend/resources_management/resource_record.h"
+#include "backend/resources_management/resource_caching.h"
 
 namespace xihe::backend
 {

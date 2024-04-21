@@ -90,9 +90,19 @@ vk::ImageUsageFlags Image::get_usage() const
 	return usage_;
 }
 
+vk::ImageTiling Image::get_tiling() const
+{
+	return tiling_;
+}
+
 vk::SampleCountFlagBits Image::get_sample_count() const
 {
 	return sample_count_;
+}
+
+VmaAllocation Image::get_memory() const
+{
+	return memory_;
 }
 
 vk::ImageSubresource Image::get_subresource() const
@@ -103,5 +113,10 @@ vk::ImageSubresource Image::get_subresource() const
 std::unordered_set<ImageView *> &Image::get_views()
 {
 	return views_;
+}
+
+uint32_t Image::get_array_layer_count() const
+{
+	return array_layer_count_;
 }
 }        // namespace xihe::backend

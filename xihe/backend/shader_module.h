@@ -69,24 +69,24 @@ struct ShaderResource
 
 class ShaderVariant
 {
-public:
-	ShaderVariant() =default;
+  public:
+	ShaderVariant() = default;
 
 	ShaderVariant(std::string &&preamble, std::vector<std::string> &&processes);
 
 	size_t get_id() const;
 
-	const std::string &get_preamble() const;
-	const std::vector<std::string> &get_processes() const;
+	const std::string                             &get_preamble() const;
+	const std::vector<std::string>                &get_processes() const;
 	const std::unordered_map<std::string, size_t> &get_runtime_array_sizes() const;
 
 	void clear();
 
-private:
+  private:
 	size_t id_;
 
-	std::string preamble_;
-	std::vector<std::string> processes_;
+	std::string                             preamble_;
+	std::vector<std::string>                processes_;
 	std::unordered_map<std::string, size_t> runtime_array_sizes_;
 
 	void update_id();
@@ -97,8 +97,10 @@ class ShaderSource
   public:
 	ShaderSource(const std::string &filename);
 
-	std::string get_filename() const;
+	size_t             get_id() const;
+	std::string        get_filename() const;
 	const std::string &get_source() const;
+
   private:
 	size_t      id_;
 	std::string filename_;
@@ -118,7 +120,7 @@ class ShaderModule
 	ShaderModule(ShaderModule &&other);
 
 	ShaderModule &operator=(const ShaderModule &) = delete;
-	ShaderModule &operator=(ShaderModule &&) = delete;
+	ShaderModule &operator=(ShaderModule &&)      = delete;
 
 	size_t get_id() const;
 
@@ -143,7 +145,6 @@ class ShaderModule
 	}
 
 	void set_resource_mode(const std::string &name, const ShaderResourceMode &resource_mode);
-
 
   private:
 	Device &device_;

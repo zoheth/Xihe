@@ -15,6 +15,12 @@ class ImageView : public VulkanResource<vk::ImageView>
 	          uint32_t          n_mip_levels     = 0,
 	          uint32_t          n_array_layers   = 0);
 
+	vk::Format                 get_format() const;
+	Image const               &get_image() const;
+	void                       set_image(Image &image);
+	vk::ImageSubresourceLayers get_subresource_layers() const;
+	vk::ImageSubresourceRange  get_subresource_range() const;
+
   private:
 	Image                    *image_{nullptr};
 	vk::Format                format_;

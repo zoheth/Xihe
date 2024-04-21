@@ -37,10 +37,15 @@ class Image : public VulkanResource<vk::Image>
 	vk::ImageType           get_type() const;
 	vk::Format              get_format() const;
 	vk::ImageUsageFlags     get_usage() const;
+	vk::ImageTiling         get_tiling() const;
 	vk::SampleCountFlagBits get_sample_count() const;
+
+	VmaAllocation get_memory() const;
 
 	vk::ImageSubresource get_subresource() const;
 	std::unordered_set<ImageView *> &get_views();
+
+	uint32_t get_array_layer_count() const;
 
   private:
 	VmaAllocation memory_{VK_NULL_HANDLE};
