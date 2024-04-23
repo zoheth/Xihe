@@ -5,6 +5,8 @@
 #include "common/error.h"
 #include "common/logging.h"
 
+#include "backend/resources_management/resource_cache.h"
+
 XH_DISABLE_WARNINGS()
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -296,7 +298,7 @@ Queue const &Device::get_suitable_graphics_queue() const
 	return get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
 }
 
-ResourceCache & Device::get_resource_cache()
+ResourceCache &Device::get_resource_cache()
 {
 	return resource_cache_;
 }

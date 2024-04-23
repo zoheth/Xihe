@@ -13,7 +13,7 @@ class DescriptorSetLayout;
 
 class PipelineLayout
 {
-public:
+  public:
 	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules);
 
 	PipelineLayout(const PipelineLayout &) = delete;
@@ -22,15 +22,19 @@ public:
 	~PipelineLayout();
 
 	PipelineLayout &operator=(const PipelineLayout &) = delete;
-	PipelineLayout &operator=(PipelineLayout &&) = delete;
+	PipelineLayout &operator=(PipelineLayout &&)      = delete;
 
 	vk::PipelineLayout get_handle() const;
+
+	std::vector<backend::ShaderResource> get_resources(
+	    const backend::ShaderResourceType &type  = backend::ShaderResourceType::kAll,
+	    vk::ShaderStageFlags               stage = vk::ShaderStageFlagBits::eAll) const;
 
 	const std::vector<ShaderModule *> &get_shader_modules() const;
 
   private:
-	Device &device_;
-  vk::PipelineLayout handle_{VK_NULL_HANDLE};
+	Device            &device_;
+	vk::PipelineLayout handle_{VK_NULL_HANDLE};
 
 	std::vector<ShaderModule *> shader_modules_;
 

@@ -52,6 +52,20 @@ backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode r
 	{
 		begin_frame();
 	}
+
+	if (!acquired_semaphore_)
+	{
+		throw std::runtime_error("Couldn't begin frame");
+	}
+
+	const auto &queue = device_.get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
+	return get_active_frame().request_command_buffer(queue, reset_mode);
+}
+
+RenderFrame & RenderContext::get_active_frame() const
+{
+	assert(frame_active_ && "Frame is not active, please call begin_frame");
+	return *frames_[active_frame_index_];
 }
 
 void RenderContext::begin_frame()

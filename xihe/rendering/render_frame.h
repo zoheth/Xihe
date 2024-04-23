@@ -33,6 +33,12 @@ class RenderFrame
 	RenderFrame &operator=(const RenderFrame &) = delete;
 	RenderFrame &operator=(RenderFrame &&)      = delete;
 
+	backend::CommandBuffer &request_command_buffer(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool,
+		vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary,
+		size_t thread_index = 0);
+
+private:
+	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);
   private:
 	const std::unordered_map<vk::BufferUsageFlags, uint32_t> supported_usage_map_ = {
 	    {vk::BufferUsageFlagBits::eUniformBuffer, 1},

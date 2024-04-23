@@ -11,15 +11,12 @@
 #include "rendering/render_target.h"
 #include "resource_record.h"
 
-namespace
-{
 template <class T>
-inline void hash_combine(std::size_t &seed, const T &v)
+void hash_combine(std::size_t &seed, const T &v)
 {
 	std::hash<T> hasher;
 	seed ^= hasher(v) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
 }
-}        // namespace
 
 namespace std
 {
@@ -104,7 +101,7 @@ struct hash<xihe::backend::DescriptorPool>
 template <>
 struct hash<xihe::backend::DescriptorSet>
 {
-	size_t operator()(const xihe::backend::DescriptorSet &descriptor_set) const noexcept
+	size_t operator()(xihe::backend::DescriptorSet &descriptor_set) const noexcept
 	{
 		std::size_t result = 0;
 
@@ -386,6 +383,123 @@ namespace xihe::backend
 {
 namespace
 {
+
+template <typename T>
+inline void hash_param(size_t &seed, const T &value)
+{
+	hash_combine(seed, value);
+}
+
+template <>
+inline void hash_param(size_t & /*seed*/, const vk::PipelineCache & /*value*/)
+{
+}
+
+template <>
+inline void hash_param<std::vector<uint8_t>>(
+    size_t                     &seed,
+    const std::vector<uint8_t> &value)
+{
+	hash_combine(seed, std::string{value.begin(), value.end()});
+}
+
+template <>
+inline void hash_param<std::vector<xihe::rendering::Attachment>>(
+    size_t                        &seed,
+    const std::vector<xihe::rendering::Attachment> &value)
+{
+	for (auto &attachment : value)
+	{
+		hash_combine(seed, attachment);
+	}
+}
+
+template <>
+inline void hash_param<std::vector<LoadStoreInfo>>(
+    size_t                           &seed,
+    const std::vector<LoadStoreInfo> &value)
+{
+	for (auto &load_store_info : value)
+	{
+		hash_combine(seed, load_store_info);
+	}
+}
+
+template <>
+inline void hash_param<std::vector<SubpassInfo>>(
+    size_t                         &seed,
+    const std::vector<SubpassInfo> &value)
+{
+	for (auto &subpass_info : value)
+	{
+		hash_combine(seed, subpass_info);
+	}
+}
+
+template <>
+inline void hash_param<std::vector<ShaderModule *>>(
+    size_t                            &seed,
+    const std::vector<ShaderModule *> &value)
+{
+	for (auto &shader_module : value)
+	{
+		hash_combine(seed, shader_module->get_id());
+	}
+}
+
+template <>
+inline void hash_param<std::vector<ShaderResource>>(
+    size_t                            &seed,
+    const std::vector<ShaderResource> &value)
+{
+	for (auto &resource : value)
+	{
+		hash_combine(seed, resource);
+	}
+}
+
+template <>
+inline void hash_param<std::map<uint32_t, std::map<uint32_t, vk::DescriptorBufferInfo>>>(
+    size_t                                                               &seed,
+    const std::map<uint32_t, std::map<uint32_t, vk::DescriptorBufferInfo>> &value)
+{
+	for (auto &binding_set : value)
+	{
+		hash_combine(seed, binding_set.first);
+
+		for (auto &binding_element : binding_set.second)
+		{
+			hash_combine(seed, binding_element.first);
+			hash_combine(seed, binding_element.second);
+		}
+	}
+}
+
+template <>
+inline void hash_param<std::map<uint32_t, std::map<uint32_t, vk::DescriptorImageInfo>>>(
+    size_t                                                              &seed,
+    const std::map<uint32_t, std::map<uint32_t, vk::DescriptorImageInfo>> &value)
+{
+	for (auto &binding_set : value)
+	{
+		hash_combine(seed, binding_set.first);
+
+		for (auto &binding_element : binding_set.second)
+		{
+			hash_combine(seed, binding_element.first);
+			hash_combine(seed, binding_element.second);
+		}
+	}
+}
+
+template <typename T, typename... Args>
+inline void hash_param(size_t &seed, const T &first_arg, const Args &...args)
+{
+	hash_param(seed, first_arg);
+
+	hash_param(seed, args...);
+}
+
 template <class T, class... A>
 struct RecordHelper
 {
@@ -398,11 +512,116 @@ struct RecordHelper
 	{
 	}
 };
+
+template <class... A>
+struct RecordHelper<ShaderModule, A...>
+{
+	size_t record(ResourceRecord &recorder, A &...args)
+	{
+		return recorder.register_shader_module(args...);
+	}
+
+	void index(ResourceRecord &recorder, size_t index, ShaderModule &shader_module)
+	{
+		recorder.set_shader_module(index, shader_module);
+	}
+};
+
+template <class... A>
+struct RecordHelper<PipelineLayout, A...>
+{
+	size_t record(ResourceRecord &recorder, A &...args)
+	{
+		return recorder.register_pipeline_layout(args...);
+	}
+
+	void index(ResourceRecord &recorder, size_t index, PipelineLayout &pipeline_layout)
+	{
+		recorder.set_pipeline_layout(index, pipeline_layout);
+	}
+};
+
+template <class... A>
+struct RecordHelper<RenderPass, A...>
+{
+	size_t record(ResourceRecord &recorder, A &...args)
+	{
+		return recorder.register_render_pass(args...);
+	}
+
+	void index(ResourceRecord &recorder, size_t index, RenderPass &render_pass)
+	{
+		recorder.set_render_pass(index, render_pass);
+	}
+};
+
+template <class... A>
+struct RecordHelper<GraphicsPipeline, A...>
+{
+	size_t record(ResourceRecord &recorder, A &...args)
+	{
+		return recorder.register_graphics_pipeline(args...);
+	}
+
+	void index(ResourceRecord &recorder, size_t index, GraphicsPipeline &graphics_pipeline)
+	{
+		recorder.set_graphics_pipeline(index, graphics_pipeline);
+	}
+};
 }        // namespace
 
 template <class T, class... A>
 T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map<size_t, T> &resources, A &&...args)
 {
+	RecordHelper<T, A...> record_helper;
+
+	std::size_t hash{0U};
+	hash_param(hash, args...);
+
+	auto res_it = resources.find(hash);
+
+	if (res_it != resources.end())
+	{
+		return res_it->second;
+	}
+
+	// If we do not have it already, create and cache it
+	const char *res_type = typeid(T).name();
+	size_t      res_id   = resources.size();
+
+	LOGD("Building #{} cache object ({})", res_id, res_type);
+
+	// Only error handle in release
+#ifndef DEBUG
+	try
+	{
+#endif
+		T resource(device, args...);
+
+		auto res_ins_it = resources.emplace(hash, std::move(resource));
+
+		if (!res_ins_it.second)
+		{
+			throw std::runtime_error{std::string{"Insertion error for #"} + std::to_string(res_id) + "cache object (" + res_type + ")"};
+		}
+
+		res_it = res_ins_it.first;
+
+		if (recorder)
+		{
+			size_t index = record_helper.record(*recorder, args...);
+			record_helper.index(*recorder, index, res_it->second);
+		}
+#ifndef DEBUG
+	}
+	catch (const std::exception &e)
+	{
+		LOGE("Creation error for #{} cache object ({})", res_id, res_type);
+		throw e;
+	}
+#endif
+
+	return res_it->second;
 }
 
 }        // namespace xihe::backend

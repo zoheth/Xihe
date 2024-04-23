@@ -118,7 +118,9 @@ bool XiheApp::prepare(Window *window)
 
 void XiheApp::update(float delta_time)
 {
-	auto &command_buffer = render_context_
+	auto &command_buffer = render_context_->begin();
+
+	command_buffer.begin
 }
 
 const std::string & XiheApp::get_name() const

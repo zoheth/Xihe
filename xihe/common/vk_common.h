@@ -1,5 +1,7 @@
 #pragma once
 
+#include <map>
+
 #include <vulkan/vulkan.hpp>
 
 #include "common/logging.h"

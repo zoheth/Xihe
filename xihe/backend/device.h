@@ -8,7 +8,7 @@
 #include "backend/fence_pool.h"
 #include "backend/physical_device.h"
 #include "backend/queue.h"
-#include "backend/resource_cache.h"
+#include "backend/resources_management/resource_cache.h"
 #include "backend/vulkan_resource.h"
 
 namespace xihe

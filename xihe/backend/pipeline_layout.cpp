@@ -5,8 +5,8 @@
 namespace xihe::backend
 {
 PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules) :
-device_(device),
-shader_modules_(shader_modules)
+    device_(device),
+    shader_modules_(shader_modules)
 {
 	// Collect and combine all the shader resources from all the shader modules
 	// Collect them all into a map that is indexed by the name of the resource
@@ -60,12 +60,38 @@ shader_modules_(shader_modules)
 	// Create a descriptor set layout for each shader set in the shader modules
 	for (auto &shader_set_it : shader_sets_)
 	{
-		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().requ);
+		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it.first, shader_modules, shader_set_it.second));
 	}
+
+	// Collect all the descriptor set layout handles, maintaining set order
+	std::vector<vk::DescriptorSetLayout> descriptor_set_layout_handles;
+	for (auto descriptor_set_layout : descriptor_set_layouts_)
+	{
+		descriptor_set_layout_handles.push_back(descriptor_set_layout? descriptor_set_layout->get_handle(): nullptr);
+	}
+
+	// Collect all the push constant shader resources
+	std::vector<vk::PushConstantRange> push_constant_ranges;
+	for (auto &push_constant_resource : get_resources(ShaderResourceType::kPushConstant))
+	{
+		push_constant_ranges.push_back({push_constant_resource.stages, push_constant_resource.offset, push_constant_resource.size});
+	}
+
+	vk::PipelineLayoutCreateInfo create_info({}, descriptor_set_layout_handles, push_constant_ranges);
+
+	handle_ = device_.get_handle().createPipelineLayout(create_info);
 }
 
-PipelineLayout::PipelineLayout(PipelineLayout &&other)
-{}
+PipelineLayout::PipelineLayout(PipelineLayout &&other) :
+    device_{other.device_},
+    handle_{other.handle_},
+    shader_modules_{std::move(other.shader_modules_)},
+    shader_resources_{std::move(other.shader_resources_)},
+    shader_sets_{std::move(other.shader_sets_)},
+    descriptor_set_layouts_{std::move(other.descriptor_set_layouts_)}
+{
+	other.handle_ = nullptr;
+}
 
 PipelineLayout::~PipelineLayout()
 {}
@@ -75,8 +101,28 @@ vk::PipelineLayout PipelineLayout::get_handle() const
 	return handle_;
 }
 
-const std::vector<ShaderModule *> & PipelineLayout::get_shader_modules() const
+std::vector<backend::ShaderResource> PipelineLayout::get_resources(const backend::ShaderResourceType &type, vk::ShaderStageFlags stage) const
+{
+	std::vector<backend::ShaderResource> found_resources;
+
+	for (auto &it : shader_resources_)
+	{
+		auto &shader_resource = it.second;
+
+		if (shader_resource.type == type || type == ShaderResourceType::kAll)
+		{
+			if (shader_resource.stages == stage || stage == vk::ShaderStageFlagBits::eAll)
+			{
+				found_resources.push_back(shader_resource);
+			}
+		}
+	}
+
+	return found_resources;
+}
+
+const std::vector<ShaderModule *> &PipelineLayout::get_shader_modules() const
 {
 	return shader_modules_;
 }
-}
+}        // namespace xihe::backend

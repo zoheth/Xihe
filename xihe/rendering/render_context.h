@@ -36,6 +36,9 @@ class RenderContext
 
 	backend::CommandBuffer &begin(backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool);
 
+
+	RenderFrame &get_active_frame() const;
+
   private:
 	void begin_frame();
 
