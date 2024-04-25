@@ -17,6 +17,13 @@ CommandBuffer::CommandBuffer(CommandPool &command_pool, vk::CommandBufferLevel l
     set_handle(get_device().get_handle().allocateCommandBuffers(allocate_info).front());
 }
 
+CommandBuffer::CommandBuffer(CommandBuffer &&other) noexcept :
+	VulkanResource(std::move(other)),
+	level_{other.level_},
+	command_pool_{other.command_pool_},
+	max_push_constant_size_{other.max_push_constant_size_}
+{}
+
 CommandBuffer::~CommandBuffer()
 {
 	if (get_handle())
@@ -24,4 +31,7 @@ CommandBuffer::~CommandBuffer()
 		get_device().get_handle().freeCommandBuffers(command_pool_.get_handle(), get_handle());
 	}
 }
+
+vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer *primary_cmd_buf)
+{}
 }        // namespace xihe::backend

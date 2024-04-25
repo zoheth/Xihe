@@ -9,11 +9,11 @@ namespace xihe::backend
 {
 class Device;
 
-template <typename Handle, typename XhDevice = xihe::backend::Device>
+template <typename Handle>
 class VulkanResource
 {
   public:
-	VulkanResource(Handle handle = nullptr, XhDevice *device = nullptr) :
+	VulkanResource(Handle handle = nullptr, Device *device = nullptr) :
 	    handle_(handle), device_(device)
 	{}
 
@@ -52,12 +52,12 @@ class VulkanResource
 	{
 		return handle_;
 	}
-	XhDevice &get_device()
+	Device &get_device()
 	{
 		assert(device_ && "VKBDevice handle not set");
 		return *device_;
 	}
-	XhDevice const &get_device() const
+	Device const &get_device() const
 	{
 		assert(device_ && "VKBDevice handle not set");
 		return *device_;
@@ -95,7 +95,7 @@ class VulkanResource
 
   private:
 	Handle      handle_;
-	XhDevice   *device_;
+	Device     *device_;
 	std::string debug_name_;
 };
 }        // namespace xihe::backend
