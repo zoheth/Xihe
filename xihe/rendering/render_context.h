@@ -34,17 +34,31 @@ class RenderContext
 	 */
 	void prepare(size_t thread_count = 1, RenderTarget::CreateFunc create_render_target_func = RenderTarget::kDefaultCreateFunc);
 
+	void recreate();
+
+	void recreate_swapchain();
+
 	backend::CommandBuffer &begin(backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool);
 
-
 	RenderFrame &get_active_frame() const;
+
+	void submit(backend::CommandBuffer &command_buffer);
+
+	void submit(const std::vector<backend::CommandBuffer *> &command_buffers);
 
   private:
 	void begin_frame();
 
+	vk::Semaphore submit(const backend::Queue                       & queue,
+	                     const std::vector<backend::CommandBuffer *> &command_buffers,
+	                     vk::Semaphore                                wait_semaphore,
+	                     vk::PipelineStageFlags                       wait_pipeline_stage);
+
+	void submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers);
+
 	void handle_surface_changes(bool force_update = false);
 
-	void update_swapchain(const vk::Extent2D &extent, const vk::SurfaceTransformFlagBitsKHR transform);
+	void update_swapchain(const vk::Extent2D &extent);
 
   private:
 	backend::Device &device_;

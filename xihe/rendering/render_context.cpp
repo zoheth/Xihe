@@ -44,6 +44,57 @@ void RenderContext::prepare(size_t thread_count, RenderTarget::CreateFunc create
 	prepared_                  = true;
 }
 
+void RenderContext::recreate()
+{
+	LOGI("Recreated swapchain");
+
+	vk::Extent2D swapchain_extent = swapchain_->get_extent();
+	vk::Extent3D extent{swapchain_extent.width, swapchain_extent.height, 1};
+
+	auto frame_it = frames_.begin();
+
+	for (auto &image_handle : swapchain_->get_images())
+	{
+		backend::Image swapchain_image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+
+		auto render_target = create_render_target_func_(std::move(swapchain_image));
+
+		if (frame_it != frames_.end())
+		{
+			(*frame_it)->update_render_target(std::move(render_target));
+		}
+		else
+		{
+			// Create a new frame if the new swapchain has more images than current frames
+			frames_.emplace_back(std::make_unique<RenderFrame>(device_, std::move(render_target), thread_count_));
+		}
+
+		++frame_it;
+	}
+
+	device_.get_resource_cache().clear_framebuffers();
+}
+
+void RenderContext::recreate_swapchain()
+{
+	device_.get_handle().waitIdle();
+	device_.get_resource_cache().clear_framebuffers();
+
+	vk::Extent2D swapchain_extent = swapchain_->get_extent();
+	vk::Extent3D extent{swapchain_extent.width, swapchain_extent.height, 1};
+
+	auto frame_it = frames_.begin();
+
+	for (auto &image_handle : swapchain_->get_images())
+	{
+		backend::Image swapchain_image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+		auto           render_target = create_render_target_func_(std::move(swapchain_image));
+		(*frame_it)->update_render_target(std::move(render_target));
+
+		++frame_it;
+	}
+}
+
 backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode reset_mode)
 {
 	assert(prepared_ && "RenderContext is not prepared");
@@ -62,15 +113,83 @@ backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode r
 	return get_active_frame().request_command_buffer(queue, reset_mode);
 }
 
-RenderFrame & RenderContext::get_active_frame() const
+RenderFrame &RenderContext::get_active_frame() const
 {
 	assert(frame_active_ && "Frame is not active, please call begin_frame");
 	return *frames_[active_frame_index_];
 }
 
+void RenderContext::submit(backend::CommandBuffer &command_buffer)
+{
+	submit({&command_buffer});
+}
+
+void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_buffers)
+{
+	assert(frame_active && "HPPRenderContext is inactive, cannot submit command buffer. Please call begin()");
+
+	vk::Semaphore render_semaphore;
+
+	if (swapchain_)
+	{
+		assert(acquired_semaphore_ && "We do not have acquired_semaphore, it was probably consumed?\n");
+		render_semaphore = submit(queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+	}
+	else
+	{
+		submit(queue_, command_buffers);
+	}
+
+	end_frame(render_semaphore);
+}
+
 void RenderContext::begin_frame()
 {
 	handle_surface_changes();
+	// todo
+}
+
+vk::Semaphore RenderContext::submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers, vk::Semaphore wait_semaphore, vk::PipelineStageFlags wait_pipeline_stage)
+{
+	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
+	std::ranges::transform(command_buffers, command_buffer_handles.begin(),
+	                       [](const backend::CommandBuffer *cmd_buf) {
+		                       return cmd_buf->get_handle();
+	                       });
+
+	RenderFrame &frame = get_active_frame();
+
+	vk::Semaphore signal_semaphore = frame.request_semaphore();
+
+	vk::SubmitInfo submit_info{nullptr, nullptr, command_buffer_handles, signal_semaphore};
+	if (wait_semaphore)
+	{
+		submit_info.setWaitSemaphores(wait_semaphore);
+		submit_info.pWaitDstStageMask = &wait_pipeline_stage;
+	}
+
+	vk::Fence fence = frame.request_fence();
+
+	queue.get_handle().submit(submit_info, fence);
+
+	return signal_semaphore;
+}
+
+void RenderContext::submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers)
+{
+	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
+	std::ranges::transform(command_buffers, command_buffer_handles.begin(),
+	                       [](const backend::CommandBuffer *cmd_buf) {
+		                       return cmd_buf->get_handle();
+	                       });
+
+	RenderFrame &frame = get_active_frame();
+
+	vk::SubmitInfo submit_info{nullptr, nullptr, command_buffer_handles};
+
+	vk::Fence fence = frame.request_fence();
+
+	queue.get_handle().submit(submit_info, fence);
 }
 
 void RenderContext::handle_surface_changes(bool force_update)
@@ -87,14 +206,16 @@ void RenderContext::handle_surface_changes(bool force_update)
 		// Recreate swapchain
 		device_.get_handle().waitIdle();
 
-		
-
 		surface_extent_ = surface_capabilities.currentExtent;
 	}
 }
 
-void RenderContext::update_swapchain(const vk::Extent2D &extent, const vk::SurfaceTransformFlagBitsKHR transform)
+void RenderContext::update_swapchain(const vk::Extent2D &extent)
 {
-	device_.get_resource_cache()
+	device_.get_resource_cache().clear_framebuffers();
+
+	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, extent);
+
+	recreate();
 }
 }        // namespace xihe::rendering

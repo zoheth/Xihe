@@ -20,6 +20,8 @@ class DescriptorPool
 	const DescriptorSetLayout &get_descriptor_set_layout() const;
 	void                       set_descriptor_set_layout(const DescriptorSetLayout &set_layout);
 
+	void reset();
+
   private:
 	Device &device_;
 

@@ -1,5 +1,7 @@
 ﻿#include "xihe_app.h"
 
+#include "rendering/render_frame.h"
+
 #include <cassert>
 
 #include <volk.h>
@@ -120,10 +122,16 @@ void XiheApp::update(float delta_time)
 {
 	auto &command_buffer = render_context_->begin();
 
-	command_buffer.begin
+	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+	draw(command_buffer, render_context_->get_active_frame().get_render_target());
+
+	command_buffer.end();
+
+	render_context_->submit(command_buffer);
 }
 
-const std::string & XiheApp::get_name() const
+const std::string &XiheApp::get_name() const
 {
 	return name_;
 }
@@ -152,6 +160,55 @@ std::unordered_map<const char *, bool> const &XiheApp::get_instance_extensions()
 std::unique_ptr<backend::Instance> const &XiheApp::get_instance() const
 {
 	return instance_;
+}
+
+void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
+{
+	auto &views = render_target.get_views();
+
+	{
+		ImageMemoryBarrier memory_barrier{};
+		memory_barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+
+		command_buffer.image_memory_barrier(views[0], memory_barrier);
+		render_target.set_layout(0, memory_barrier.new_layout);
+
+		// Skip 1 as it is handled later as a depth-stencil attachment
+		for (size_t i = 2; i < views.size(); ++i)
+		{
+			command_buffer.image_memory_barrier(views[i], memory_barrier);
+			render_target.set_layout(static_cast<uint32_t>(i), memory_barrier.new_layout);
+		}
+	}
+
+	{
+		ImageMemoryBarrier memory_barrier{};
+		memory_barrier.new_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+
+		command_buffer.image_memory_barrier(views[1], memory_barrier);
+		render_target.set_layout(1, memory_barrier.new_layout);
+	}
+
+	set_viewport_and_scissor(command_buffer, render_target.get_extent());
+	// todo
+
+	{
+		ImageMemoryBarrier memory_barrier{};
+		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
+		memory_barrier.src_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eBottomOfPipe;
+
+		command_buffer.image_memory_barrier(views[0], memory_barrier);
+		render_target.set_layout(0, memory_barrier.new_layout);
+	}
 }
 
 void XiheApp::add_instance_extension(const char *extension, bool optional)
@@ -183,6 +240,12 @@ void XiheApp::create_render_context()
 void XiheApp::prepare_render_context() const
 {
 	render_context_->prepare();
+}
+
+void XiheApp::set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
+{
+	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
+	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 }        // namespace xihe
 

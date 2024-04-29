@@ -37,6 +37,18 @@ class RenderFrame
 		vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary,
 		size_t thread_index = 0);
 
+	RenderTarget &get_render_target();
+	RenderTarget const &get_render_target() const;
+
+	vk::Fence     request_fence();
+	vk::Semaphore request_semaphore();
+	vk::Semaphore request_semaphore_with_ownership();
+	void          reset();
+
+	void clear_descriptors();
+
+	void update_render_target(std::unique_ptr<RenderTarget> &&render_target);
+
 private:
 	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);
   private:
@@ -69,6 +81,6 @@ private:
 
 	DescriptorManagementStrategy descriptor_management_strategy_{DescriptorManagementStrategy::kStoreInCache};
 
-	std::map<vk::BufferUsageFlags, std::vector<std::pair<backend::BufferPool, backend::BufferBlock *>>> buffer_pools;
+	std::map<vk::BufferUsageFlags, std::vector<std::pair<backend::BufferPool, backend::BufferBlock *>>> buffer_pools_;
 };
 }        // namespace xihe::rendering

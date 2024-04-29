@@ -1,4 +1,6 @@
 #pragma once
+#include "resource_record.h"
+
 #include <mutex>
 #include <unordered_map>
 
@@ -74,13 +76,26 @@ class ResourceCache
 	                                 const RenderPass              &render_pass);
 
 	void clear();
+	void clear_framebuffers();
+	void clear_pipelines();
 
   private:
 	Device &device_;
+	ResourceRecord recorder_{};
+	
 
 	vk::PipelineCache pipeline_cache_{VK_NULL_HANDLE};
 
 	ResourceCacheState state_;
+
+	std::mutex descriptor_set_mutex_        = {};
+	std::mutex pipeline_layout_mutex_       = {};
+	std::mutex shader_module_mutex_         = {};
+	std::mutex descriptor_set_layout_mutex_ = {};
+	std::mutex graphics_pipeline_mutex_     = {};
+	std::mutex render_pass_mutex_           = {};
+	std::mutex compute_pipeline_mutex_      = {};
+	std::mutex framebuffer_mutex_           = {};
 };
 }        // namespace backend
 }        // namespace xihe

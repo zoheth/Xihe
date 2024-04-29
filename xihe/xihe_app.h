@@ -32,6 +32,9 @@ class XiheApp : public Application
 	std::unordered_map<const char *, bool> const &get_instance_extensions() const;
 	std::unique_ptr<backend::Instance> const     &get_instance() const;
 
+
+	virtual void draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
+
   private:
 
 	void add_instance_extension(const char *extension, bool optional = false);
@@ -44,6 +47,8 @@ class XiheApp : public Application
 
 	void create_render_context();
 	void prepare_render_context() const;
+
+	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
   private:
 	std::unique_ptr<backend::Instance> instance_;

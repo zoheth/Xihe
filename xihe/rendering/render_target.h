@@ -46,6 +46,16 @@ class RenderTarget
 	const std::vector<uint32_t>   &get_input_attachments() const;
 	const std::vector<uint32_t>   &get_output_attachments() const;
 
+	/**
+	 * Sets the current attachments overwriting the current ones
+	 * Should be set before beginning the render pass and before starting a new subpass
+	 **/
+	void                         set_input_attachments(const std::vector<uint32_t> &input);
+	void                         set_output_attachments(const std::vector<uint32_t> &output);
+
+	void                         set_layout(uint32_t attachment, vk::ImageLayout layout);
+	vk::ImageLayout              get_layout(uint32_t attachment) const;
+
 
   private:
 	backend::Device                &device_;

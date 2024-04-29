@@ -3,6 +3,7 @@
 #include <map>
 
 #include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_format_traits.hpp>
 
 #include "common/logging.h"
 
@@ -15,6 +16,26 @@ using BindingMap = std::map<uint32_t, std::map<uint32_t, T>>;
 namespace xihe
 {
 
+struct BufferMemoryBarrier
+{
+	vk::PipelineStageFlags src_stage_mask  = vk::PipelineStageFlagBits::eBottomOfPipe;
+	vk::PipelineStageFlags dst_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
+	vk::AccessFlags        src_access_mask = {};
+	vk::AccessFlags        dst_access_mask = {};
+};
+
+struct ImageMemoryBarrier
+{
+	vk::PipelineStageFlags src_stage_mask = vk::PipelineStageFlagBits::eBottomOfPipe;
+	vk::PipelineStageFlags dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
+	vk::AccessFlags        src_access_mask;
+	vk::AccessFlags        dst_access_mask;
+	vk::ImageLayout        old_layout       = vk::ImageLayout::eUndefined;
+	vk::ImageLayout        new_layout       = vk::ImageLayout::eUndefined;
+	uint32_t               old_queue_family = VK_QUEUE_FAMILY_IGNORED;
+	uint32_t               new_queue_family = VK_QUEUE_FAMILY_IGNORED;
+};
+
 struct LoadStoreInfo
 {
 	vk::AttachmentLoadOp  load_op  = vk::AttachmentLoadOp::eClear;
@@ -23,14 +44,22 @@ struct LoadStoreInfo
 
 inline bool is_depth_only_format(vk::Format format)
 {
-	switch (format)
-	{
-	case vk::Format::eD32Sfloat:
-	case vk::Format::eD16Unorm:
-		return true;
-	default:
-		return false;
-	}
+	return vk::componentCount(format) == 1 && (std::string(vk::componentName(format, 0)) == "D");
+}
+
+inline bool is_depth_stencil_format(vk::Format format)
+{
+	return vk::componentCount(format) == 2 && (std::string(vk::componentName(format, 0)) == "D") && (std::string(vk::componentName(format, 1)) == "S");
+}
+
+inline bool is_depth_format(vk::Format format)
+{
+	return std::string(vk::componentName(format, 0)) == "D";
+}
+
+inline bool is_dynamic_buffer_descriptor_type(vk::DescriptorType type)
+{
+		return type == vk::DescriptorType::eUniformBufferDynamic || type == vk::DescriptorType::eStorageBufferDynamic;
 }
 
 inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physical_device,
@@ -44,7 +73,8 @@ inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physi
 	{
 		if (depth_only && !is_depth_only_format(format))
 		{
-			continue;;
+			continue;
+			;
 		}
 		vk::FormatProperties format_properties = physical_device.getFormatProperties(format);
 
@@ -63,4 +93,4 @@ inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physi
 
 	return depth_format;
 }
-}
+}        // namespace xihe

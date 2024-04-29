@@ -1,4 +1,5 @@
 #pragma once
+#include "buffer.h"
 #include "vk_mem_alloc.h"
 
 #include <memory>
@@ -25,12 +26,24 @@ class BufferBlock
 {
   public:
 	BufferBlock(Device &device, vk::DeviceSize size, vk::BufferUsageFlags usage, VmaMemoryUsage memory_usage);
+
+	void reset();
+
+  private:
+	backend::Buffer buffer_;
+	vk::DeviceSize  alignment{0};
+	vk::DeviceSize  offset_{0};
 };
 
 class BufferPool
 {
   public:
 	BufferPool(Device &device, vk::DeviceSize block_size, vk::BufferUsageFlags usage, VmaMemoryUsage memory_usage = VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+	BufferBlock &request_buffer_block(vk::DeviceSize minimum_size, bool minimal = false);
+
+	void reset();
+
   private:
 	Device &device_;
 

@@ -91,4 +91,43 @@ CommandBuffer &CommandPool::request_command_buffer(vk::CommandBufferLevel level)
 		return *secondary_command_buffers_[active_secondary_command_buffer_count_++];
 	}
 }
+
+void CommandPool::reset_pool()
+{
+	switch (reset_mode_)
+	{
+		case CommandBuffer::ResetMode::kResetIndividually:
+			reset_command_buffers();
+			break;
+		case CommandBuffer::ResetMode::kResetPool:
+			device_.get_handle().resetCommandPool(handle_);
+			reset_command_buffers();
+			break;
+
+		case CommandBuffer::ResetMode::kAlwaysAllocate:
+			primary_command_buffers_.clear();
+			active_primary_command_buffer_count_ = 0;
+			secondary_command_buffers_.clear();
+			active_secondary_command_buffer_count_ = 0;
+			break;
+
+		default:
+			throw std::runtime_error("Unknown reset mode for command pools");
+	}
+}
+
+void CommandPool::reset_command_buffers()
+{
+	for (auto &command_buffer : primary_command_buffers_)
+	{
+		command_buffer->reset(reset_mode_);
+	}
+	active_primary_command_buffer_count_ = 0;
+
+	for (auto &command_buffer : secondary_command_buffers_)
+	{
+		command_buffer->reset(reset_mode_);
+	}
+	active_secondary_command_buffer_count_ = 0;	
+}
 }        // namespace xihe::backend

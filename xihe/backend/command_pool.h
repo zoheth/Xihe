@@ -29,7 +29,7 @@ class CommandPool
 	CommandPool &operator=(CommandPool &&)      = delete;
 
 	Device                  &get_device();
-	vk::CommandPool         get_handle() const;
+	vk::CommandPool          get_handle() const;
 	uint32_t                 get_queue_family_index() const;
 	rendering::RenderFrame  *get_render_frame();
 	CommandBuffer::ResetMode get_reset_mode() const;
@@ -37,6 +37,9 @@ class CommandPool
 	CommandBuffer           &request_command_buffer(vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary);
 
 	void reset_pool();
+
+  private:
+	void reset_command_buffers();
 
   private:
 	Device                 &device_;
