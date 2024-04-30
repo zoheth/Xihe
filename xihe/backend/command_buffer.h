@@ -1,8 +1,11 @@
 #pragma once
 
+#include "common/vk_common.h"
+#include "common/helpers.h"
 #include "framebuffer.h"
 #include "render_pass.h"
 #include "vulkan_resource.h"
+#include "image.h"
 #include "rendering/pipeline_state.h"
 #include "resources_management/resource_binding_state.h"
 
@@ -43,7 +46,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result end();
 
-	void image_memory_barrier(const ImageView &image_view, const ImageMemoryBarrier &memory_barrier);
+	void image_memory_barrier(const backend::ImageView &image_view, const ImageMemoryBarrier &memory_barrier);
 
 	/**
 	 * @brief Reset the command buffer to a state where it can be recorded to

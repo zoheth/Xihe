@@ -83,9 +83,9 @@ class ShaderVariant
 	void clear();
 
   private:
-	size_t id_;
+	size_t id_{};
 
-	std::string                             preamble_;
+	std::string                             preamble_{};
 	std::vector<std::string>                processes_;
 	std::unordered_map<std::string, size_t> runtime_array_sizes_;
 
@@ -117,7 +117,7 @@ class ShaderModule
 	             const ShaderVariant    &shader_variant);
 
 	ShaderModule(const ShaderModule &) = delete;
-	ShaderModule(ShaderModule &&other);
+	ShaderModule(ShaderModule &&other) noexcept;
 
 	ShaderModule &operator=(const ShaderModule &) = delete;
 	ShaderModule &operator=(ShaderModule &&)      = delete;

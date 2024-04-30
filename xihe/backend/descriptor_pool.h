@@ -22,6 +22,8 @@ class DescriptorPool
 
 	void reset();
 
+	vk::DescriptorSet allocate();
+
   private:
 	Device &device_;
 

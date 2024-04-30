@@ -13,7 +13,7 @@ class Pipeline
 	Pipeline(Device &device);
 
 	Pipeline(const Pipeline &) = delete;
-	Pipeline(Pipeline &&other);
+	Pipeline(Pipeline &&other) noexcept;
 
 	virtual ~Pipeline();
 

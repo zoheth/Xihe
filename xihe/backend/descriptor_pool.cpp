@@ -34,4 +34,10 @@ void DescriptorPool::reset()
 
 	pool_index_ = 0;
 }
+
+vk::DescriptorSet DescriptorPool::allocate()
+{
+	// todo
+	return vk::DescriptorSet{};
+}
 }        // namespace xihe::backend

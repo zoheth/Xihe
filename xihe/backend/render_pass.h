@@ -1,10 +1,15 @@
 #pragma once
 
-#include <vulkan/vulkan.hpp>
-
+#include "common/vk_common.h"
 #include "backend/vulkan_resource.h"
 
-namespace xihe::backend
+namespace xihe
+{
+namespace rendering
+{
+struct Attachment;
+}
+namespace backend
 {
 struct SubpassInfo
 {
@@ -21,6 +26,14 @@ struct SubpassInfo
 
 class RenderPass : public VulkanResource<vk::RenderPass>
 {
-public:
+  public:
+	RenderPass(Device                           &device,
+	           const std::vector<rendering::Attachment>   &attachments,
+	           const std::vector<LoadStoreInfo> &load_store_infos,
+	           const std::vector<SubpassInfo>   &subpasses);
+
+  private:
+	size_t subpass_count_;
 };
-}        // namespace xihe::backend
+}        // namespace backend
+}        // namespace xihe

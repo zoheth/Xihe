@@ -1,7 +1,8 @@
 #pragma once
 #include <memory>
 
-#include "allocated.h"
+#include "backend/allocated.h"
+#include "backend/vulkan_resource.h"
 
 namespace xihe::backend
 {
@@ -32,7 +33,7 @@ struct BufferBuilder : public Builder<BufferBuilder, vk::BufferCreateInfo>
 		return *this;
 	}
 
-	Buffer build(Device &device) const;
+	Buffer    build(Device &device) const;
 	BufferPtr build_unique(Device &device) const;
 };
 
@@ -43,10 +44,10 @@ class Buffer : public Allocated<vk::Buffer>
   public:
 	static Buffer create_staging_buffer(Device &device, vk::DeviceSize size, const void *data);
 
-	template<typename T>
+	template <typename T>
 	static Buffer create_staging_buffer(Device &device, std::vector<T> const &data)
 	{
-				return create_staging_buffer(device, sizeof(T) * data.size(), data.data());
+		return create_staging_buffer(device, sizeof(T) * data.size(), data.data());
 	}
 
 	Buffer(Device &device, BufferBuilder const &builder);
@@ -62,11 +63,8 @@ class Buffer : public Allocated<vk::Buffer>
 
 	vk::DeviceSize get_size() const;
 
-private:
+  private:
 	vk::DeviceSize size_{0};
-
-
-
 };
 
 }        // namespace xihe::backend

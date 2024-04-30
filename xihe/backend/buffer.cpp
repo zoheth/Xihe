@@ -1,5 +1,7 @@
 #include "buffer.h"
 
+#include "backend/device.h"
+
 namespace xihe::backend
 {
 Buffer BufferBuilder::build(Device &device) const

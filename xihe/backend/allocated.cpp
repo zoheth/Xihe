@@ -116,7 +116,7 @@ vk::Image AllocateBase::create_image(vk::ImageCreateInfo const &create_info)
 {
 	assert(0 < create_info.mipLevels && "Images should have at least one level");
 	assert(0 < create_info.arrayLayers && "Images should have at least one layer");
-	assert(0 < create_info.usage && "Images should have at least one usage type");
+	assert(create_info.usage && "Images should have at least one usage type");
 
 	VkImageCreateInfo const &create_info_c = create_info.operator VkImageCreateInfo const &();
 	VkImage                  image;

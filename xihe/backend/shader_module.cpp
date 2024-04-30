@@ -167,7 +167,7 @@ ShaderModule::ShaderModule(Device &device, vk::ShaderStageFlagBits stage, const 
 	                        reinterpret_cast<const char *>(spirv_.data() + spirv_.size())});
 }
 
-ShaderModule::ShaderModule(ShaderModule &&other) :
+ShaderModule::ShaderModule(ShaderModule &&other) noexcept :
 	device_{other.device_},
 	id_{other.id_},
 	stage_{other.stage_},

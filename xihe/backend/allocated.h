@@ -1,10 +1,12 @@
 #pragma once
-#include "device.h"
 
 #include <string>
 
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
+
+#include "common/error.h"
+#include "backend/vulkan_resource.h"
 
 namespace xihe::backend
 {

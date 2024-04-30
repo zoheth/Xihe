@@ -4,9 +4,13 @@
 
 namespace xihe::backend
 {
-BufferBlock::BufferBlock(Device &device, vk::DeviceSize size, vk::BufferUsageFlags usage, VmaMemoryUsage memory_usage) :
-    buffer_{device, size, usage, memory_usage}
+BufferBlock::BufferBlock(Device &device, vk::DeviceSize size, vk::BufferUsageFlags usage, VmaMemoryUsage memory_usage)
 {
+	BufferBuilder builder{size};
+	builder.with_usage(usage);
+	builder.with_vma_usage(memory_usage);
+	buffer_ =  builder.build_unique(device);
+
 	if (usage == vk::BufferUsageFlagBits::eUniformBuffer)
 	{
 		alignment = device.get_gpu().get_properties().limits.minUniformBufferOffsetAlignment;
@@ -45,8 +49,8 @@ BufferPool::BufferPool(Device &device, vk::DeviceSize block_size, vk::BufferUsag
 {
 }
 
-BufferBlock &BufferPool::request_buffer_block(vk::DeviceSize minimum_size, bool minimal)
-{}
+//BufferBlock &BufferPool::request_buffer_block(vk::DeviceSize minimum_size, bool minimal)
+//{}
 
 void BufferPool::reset()
 {

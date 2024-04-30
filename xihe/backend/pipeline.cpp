@@ -8,7 +8,7 @@ Pipeline::Pipeline(Device &device) :
     device_{device}
 {}
 
-Pipeline::Pipeline(Pipeline &&other) :
+Pipeline::Pipeline(Pipeline &&other) noexcept :
     device_{other.device_},
     handle_{other.handle_},
     state_{other.state_}
@@ -241,23 +241,25 @@ GraphicsPipeline::GraphicsPipeline(Device &device, vk::PipelineCache pipeline_ca
 	    dynamic_states.data()};
 
 
-	vk::GraphicsPipelineCreateInfo create_info{
-	    vk::PipelineCreateFlags{},
+	vk::GraphicsPipelineCreateInfo create_info(
+	    {},
 		to_u32(stage_create_infos.size()),
 	    stage_create_infos.data(),
-		vertex_input_state_create_info,
-		input_assembly_state_create_info,
+		&vertex_input_state_create_info,
+		&input_assembly_state_create_info,
 		{},
-		viewport_state_create_info,
-		rasterization_state_create_info,
-		multisample_state_create_info,
-		depth_stencil_state_create_info,
-		color_blend_state_create_info,
-		dynamic_state_create_info,
+		&viewport_state_create_info,
+		&rasterization_state_create_info,
+		&multisample_state_create_info,
+		&depth_stencil_state_create_info,
+		&color_blend_state_create_info,
+		&dynamic_state_create_info,
 		pipeline_state.get_pipeline_layout().get_handle(),
 		pipeline_state.get_render_pass()->get_handle(),
 		pipeline_state.get_subpass_index()
-	};
+	);
+
+
 
 	vk::Result result = device_.get_handle().createGraphicsPipelines(pipeline_cache, 1, &create_info, nullptr, &handle_);
 

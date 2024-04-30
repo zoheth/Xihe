@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/vk_common.h"
 #include "backend/buffer.h"
 #include "backend/image_view.h"
 #include "backend/sampler.h"

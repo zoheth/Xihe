@@ -5,6 +5,9 @@
 #include <vulkan/vulkan_core.h>
 #include <vulkan/vulkan.hpp>
 
+#include "common/helpers.h"
+#include "common/logging.h"
+
 #if defined(__clang__)
 // CLANG ENABLE/DISABLE WARNING DEFINITION
 #	define XH_DISABLE_WARNINGS()                             \

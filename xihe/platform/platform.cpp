@@ -11,8 +11,6 @@
 namespace xihe
 {
 
-std::string Platform::work
-
 ExitCode Platform::initialize()
 {
 	auto sinks = get_platform_sinks();

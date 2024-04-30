@@ -73,6 +73,19 @@ struct hash<xihe::backend::VulkanResource<T>>
 };
 
 template <>
+struct hash<xihe::backend::RenderPass>
+{
+	std::size_t operator()(const xihe::backend::RenderPass &render_pass) const
+	{
+		std::size_t result = 0;
+
+		hash_combine(result, render_pass.get_handle());
+
+		return result;
+	}
+};
+
+template <>
 struct hash<xihe::backend::DescriptorSetLayout>
 {
 	size_t operator()(const xihe::backend::DescriptorSetLayout &descriptor_set_layout) const noexcept
@@ -175,6 +188,26 @@ struct hash<xihe::backend::ShaderModule>
 		std::size_t result = 0;
 
 		hash_combine(result, shader_module.get_id());
+
+		return result;
+	}
+};
+
+template <>
+struct hash<xihe::SpecializationConstantState>
+{
+	std::size_t operator()(const xihe::SpecializationConstantState &specialization_constant_state) const
+	{
+		std::size_t result = 0;
+
+		for (auto constants : specialization_constant_state.get_specialization_constant_state())
+		{
+			hash_combine(result, constants.first);
+			for (const auto data : constants.second)
+			{
+				hash_combine(result, data);
+			}
+		}
 
 		return result;
 	}
@@ -344,6 +377,26 @@ struct hash<xihe::PipelineState>
 		{
 			hash_combine(result, attachment);
 		}
+
+		return result;
+	}
+};
+
+template <>
+struct hash<xihe::ColorBlendAttachmentState>
+{
+	std::size_t operator()(const xihe::ColorBlendAttachmentState &color_blend_attachment) const
+	{
+		std::size_t result = 0;
+
+		hash_combine(result, color_blend_attachment.alpha_blend_op);
+		hash_combine(result, color_blend_attachment.blend_enable);
+		hash_combine(result, color_blend_attachment.color_blend_op);
+		hash_combine(result, color_blend_attachment.color_write_mask);
+		hash_combine(result, color_blend_attachment.dst_alpha_blend_factor);
+		hash_combine(result, color_blend_attachment.dst_color_blend_factor);
+		hash_combine(result, color_blend_attachment.src_alpha_blend_factor);
+		hash_combine(result, color_blend_attachment.src_color_blend_factor);
 
 		return result;
 	}

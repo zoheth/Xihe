@@ -2,6 +2,15 @@
 
 #include <string>
 #include <utility>
+#include <cstdio>
+#include <map>
+#include <sstream>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include <vk_mem_alloc.h>
+#include <volk.h>
 
 #include <vulkan/vulkan.hpp>
 
@@ -21,10 +30,10 @@ class VulkanResource
 	VulkanResource &operator=(const VulkanResource &) = delete;
 
 	VulkanResource(VulkanResource &&other) noexcept :
-	    handle_(std::exchange(other.handle_, {})), device_(std::exchange(other.device_, {}))
-	{
-		set_debug_name(std::exchange(other.debug_name_, {}));
-	}
+	    handle_(std::exchange(other.handle_, {})),
+		device_(std::exchange(other.device_, {})),
+		debug_name_(std::exchange(other.debug_name_, {}))
+	{}
 
 	VulkanResource &operator=(VulkanResource &&other) noexcept
 	{
@@ -32,7 +41,7 @@ class VulkanResource
 		{
 			handle_     = std::exchange(other.handle_, {});
 			device_     = std::exchange(other.device_, {});
-			set_debug_name(std::exchange(other.debug_name_, {}));
+			debug_name_ = std::exchange(other.debug_name_, {});
 		}
 		return *this;
 	}
@@ -41,7 +50,7 @@ class VulkanResource
 
 	vk::ObjectType get_object_type() const
 	{
-		return Handle::NativeType;
+		return Handle::objectType;
 	}
 
 	Handle &get_handle()
@@ -89,7 +98,7 @@ class VulkanResource
 
 		if (device_ && !debug_name_.empty())
 		{
-			device_->get_debug_utils().set_debug_name(device_->get_handle(), Handle::objectType, get_handle_u64(), debug_name_.c_str());
+			get_device().get_debug_utils().set_debug_name(get_device().get_handle(), get_object_type(), get_handle_u64(), debug_name_.c_str());
 		}
 	}
 
