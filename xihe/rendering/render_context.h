@@ -58,7 +58,7 @@ class RenderContext
 
 	void submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers);
 
-	void handle_surface_changes(bool force_update = false);
+	bool handle_surface_changes(bool force_update = false);
 
 	void update_swapchain(const vk::Extent2D &extent);
 
