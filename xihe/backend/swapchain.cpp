@@ -203,6 +203,32 @@ vk::ImageUsageFlags composite_image_flags(std::set<vk::ImageUsageFlagBits> &imag
 
 namespace xihe::backend
 {
+Swapchain::Swapchain(Swapchain &old_swapchain, const vk::Extent2D &extent):
+    Swapchain{old_swapchain.device_,
+              old_swapchain.surface_,
+              old_swapchain.properties_.present_mode,
+              old_swapchain.present_mode_priority_list_,
+              old_swapchain.surface_format_priority_list_,
+              extent,
+              old_swapchain.properties_.image_count,
+              old_swapchain.properties_.pre_transform,
+              old_swapchain.image_usage_flags_,
+              old_swapchain.get_handle()}
+{}
+
+Swapchain::Swapchain(Swapchain &old_swapchain, const uint32_t image_count):
+    Swapchain{old_swapchain.device_,
+              old_swapchain.surface_,
+              old_swapchain.properties_.present_mode,
+              old_swapchain.present_mode_priority_list_,
+              old_swapchain.surface_format_priority_list_,
+              old_swapchain.properties_.extent,
+              image_count,
+              old_swapchain.properties_.pre_transform,
+              old_swapchain.image_usage_flags_,
+              old_swapchain.get_handle()}
+{}
+
 Swapchain::Swapchain(Device                                  &device,
                      vk::SurfaceKHR                           surface,
                      const vk::PresentModeKHR                 present_mode,
@@ -285,6 +311,13 @@ vk::SwapchainKHR Swapchain::get_handle() const
 {
 	return handle_;
 }
+
+std::pair<vk::Result, uint32_t> Swapchain::acquire_next_image(vk::Semaphore image_acquired_semaphore, vk::Fence fence) const
+{
+	vk::ResultValue<uint32_t> result = device_.get_handle().acquireNextImageKHR(handle_, std::numeric_limits<uint64_t>::max(), image_acquired_semaphore, fence);
+	return std::make_pair(result.result, result.value);
+}
+
 
 vk::Format Swapchain::get_format() const
 {

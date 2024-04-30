@@ -49,6 +49,8 @@ class RenderContext
   private:
 	void begin_frame();
 
+	void end_frame(vk::Semaphore semaphore);
+
 	vk::Semaphore submit(const backend::Queue                       & queue,
 	                     const std::vector<backend::CommandBuffer *> &command_buffers,
 	                     vk::Semaphore                                wait_semaphore,

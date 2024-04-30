@@ -53,6 +53,9 @@ class Window
 
 	virtual std::vector<const char *> get_required_surface_extensions() const = 0;
 
+	virtual bool get_display_present_info(vk::DisplayPresentInfoKHR *info,
+		uint32_t src_width, uint32_t src_height) const;
+
 	const Extent     &get_extent() const;
 	Mode              get_window_mode() const;
 	const Properties &get_properties() const

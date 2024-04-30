@@ -20,6 +20,12 @@ Window::Extent Window::resize(const Extent &extent)
 	return properties_.extent;
 }
 
+bool Window::get_display_present_info(vk::DisplayPresentInfoKHR *info, uint32_t src_width, uint32_t src_height) const
+{
+	// Default is to not use the extra present info
+	return false;
+}
+
 const Window::Extent &Window::get_extent() const
 {
 	return properties_.extent;

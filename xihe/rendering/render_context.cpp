@@ -126,7 +126,7 @@ void RenderContext::submit(backend::CommandBuffer &command_buffer)
 
 void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_buffers)
 {
-	assert(frame_active && "HPPRenderContext is inactive, cannot submit command buffer. Please call begin()");
+	assert(frame_active_ && "HPPRenderContext is inactive, cannot submit command buffer. Please call begin()");
 
 	vk::Semaphore render_semaphore;
 
@@ -145,8 +145,92 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 
 void RenderContext::begin_frame()
 {
-	handle_surface_changes();
-	// todo
+	if (swapchain_)
+	{
+		handle_surface_changes();
+	}
+
+	assert(!frame_active_ && "Frame is still active, please call end_frame");
+
+	auto &prev_frame = *frames_[active_frame_index_];
+
+	// We will use the acquired semaphore in a different frame context,
+	// so we need to hold ownership.
+	acquired_semaphore_ = prev_frame.request_semaphore_with_ownership();
+
+	if (swapchain_)
+	{
+		vk::Result result;
+		try
+		{
+			std::tie(result, active_frame_index_) = swapchain_->acquire_next_image(acquired_semaphore_);
+		}
+		catch (vk::OutOfDateKHRError & /*err*/)
+		{
+			result = vk::Result::eErrorOutOfDateKHR;
+		}
+
+		if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR)
+		{
+			bool swapchain_updated = handle_surface_changes(result == vk::Result::eErrorOutOfDateKHR);
+
+			if (swapchain_updated)
+			{
+				std::tie(result, active_frame_index_) = swapchain_->acquire_next_image(acquired_semaphore_);
+			}
+		}
+
+		if (result != vk::Result::eSuccess)
+		{
+			prev_frame.reset();
+			return;
+		}
+	}
+
+	frame_active_ = true;
+
+	get_active_frame().reset();
+}
+
+void RenderContext::end_frame(vk::Semaphore semaphore)
+{
+	assert(frame_active_ && "Frame is not active, please call begin_frame");
+
+	if (swapchain_)
+	{
+		vk::SwapchainKHR vk_swapchain = swapchain_->get_handle();
+		vk::PresentInfoKHR present_info(semaphore, vk_swapchain, active_frame_index_);
+
+		vk::DisplayPresentInfoKHR display_present_info;
+		if (device_.is_extension_supported(VK_KHR_DISPLAY_SWAPCHAIN_EXTENSION_NAME) &&
+		    window_.get_display_present_info(&display_present_info, surface_extent_.width, surface_extent_.height))
+		{
+			present_info.setPNext(&display_present_info);
+		}
+
+		vk::Result result;
+		try
+		{
+			result = queue_.get_handle().presentKHR(present_info);
+		}
+		catch (vk::OutOfDateKHRError &e)
+		{
+			result = vk::Result::eErrorOutOfDateKHR;
+		}
+
+		if (result == vk::Result::eSuboptimalKHR || result == vk::Result::eErrorOutOfDateKHR)
+		{
+			handle_surface_changes();
+		}
+
+	}
+
+	if (acquired_semaphore_)
+	{
+		get_active_frame().release_owned_semaphore(semaphore);
+		acquired_semaphore_ = nullptr;
+	}
+	frame_active_ = false;
 }
 
 vk::Semaphore RenderContext::submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers, vk::Semaphore wait_semaphore, vk::PipelineStageFlags wait_pipeline_stage)
@@ -192,13 +276,19 @@ void RenderContext::submit(const backend::Queue &queue, const std::vector<backen
 	queue.get_handle().submit(submit_info, fence);
 }
 
-void RenderContext::handle_surface_changes(bool force_update)
+bool RenderContext::handle_surface_changes(bool force_update)
 {
+	if (!swapchain_)
+	{
+		LOGW("Can't handle surface changes in headless mode, skipping.");
+		return false;
+	}
+
 	const vk::SurfaceCapabilitiesKHR surface_capabilities = device_.get_gpu().get_handle().getSurfaceCapabilitiesKHR(swapchain_->get_surface());
 
 	if (surface_capabilities.currentExtent.width == 0xFFFFFFFF)
 	{
-		return;
+		return false;
 	}
 
 	if (surface_capabilities.currentExtent.width != surface_extent_.width || surface_capabilities.currentExtent.height != surface_extent_.height)
@@ -206,8 +296,14 @@ void RenderContext::handle_surface_changes(bool force_update)
 		// Recreate swapchain
 		device_.get_handle().waitIdle();
 
+		update_swapchain(surface_capabilities.currentExtent);
+
 		surface_extent_ = surface_capabilities.currentExtent;
+
+		return true;
 	}
+
+	return false;
 }
 
 void RenderContext::update_swapchain(const vk::Extent2D &extent)

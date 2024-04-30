@@ -49,6 +49,8 @@ class RenderFrame
 
 	void update_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
+	void release_owned_semaphore(vk::Semaphore semaphore);
+
 private:
 	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);
   private:

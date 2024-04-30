@@ -129,6 +129,11 @@ void RenderFrame::update_render_target(std::unique_ptr<RenderTarget> &&render_ta
 	swapchain_render_target_ = std::move(render_target);
 }
 
+void RenderFrame::release_owned_semaphore(vk::Semaphore semaphore)
+{
+	semaphore_pool_.release_owned_semaphore(semaphore);
+}
+
 std::vector<std::unique_ptr<backend::CommandPool>> &RenderFrame::get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode)
 {
 	auto command_pool_it = command_pools_.find(queue.get_family_index());

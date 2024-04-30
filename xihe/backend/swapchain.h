@@ -44,6 +44,8 @@ class Swapchain
 	Device const    &get_device() const;
 	vk::SwapchainKHR get_handle() const;
 
+	std::pair<vk::Result, uint32_t> acquire_next_image(vk::Semaphore image_acquired_semaphore, vk::Fence fence = nullptr) const;
+
 	const vk::Extent2D             &get_extent() const;
 	vk::Format                      get_format() const;
 	const std::vector<vk::Image>   &get_images() const;
