@@ -24,6 +24,8 @@ class DescriptorPool
 
 	vk::DescriptorSet allocate();
 
+private:
+	uint32_t find_available_pool(uint32_t pool_index);
   private:
 	Device &device_;
 

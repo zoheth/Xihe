@@ -31,6 +31,13 @@ class DescriptorSet
 	}
 
 private:
+	/**
+	 * \brief Prepares the descriptor set to have its contents updated by loading a vector of write operations
+	 *		  Cannot be called twice during the lifetime of a DescriptorSet
+	 */
+	void prepare();
+
+private:
 	Device &device_;
 
 	const DescriptorSetLayout &descriptor_set_layout_;

@@ -20,6 +20,8 @@ class GlslCompiler
 	                      std::vector<std::uint32_t> &spirv,
 	                      std::string                &info_log);
 
-	
+  private:
+	static glslang::EShTargetLanguage        env_target_language_;
+	static glslang::EShTargetLanguageVersion env_target_language_version_;
 };
 }        // namespace xihe::backend
