@@ -11,6 +11,10 @@
 namespace xihe
 {
 
+std::string Platform::working_directory_;
+
+std::string Platform::temp_directory_;
+
 ExitCode Platform::initialize()
 {
 	auto sinks = get_platform_sinks();

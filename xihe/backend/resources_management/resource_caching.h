@@ -624,7 +624,7 @@ struct RecordHelper<GraphicsPipeline, A...>
 }        // namespace
 
 template <class T, class... A>
-T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map<size_t, T> &resources, A &&...args)
+T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map<size_t, T> &resources, A &...args)
 {
 	RecordHelper<T, A...> record_helper;
 

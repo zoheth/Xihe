@@ -9,7 +9,7 @@ namespace xihe::backend
 {
 class Device;
 class ShaderModule;
-class ShaderResource;
+struct ShaderResource;
 
 class DescriptorSetLayout
 {
