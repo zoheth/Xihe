@@ -27,6 +27,8 @@ class PhysicalDevice
 	 */
 	void *get_extension_feature_chain() const;
 
+	bool is_extension_supported(const std::string &requested_extension) const;
+
 	vk::PhysicalDevice                            get_handle() const;
 	Instance                                     &get_instance() const;
 	const vk::PhysicalDeviceProperties           &get_properties() const;
@@ -79,6 +81,9 @@ class PhysicalDevice
 	vk::PhysicalDeviceFeatures         features_;
 	vk::PhysicalDeviceProperties       properties_;
 	vk::PhysicalDeviceMemoryProperties memory_properties_;
+
+	// The extensions that this GPU supports
+	std::vector<vk::ExtensionProperties> device_extensions_;
 
 	// The GPU queue family properties
 	std::vector<vk::QueueFamilyProperties> queue_family_properties_;

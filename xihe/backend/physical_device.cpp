@@ -12,14 +12,32 @@ PhysicalDevice::PhysicalDevice(Instance &instance, vk::PhysicalDevice physical_d
     features_{physical_device.getFeatures()},
     properties_{physical_device.getProperties()},
     memory_properties_{physical_device.getMemoryProperties()},
-    queue_family_properties_{physical_device.getQueueFamilyProperties()}
+    queue_family_properties_{physical_device.getQueueFamilyProperties()},
+	device_extensions_{physical_device.enumerateDeviceExtensionProperties()}
 {
 	LOGI("Found GPU: {}", properties_.deviceName.data());
+
+	// Display supported extensions
+	if (device_extensions_.size() > 0)
+	{
+		LOGD("Device supports the following extensions:");
+		for (auto &extension : device_extensions_)
+		{
+			LOGD("  \t{}", extension.extensionName.data());
+		}
+	}
 }
 
 void * PhysicalDevice::get_extension_feature_chain() const
 {
 	return last_requested_extension_feature_;
+}
+
+bool PhysicalDevice::is_extension_supported(const std::string &requested_extension) const
+{
+	return std::ranges::find_if(
+	           device_extensions_,
+	           [requested_extension](auto &ext) { return std::strcmp(ext.extensionName, requested_extension.c_str()) == 0; }) != device_extensions_.end();
 }
 
 vk::PhysicalDevice PhysicalDevice::get_handle() const

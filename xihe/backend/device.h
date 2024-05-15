@@ -35,8 +35,6 @@ class Device : public backend::VulkanResource<vk::Device>
 
 	PhysicalDevice const &get_gpu() const;
 
-	VmaAllocator const &get_memory_allocator() const;
-
 	DebugUtils const &get_debug_utils() const;
 
 	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
@@ -57,7 +55,7 @@ class Device : public backend::VulkanResource<vk::Device>
 	vk::SurfaceKHR        surface_{nullptr};
 	ResourceCache         resource_cache_;
 
-	std::vector<vk::ExtensionProperties> device_extensions_;
+	// std::vector<vk::ExtensionProperties> device_extensions_;
 	std::vector<const char *>            enabled_extensions_;
 
 	VmaAllocator memory_allocator_{VK_NULL_HANDLE};

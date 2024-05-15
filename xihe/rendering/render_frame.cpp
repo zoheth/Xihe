@@ -148,23 +148,27 @@ std::vector<std::unique_ptr<backend::CommandPool>> &RenderFrame::get_command_poo
 			// Delete pools
 			command_pools_.erase(command_pool_it);
 		}
-	}
-	else
-	{
-		return command_pool_it->second;
+
+		else
+		{
+			return command_pool_it->second;
+		}
 	}
 
-	bool inserted                       = false;
-	std::tie(command_pool_it, inserted) = command_pools_.emplace(queue.get_family_index(), std::vector<std::unique_ptr<backend::CommandPool>>{});
-	if (!inserted)
+	std::vector<std::unique_ptr<backend::CommandPool>> queue_command_pools;
+	for (size_t i = 0; i < thread_count_; i++)
 	{
-		throw std::runtime_error{"Command pool already exists for queue family " + std::to_string(queue.get_family_index())};
+		queue_command_pools.push_back(std::make_unique<backend::CommandPool>(device_, queue.get_family_index(), this, i, reset_mode));
 	}
 
-	for (size_t i = 0; i < thread_count_; ++i)
+	auto res_ins_it = command_pools_.emplace(queue.get_family_index(), std::move(queue_command_pools));
+
+	if (!res_ins_it.second)
 	{
-		command_pool_it->second.push_back(std::make_unique<backend::CommandPool>(device_, queue.get_family_index(), this, i, reset_mode));
+		throw std::runtime_error("Failed to insert command pool");
 	}
+
+	command_pool_it = res_ins_it.first;
 
 	return command_pool_it->second;
 }

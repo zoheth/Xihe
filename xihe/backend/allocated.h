@@ -5,16 +5,20 @@
 #include <vk_mem_alloc.h>
 #include <vulkan/vulkan.hpp>
 
-#include "common/error.h"
 #include "backend/vulkan_resource.h"
+#include "common/error.h"
 
 namespace xihe::backend
+{
+class Device;
+
+namespace allocated
 {
 template <typename BuilderType,
           typename CreateInfoType>
 struct Builder
 {
-	VmaAllocationCreateInfo allocation_create_info;
+	VmaAllocationCreateInfo allocation_create_info{};
 	std::string             debug_name;
 	CreateInfoType          create_info;
 
@@ -94,9 +98,13 @@ struct Builder
 	}
 };
 
-void init(const VmaAllocationCreateInfo &create_info);
+void init(const VmaAllocatorCreateInfo &create_info);
+
+void init(const backend::Device &device);
 
 VmaAllocator &get_memory_allocator();
+
+void shutdown();
 
 class AllocateBase
 {
@@ -159,10 +167,13 @@ class AllocateBase
 	bool                    persistent_{false};        // Whether the buffer is persistently mapped or not
 };
 
-template <typename HandleType>
-class Allocated : public backend::VulkanResource<HandleType>, public AllocateBase
+template <typename HandleType,
+          typename ParentType = VulkanResource<HandleType>>
+class Allocated : public ParentType, public AllocateBase
 {
   public:
+	using ParentType::ParentType;
+
 	Allocated()                  = delete;
 	Allocated(const Allocated &) = delete;
 
@@ -184,5 +195,6 @@ class Allocated : public backend::VulkanResource<HandleType>, public AllocateBas
 		return backend::VulkanResource<HandleType>::get_handle();
 	}
 };
+}        // namespace allocated
 
 }        // namespace xihe::backend

@@ -10,7 +10,7 @@ class Device;
 class Buffer;
 using BufferPtr = std::unique_ptr<Buffer>;
 
-struct BufferBuilder : public Builder<BufferBuilder, vk::BufferCreateInfo>
+struct BufferBuilder : public allocated::Builder<BufferBuilder, vk::BufferCreateInfo>
 {
   private:
 	using Parent = Builder<BufferBuilder, vk::BufferCreateInfo>;
@@ -37,7 +37,7 @@ struct BufferBuilder : public Builder<BufferBuilder, vk::BufferCreateInfo>
 	BufferPtr build_unique(Device &device) const;
 };
 
-class Buffer : public Allocated<vk::Buffer>
+class Buffer : public allocated::Allocated<vk::Buffer>
 {
 	using Parent = Allocated<vk::Buffer>;
 
