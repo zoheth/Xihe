@@ -4,31 +4,18 @@
 
 namespace xihe
 {
-std::vector<std::string> split(const std::string &str, const std::string &delimiter)
+std::vector<std::string> split(const std::string &str, char delimiter)
 {
-	if (str.empty())
+	std::vector<std::string> tokens;
+
+	std::stringstream sstream(str);
+	std::string       token;
+	while (std::getline(sstream, token, delimiter))
 	{
-		return {};
+		tokens.push_back(token);
 	}
 
-	std::vector<std::string> out;
-
-	std::string buffer         = str;
-	size_t      last_found_pos = 0;
-	size_t      pos            = 0;
-	while ((pos = buffer.find(delimiter)) != std::string::npos)
-	{
-		out.push_back(buffer.substr(0, pos));
-		buffer.erase(0, pos + delimiter.length());
-		last_found_pos = last_found_pos + pos + delimiter.length();
-	}
-
-	if (last_found_pos == str.size())
-	{
-		out.emplace_back("");
-	}
-
-	return out;
+	return tokens;
 }
 
 std::string join(const std::vector<std::string> &str, const std::string &separator)
@@ -1237,17 +1224,4 @@ std::string color_component_to_string(VkColorComponentFlags flags)
 	                                            {VK_COLOR_COMPONENT_A_BIT, "A"}});
 }
 
-std::vector<std::string> split(const std::string &input, char delim)
-{
-	std::vector<std::string> tokens;
-
-	std::stringstream sstream(input);
-	std::string       token;
-	while (std::getline(sstream, token, delim))
-	{
-		tokens.push_back(token);
-	}
-
-	return tokens;
-}
 }        // namespace xihe

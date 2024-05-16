@@ -17,7 +17,7 @@ inline std::vector<std::string> precompile_shader(const std::string &source)
 {
 	std::vector<std::string> final_file;
 
-	auto lines = split(source, "\n");
+	auto lines = split(source, '\n');
 
 	for (auto &line : lines)
 	{

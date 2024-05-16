@@ -67,7 +67,7 @@ PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *>
 	std::vector<vk::DescriptorSetLayout> descriptor_set_layout_handles;
 	for (auto descriptor_set_layout : descriptor_set_layouts_)
 	{
-		descriptor_set_layout_handles.push_back(descriptor_set_layout? descriptor_set_layout->get_handle(): nullptr);
+		descriptor_set_layout_handles.push_back(descriptor_set_layout ? descriptor_set_layout->get_handle() : nullptr);
 	}
 
 	// Collect all the push constant shader resources
@@ -124,5 +124,41 @@ std::vector<backend::ShaderResource> PipelineLayout::get_resources(const backend
 const std::vector<ShaderModule *> &PipelineLayout::get_shader_modules() const
 {
 	return shader_modules_;
+}
+
+vk::ShaderStageFlags PipelineLayout::get_push_constant_range_stage(uint32_t size, uint32_t offset) const
+{
+	vk::ShaderStageFlags stages;
+
+	for (auto &push_constant_resource : get_resources(ShaderResourceType::kPushConstant))
+	{
+		if (push_constant_resource.offset <= offset && offset + size <= push_constant_resource.offset + push_constant_resource.size)
+		{
+			stages |= push_constant_resource.stages;
+		}
+	}
+	return stages;
+}
+
+DescriptorSetLayout const &PipelineLayout::get_descriptor_set_layout(const uint32_t set_index) const
+{
+	auto                                                                                                       it = std::ranges::find_if(descriptor_set_layouts_,
+	                                                                                  [&set_index](auto const *descriptor_set_layout) { return descriptor_set_layout->get_index() == set_index; });
+	if (it == descriptor_set_layouts_.end())
+	{
+		throw std::runtime_error("Couldn't find descriptor set layout at set index " + to_string(set_index));
+	}
+	return **it;
+}
+
+const std::unordered_map<uint32_t, std::vector<ShaderResource>> &PipelineLayout::get_shader_sets() const
+{
+	return shader_sets_;
+
+}
+
+bool PipelineLayout::has_descriptor_set_layout(const uint32_t set_index) const
+{
+	return set_index < descriptor_set_layouts_.size();
 }
 }        // namespace xihe::backend

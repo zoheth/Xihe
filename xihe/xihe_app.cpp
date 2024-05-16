@@ -196,7 +196,15 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 	}
 
 	set_viewport_and_scissor(command_buffer, render_target.get_extent());
+
+	command_buffer.begin_render_pass(render_target, vk::SubpassContents::eInline);
 	// todo
+
+
+	render(command_buffer);
+
+
+	command_buffer.get_handle().endRenderPass();
 
 	{
 		ImageMemoryBarrier memory_barrier{};
@@ -249,7 +257,7 @@ void XiheApp::set_viewport_and_scissor(backend::CommandBuffer const &command_buf
 }
 }        // namespace xihe
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::XiheApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::XiheApp>();
+//}

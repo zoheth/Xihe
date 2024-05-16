@@ -16,6 +16,14 @@ class DescriptorSet
 	              const BindingMap<vk::DescriptorBufferInfo> &buffer_infos = {},
 	              const BindingMap<vk::DescriptorImageInfo>  &image_infos  = {});
 
+	/**
+	 * @brief Updates the contents of the DescriptorSet by performing the write operations
+	 * @param bindings_to_update If empty. we update all bindings. Otherwise, only write the specified bindings if they haven't already been written
+	 */
+	void update(const std::vector<uint32_t> &bindings_to_update = {});
+
+	void apply_writes() const;
+
 	const DescriptorSetLayout &get_layout() const;
 
 	vk::DescriptorSet get_handle() const;

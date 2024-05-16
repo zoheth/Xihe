@@ -62,6 +62,11 @@ inline bool is_dynamic_buffer_descriptor_type(vk::DescriptorType type)
 		return type == vk::DescriptorType::eUniformBufferDynamic || type == vk::DescriptorType::eStorageBufferDynamic;
 }
 
+inline bool is_buffer_descriptor_type(vk::DescriptorType descriptor_type)
+{
+	return descriptor_type == vk::DescriptorType::eUniformBuffer || descriptor_type == vk::DescriptorType::eStorageBuffer || is_dynamic_buffer_descriptor_type(descriptor_type);
+}
+
 inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physical_device,
                                             bool                           depth_only                 = false,
                                             const std::vector<vk::Format> &depth_format_priority_list = {

@@ -32,6 +32,12 @@ class PipelineLayout
 
 	const std::vector<ShaderModule *> &get_shader_modules() const;
 
+	vk::ShaderStageFlags get_push_constant_range_stage(uint32_t size, uint32_t offset = 0) const;
+
+	DescriptorSetLayout const                                       &get_descriptor_set_layout(const uint32_t set_index) const;
+	const std::unordered_map<uint32_t, std::vector<ShaderResource>> &get_shader_sets() const;
+	bool                                                             has_descriptor_set_layout(const uint32_t set_index) const;
+
   private:
 	Device            &device_;
 	vk::PipelineLayout handle_{VK_NULL_HANDLE};

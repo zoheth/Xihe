@@ -24,6 +24,8 @@ class XiheApp : public Application
 
 	void update(float delta_time) override;
 
+	virtual void render(backend::CommandBuffer &command_buffer){}
+
 	const std::string &get_name() const;
 
 	std::unique_ptr<backend::Device> const       &get_device() const;
@@ -34,6 +36,8 @@ class XiheApp : public Application
 
 
 	virtual void draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
+
+
 
   private:
 
@@ -50,7 +54,7 @@ class XiheApp : public Application
 
 	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
-  private:
+  protected:
 	std::unique_ptr<backend::Instance> instance_;
 
 	std::unique_ptr<backend::Device> device_;

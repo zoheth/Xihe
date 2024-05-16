@@ -40,6 +40,12 @@ class RenderFrame
 	RenderTarget &get_render_target();
 	RenderTarget const &get_render_target() const;
 
+	vk::DescriptorSet request_descriptor_set(const backend::DescriptorSetLayout    &descriptor_set_layout,
+	                                         const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
+	                                         const BindingMap<vk::DescriptorImageInfo>  &image_infos,
+	                                         bool                                        update_after_bind,
+	                                         size_t                                      thread_index = 0);
+
 	vk::Fence     request_fence();
 	vk::Semaphore request_semaphore();
 	vk::Semaphore request_semaphore_with_ownership();
@@ -53,6 +59,10 @@ class RenderFrame
 
 private:
 	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);
+
+	static std::vector<uint32_t> collect_bindings_to_update(const backend::DescriptorSetLayout    &descriptor_set_layout,
+	                                                        const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
+	                                                        const BindingMap<vk::DescriptorImageInfo>  &image_infos);
   private:
 	const std::unordered_map<vk::BufferUsageFlags, uint32_t> supported_usage_map_ = {
 	    {vk::BufferUsageFlagBits::eUniformBuffer, 1},

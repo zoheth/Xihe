@@ -1,5 +1,7 @@
 #include "render_frame.h"
 
+#include "backend/resources_management/resource_caching.h"
+
 constexpr uint32_t kBufferPoolBlockSize = 256;
 
 namespace xihe::rendering
@@ -56,6 +58,38 @@ RenderTarget &RenderFrame::get_render_target()
 RenderTarget const &RenderFrame::get_render_target() const
 {
 	return *swapchain_render_target_;
+}
+
+vk::DescriptorSet RenderFrame::request_descriptor_set(const backend::DescriptorSetLayout &descriptor_set_layout, const BindingMap<vk::DescriptorBufferInfo> &buffer_infos, const BindingMap<vk::DescriptorImageInfo> &image_infos, bool update_after_bind, size_t thread_index)
+{
+	assert(thread_index < thread_count_ && "Thread index is out of bounds");
+
+	assert(thread_index < descriptor_pools_.size());
+	auto &descriptor_pool = request_resource(device_, nullptr, *descriptor_pools_[thread_index], descriptor_set_layout);
+	if (descriptor_management_strategy_ == DescriptorManagementStrategy::kStoreInCache)
+	{
+		// The bindings we want to update before binding, if empty we update all bindings
+		std::vector<uint32_t> bindings_to_update;
+		// If update after bind is enabled, we store the binding index of each binding that need to be updated before being bound
+		if (update_after_bind)
+		{
+			bindings_to_update = collect_bindings_to_update(descriptor_set_layout, buffer_infos, image_infos);
+		}
+
+		// Request a descriptor set from the render frame, and write the buffer infos and image infos of all the specified bindings
+		assert(thread_index < descriptor_sets_.size());
+		auto &descriptor_set =
+		    request_resource(device_, nullptr, *descriptor_sets_[thread_index], descriptor_set_layout, descriptor_pool, buffer_infos, image_infos);
+		descriptor_set.update(bindings_to_update);
+		return descriptor_set.get_handle();
+	}
+	else
+	{
+		// Request a descriptor pool, allocate a descriptor set, write buffer and image data to it
+		backend::DescriptorSet descriptor_set{device_, descriptor_set_layout, descriptor_pool, buffer_infos, image_infos};
+		descriptor_set.apply_writes();
+		return descriptor_set.get_handle();
+	}
 }
 
 vk::Fence RenderFrame::request_fence()
@@ -173,4 +207,22 @@ std::vector<std::unique_ptr<backend::CommandPool>> &RenderFrame::get_command_poo
 	return command_pool_it->second;
 }
 
+std::vector<uint32_t> RenderFrame::collect_bindings_to_update(const backend::DescriptorSetLayout &descriptor_set_layout, const BindingMap<vk::DescriptorBufferInfo> &buffer_infos, const BindingMap<vk::DescriptorImageInfo> &image_infos)
+{
+	std::set<uint32_t> bindings_to_update;
+
+	auto aggregate_binding_to_update = [&bindings_to_update, &descriptor_set_layout](const auto &infos_map) {
+		for (const auto &[binding_index, ignored] : infos_map)
+		{
+			if (!(descriptor_set_layout.get_layout_binding_flag(binding_index) & vk::DescriptorBindingFlagBits::eUpdateAfterBind))
+			{
+				bindings_to_update.insert(binding_index);
+			}
+		}
+	};
+	aggregate_binding_to_update(buffer_infos);
+	aggregate_binding_to_update(image_infos);
+
+	return {bindings_to_update.begin(), bindings_to_update.end()};
+}
 }        // namespace xihe::rendering

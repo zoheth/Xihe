@@ -3,6 +3,7 @@
 #include "descriptor_pool.h"
 #include "descriptor_set_layout.h"
 #include "device.h"
+#include "resources_management/resource_caching.h"
 
 namespace xihe::backend
 {
@@ -15,6 +16,72 @@ DescriptorSet::DescriptorSet(Device &device, const DescriptorSetLayout &descript
     handle_{descriptor_pool.allocate()}
 {
 	prepare();
+}
+
+void DescriptorSet::update(const std::vector<uint32_t> &bindings_to_update)
+{
+	std::vector<vk::WriteDescriptorSet> write_operations;
+	std::vector<size_t>               write_operation_hashes;
+
+	// If the 'bindings_to_update' vector is empty, we want to write to all the bindings
+	// (but skipping all to-update bindings that haven't been written yet)
+	if (bindings_to_update.empty())
+	{
+		for (size_t i = 0; i < write_descriptor_sets_.size(); i++)
+		{
+			const auto &write_operation = write_descriptor_sets_[i];
+
+			size_t write_operation_hash = 0;
+			hash_param(write_operation_hash, write_operation);
+
+			auto update_pair_it = updated_bindings_.find(write_operation.dstBinding);
+			if (update_pair_it == updated_bindings_.end() || update_pair_it->second != write_operation_hash)
+			{
+				write_operations.push_back(write_operation);
+				write_operation_hashes.push_back(write_operation_hash);
+			}
+		}
+	}
+	else
+	{
+		// Otherwise we want to update the binding indices present in the 'bindings_to_update' vector.
+		// (again, skipping those to update but not updated yet)
+		for (size_t i = 0; i < write_descriptor_sets_.size(); i++)
+		{
+			const auto &write_operation = write_descriptor_sets_[i];
+
+			if (std::ranges::find(bindings_to_update, write_operation.dstBinding) != bindings_to_update.end())
+			{
+				size_t write_operation_hash = 0;
+				hash_param(write_operation_hash, write_operation);
+
+				auto update_pair_it = updated_bindings_.find(write_operation.dstBinding);
+				if (update_pair_it == updated_bindings_.end() || update_pair_it->second != write_operation_hash)
+				{
+					write_operations.push_back(write_operation);
+					write_operation_hashes.push_back(write_operation_hash);
+				}
+			}
+		}
+	}
+
+	// Perform the Vulkan call to update the DescriptorSet by executing the write operations
+	if (!write_operations.empty())
+	{
+		device_.get_handle().updateDescriptorSets(write_operations, {});
+	}
+
+	// Store the bindings from the write operations that were executed by vkUpdateDescriptorSets (and their hash)
+	// to prevent overwriting by future calls to "update()"
+	for (size_t i = 0; i < write_operations.size(); i++)
+	{
+		updated_bindings_[write_operations[i].dstBinding] = write_operation_hashes[i];
+	}
+}
+
+void DescriptorSet::apply_writes() const
+{
+	device_.get_handle().updateDescriptorSets(write_descriptor_sets_, {});
 }
 
 const DescriptorSetLayout &DescriptorSet::get_layout() const
