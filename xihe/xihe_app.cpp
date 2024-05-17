@@ -167,7 +167,7 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 	auto &views = render_target.get_views();
 
 	{
-		ImageMemoryBarrier memory_barrier{};
+		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
 		memory_barrier.dst_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
 		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
@@ -185,7 +185,7 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 	}
 
 	{
-		ImageMemoryBarrier memory_barrier{};
+		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.new_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 		memory_barrier.dst_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
@@ -194,10 +194,6 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		command_buffer.image_memory_barrier(views[1], memory_barrier);
 		render_target.set_layout(1, memory_barrier.new_layout);
 	}
-
-	set_viewport_and_scissor(command_buffer, render_target.get_extent());
-
-	command_buffer.begin_render_pass(render_target, vk::SubpassContents::eInline);
 	// todo
 
 
@@ -207,7 +203,7 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 	command_buffer.get_handle().endRenderPass();
 
 	{
-		ImageMemoryBarrier memory_barrier{};
+		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
 		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
 		memory_barrier.src_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;

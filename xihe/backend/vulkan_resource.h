@@ -72,6 +72,15 @@ class VulkanResource
 		return *device_;
 	}
 
+	bool               has_device() const
+	{
+		return device_ != nullptr;
+	}
+	bool               has_handle() const
+	{
+		return handle_ != nullptr;
+	}
+
 	uint64_t get_handle_u64() const
 	{
 		// See https://github.com/KhronosGroup/Vulkan-Docs/issues/368 .

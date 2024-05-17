@@ -10,6 +10,7 @@
 #include "platform/window.h"
 #include "platform/application.h"
 #include "rendering/render_context.h"
+#include "rendering/render_pipeline.h"
 
 namespace xihe
 {
@@ -60,6 +61,8 @@ class XiheApp : public Application
 	std::unique_ptr<backend::Device> device_;
 
 	std::unique_ptr<rendering::RenderContext> render_context_;
+
+	std::unique_ptr<rendering::RenderPipeline> render_pipeline_;
 
 	std::string name_{};
 

@@ -13,7 +13,7 @@ using ShaderStageMap = std::map<VkShaderStageFlagBits, T>;
 template <class T>
 using BindingMap = std::map<uint32_t, std::map<uint32_t, T>>;
 
-namespace xihe
+namespace xihe::common
 {
 
 struct BufferMemoryBarrier

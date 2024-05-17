@@ -6,6 +6,7 @@
 #include "image.h"
 #include "render_pass.h"
 #include "rendering/pipeline_state.h"
+#include "rendering/subpass.h"
 #include "resources_management/resource_binding_state.h"
 #include "vulkan_resource.h"
 
@@ -44,10 +45,10 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_info);
 
-	void begin_render_pass(const rendering::RenderTarget                          &render_target,
-	                       const std::vector<LoadStoreInfo>               &load_store_infos,
+	void begin_render_pass(const rendering::RenderTarget                          &        render_target,
+	                       const std::vector<common::LoadStoreInfo>               &        load_store_infos,
 	                       const std::vector<vk::ClearValue>                              &clear_values,
-	                       const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses,
+	                       const std::vector<std::unique_ptr<rendering::Subpass>> &        subpasses,
 	                       vk::SubpassContents                                             contents = vk::SubpassContents::eInline);
 
 	void begin_render_pass(const rendering::RenderTarget &render_target,
@@ -55,6 +56,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	                       const Framebuffer       &framebuffer,
 	                       const std::vector<vk::ClearValue>     &clear_values,
 	                       vk::SubpassContents                    contents = vk::SubpassContents::eInline);
+
+	void next_subpass();
 
 	vk::Result end();
 
@@ -64,7 +67,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	                         const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers,
 	                         const std::vector<vk::DeviceSize>                                &offsets);
 
-	void image_memory_barrier(const backend::ImageView &image_view, const ImageMemoryBarrier &memory_barrier);
+	void image_memory_barrier(const backend::ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier);
 
 	/**
 	 * @brief Reset the command buffer to a state where it can be recorded to
@@ -99,6 +102,13 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	void set_depth_bounds(float min_depth_bounds, float max_depth_bounds);
 
 	void bind_pipeline_layout(PipelineLayout &pipeline_layout);
+
+	RenderPass &get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses);
+
+	/**
+	 * @brief Check that the render area is an optimal size by comparing to the render area granularity
+	 */
+	bool is_render_size_optimal(const vk::Extent2D &extent, const vk::Rect2D &render_area) const;
 
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);

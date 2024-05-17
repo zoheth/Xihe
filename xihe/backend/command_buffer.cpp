@@ -64,6 +64,68 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend
 	return vk::Result::eSuccess;
 }
 
+void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<vk::ClearValue> &clear_values, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses, vk::SubpassContents contents)
+{
+	pipeline_state_.reset();
+	resource_binding_state_.reset();
+	descriptor_set_layout_binding_state_.clear();
+
+	auto &render_pass = get_render_pass(render_target, load_store_infos, subpasses);
+	auto &framebuffer = get_device().get_resource_cache().request_framebuffer(render_target, render_pass);
+
+	begin_render_pass(render_target, render_pass, framebuffer, clear_values, contents);
+}
+
+void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const RenderPass &render_pass, const Framebuffer &framebuffer, const std::vector<vk::ClearValue> &clear_values, vk::SubpassContents contents)
+{
+	current_render_pass_ = {&render_pass, &framebuffer};
+
+	vk::RenderPassBeginInfo begin_info(
+	    current_render_pass_.render_pass->get_handle(), current_render_pass_.framebuffer->get_handle(), {{}, render_target.get_extent()}, clear_values);
+
+	const auto &framebuffer_extent = current_render_pass_.framebuffer->get_extent();
+
+	// Test the requested render area to confirm that it is optimal and could not cause a performance reduction
+	if (!is_render_size_optimal(framebuffer_extent, begin_info.renderArea))
+	{
+		// Only prints the warning if the framebuffer or render area are different since the last time the render size was not optimal
+		if ((framebuffer_extent != last_framebuffer_extent_) || (begin_info.renderArea.extent != last_render_area_extent_))
+		{
+			LOGW("Render target extent is not an optimal size, this may result in reduced performance.");
+		}
+
+		last_framebuffer_extent_ = framebuffer_extent;
+		last_render_area_extent_ = begin_info.renderArea.extent;
+	}
+
+	get_handle().beginRenderPass(begin_info, contents);
+
+	// Update blend state attachments for first subpass
+	auto blend_state = pipeline_state_.get_color_blend_state();
+	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(pipeline_state_.get_subpass_index()));
+	pipeline_state_.set_color_blend_state(blend_state);
+}
+
+void CommandBuffer::next_subpass()
+{
+	// Increment subpass index
+	pipeline_state_.set_subpass_index(pipeline_state_.get_subpass_index() + 1);
+
+	// Update blend state attachments
+	auto blend_state = pipeline_state_.get_color_blend_state();
+	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(pipeline_state_.get_subpass_index()));
+	pipeline_state_.set_color_blend_state(blend_state);
+
+	// Reset descriptor sets
+	resource_binding_state_.reset();
+	descriptor_set_layout_binding_state_.clear();
+
+	// Clear stored push constants
+	stored_push_constants_.clear();
+
+	get_handle().nextSubpass(vk::SubpassContents::eInline);
+}
+
 vk::Result CommandBuffer::end()
 {
 	get_handle().end();
@@ -86,17 +148,17 @@ void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vecto
 	get_handle().bindVertexBuffers(first_binding, buffer_handles, offsets);
 }
 
-void CommandBuffer::image_memory_barrier(const ImageView &image_view, const ImageMemoryBarrier &memory_barrier)
+void CommandBuffer::image_memory_barrier(const ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier)
 {
 	auto subresource_range = image_view.get_subresource_range();
 	auto format            = image_view.get_format();
 
 	// Adjust the aspect mask if the format is a depth format
-	if (is_depth_only_format(format))
+	if (common::is_depth_only_format(format))
 	{
 		subresource_range.aspectMask = vk::ImageAspectFlagBits::eDepth;
 	}
-	else if (is_depth_stencil_format(format))
+	else if (common::is_depth_stencil_format(format))
 	{
 		subresource_range.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
 	}
@@ -196,6 +258,38 @@ void CommandBuffer::set_depth_bounds(float min_depth_bounds, float max_depth_bou
 void CommandBuffer::bind_pipeline_layout(PipelineLayout &pipeline_layout)
 {
 	pipeline_state_.set_pipeline_layout(pipeline_layout);
+}
+
+RenderPass & CommandBuffer::get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses)
+{
+	assert(!subpasses.empty() && "Cannot create a render pass without any subpass");
+
+	std::vector<SubpassInfo> subpass_infos(subpasses.size());
+	auto subpass_info_it = subpass_infos.begin();
+
+	for (auto &subpass :subpasses)
+	{
+		subpass_info_it->input_attachments                = subpass->get_input_attachments();
+		subpass_info_it->output_attachments               = subpass->get_output_attachments();
+		subpass_info_it->color_resolve_attachments        = subpass->get_color_resolve_attachments();
+		subpass_info_it->disable_depth_stencil_attachment = subpass->get_disable_depth_stencil_attachment();
+		subpass_info_it->depth_stencil_resolve_mode       = subpass->get_depth_stencil_resolve_mode();
+		subpass_info_it->depth_stencil_resolve_attachment = subpass->get_depth_stencil_resolve_attachment();
+		subpass_info_it->debug_name                       = subpass->get_debug_name();
+
+		++subpass_info_it;
+	}
+
+	return get_device().get_resource_cache().request_render_pass(render_target.get_attachments(), load_store_infos, subpass_infos);
+}
+
+bool CommandBuffer::is_render_size_optimal(const vk::Extent2D &extent, const vk::Rect2D &render_area) const
+{
+	auto render_area_granularity = current_render_pass_.render_pass->get_render_area_granularity();
+
+	return ((render_area.offset.x % render_area_granularity.width == 0) && (render_area.offset.y % render_area_granularity.height == 0) &&
+	        ((render_area.extent.width % render_area_granularity.width == 0) || (render_area.offset.x + render_area.extent.width == extent.width)) &&
+	        ((render_area.extent.height % render_area_granularity.height == 0) || (render_area.offset.y + render_area.extent.height == extent.height)));
 }
 
 void CommandBuffer::flush(vk::PipelineBindPoint pipeline_bind_point)
@@ -300,11 +394,11 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 						auto &image_view = resource_info.image_view;
 
 						// Get buffer info
-						if (buffer != nullptr && is_buffer_descriptor_type(binding_info->descriptorType))
+						if (buffer != nullptr && common::is_buffer_descriptor_type(binding_info->descriptorType))
 						{
 							vk::DescriptorBufferInfo buffer_info(resource_info.buffer->get_handle(), resource_info.offset, resource_info.range);
 
-							if (is_dynamic_buffer_descriptor_type(binding_info->descriptorType))
+							if (common::is_dynamic_buffer_descriptor_type(binding_info->descriptorType))
 							{
 								dynamic_offsets.push_back(to_u32(buffer_info.offset));
 								buffer_info.offset = 0;
@@ -329,7 +423,7 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 										break;
 									case vk::DescriptorType::eInputAttachment:
 										image_info.imageLayout =
-										    is_depth_format(image_view->get_format()) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
+											common::is_depth_format(image_view->get_format()) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
 										break;
 									case vk::DescriptorType::eStorageImage:
 										image_info.imageLayout = vk::ImageLayout::eGeneral;
