@@ -412,9 +412,10 @@ struct hash<xihe::rendering::RenderTarget>
 
 		for (auto const &view : render_target.get_views())
 		{
-			hash_combine(result, view);
+			hash_combine(result, view.get_handle());
+			hash_combine(result, view.get_image().get_handle());
 		}
-		for (auto const &attachment : render_target.get_attachments())
+		/*for (auto const &attachment : render_target.get_attachments())
 		{
 			hash_combine(result, attachment);
 		}
@@ -425,7 +426,7 @@ struct hash<xihe::rendering::RenderTarget>
 		for (auto const &output : render_target.get_output_attachments())
 		{
 			hash_combine(result, output);
-		}
+		}*/
 		return result;
 	}
 };

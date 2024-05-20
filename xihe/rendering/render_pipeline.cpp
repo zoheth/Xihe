@@ -8,7 +8,7 @@ RenderPipeline::RenderPipeline(std::vector<std::unique_ptr<Subpass>> &&subpasses
 	prepare();
 
 	// Default clear value
-	clear_value_[0].color        = {0.2f, 0.2f, 0.2f, 1.0f};
+	clear_value_[0].color        = {0.1f, 0.1f, 0.1f, 1.0f};
 	clear_value_[1].depthStencil = vk::ClearDepthStencilValue{0.0f, ~0U};
 }
 

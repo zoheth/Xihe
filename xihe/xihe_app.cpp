@@ -194,6 +194,8 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		render_target.set_layout(1, memory_barrier.new_layout);
 	}
 
+	set_viewport_and_scissor(command_buffer, render_target.get_extent());
+
 	if (render_pipeline_)
 	{
 		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
