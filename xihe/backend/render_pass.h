@@ -50,9 +50,9 @@ class RenderPass : public VulkanResource<vk::RenderPass>
 	void create_renderpass(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses);
 
   private:
-	size_t subpass_count_;
+	size_t subpass_count_{};
 
-	std::vector<uint32_t> color_output_count_;
+	std::vector<uint32_t> color_output_count_{};
 };
 }        // namespace backend
 }        // namespace xihe

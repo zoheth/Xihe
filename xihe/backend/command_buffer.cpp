@@ -3,6 +3,7 @@
 #include "backend/command_pool.h"
 #include "backend/device.h"
 #include "rendering/render_frame.h"
+#include "rendering/subpass.h"
 #include "vulkan/vulkan_format_traits.hpp"
 
 namespace xihe::backend

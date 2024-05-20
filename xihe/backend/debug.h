@@ -81,9 +81,6 @@ class DummyDebugUtils final : public backend::DebugUtils
 	void set_debug_name(vk::Device device, vk::ObjectType object_type, uint64_t object_handle, const char *name) const override
 	{}
 
-	inline void set_debug_name(vk::Device, vk::ObjectType, uint64_t, const char *) const override
-	{}
-
 	inline void set_debug_tag(vk::Device, vk::ObjectType, uint64_t,
 	                          uint64_t, const void *, size_t) const override
 	{}

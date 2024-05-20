@@ -119,6 +119,11 @@ RenderFrame &RenderContext::get_active_frame() const
 	return *frames_[active_frame_index_];
 }
 
+backend::Device & RenderContext::get_device() const
+{
+	return device_;
+}
+
 void RenderContext::submit(backend::CommandBuffer &command_buffer)
 {
 	submit({&command_buffer});

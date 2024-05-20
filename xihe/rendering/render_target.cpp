@@ -7,7 +7,7 @@
 namespace xihe::rendering
 {
 const RenderTarget::CreateFunc RenderTarget::kDefaultCreateFunc = [](backend::Image &&swapchain_image) -> std::unique_ptr<RenderTarget> {
-	vk::Format depth_format = get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle());
+	vk::Format depth_format = common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle());
 
 	backend::Image depth_image{swapchain_image.get_device(), swapchain_image.get_extent(),
 	                           depth_format,

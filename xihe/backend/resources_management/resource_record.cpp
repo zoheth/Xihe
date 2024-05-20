@@ -67,7 +67,7 @@ size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *
 	return pipeline_layout_indices_.back();
 }
 
-size_t ResourceRecord::register_render_pass(const std::vector<rendering::Attachment> &attachments, const std::vector<LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
+size_t ResourceRecord::register_render_pass(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
 {
 	render_pass_indices_.push_back(render_pass_indices_.size());
 

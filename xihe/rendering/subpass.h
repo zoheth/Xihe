@@ -1,6 +1,7 @@
 #pragma once
-#include "render_context.h"
 #include "backend/buffer_pool.h"
+#include "backend/shader_module.h"
+#include "rendering/render_context.h"
 
 namespace xihe
 {
@@ -30,7 +31,7 @@ namespace rendering
 	class Subpass
 	{
 	public:
-	    Subpass(RenderContext &render_context, backend::ShaderSource &vertex_shader, backend::ShaderSource &fragment_shader);
+	    Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
 
 		Subpass(const Subpass &) = delete;
 

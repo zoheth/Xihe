@@ -52,9 +52,9 @@ struct hash<std::vector<T>>
 };
 
 template <>
-struct hash<xihe::LoadStoreInfo>
+struct hash<xihe::common::LoadStoreInfo>
 {
-	size_t operator()(const xihe::LoadStoreInfo &info) const noexcept
+	size_t operator()(const xihe::common::LoadStoreInfo &info) const noexcept
 	{
 		size_t result = 0;
 		hash_combine(result, info.load_op);
@@ -468,9 +468,9 @@ inline void hash_param<std::vector<xihe::rendering::Attachment>>(
 }
 
 template <>
-inline void hash_param<std::vector<LoadStoreInfo>>(
-    size_t                           &seed,
-    const std::vector<LoadStoreInfo> &value)
+inline void hash_param<std::vector<common::LoadStoreInfo>>(
+    size_t                           &        seed,
+    const std::vector<common::LoadStoreInfo> &value)
 {
 	for (auto &load_store_info : value)
 	{

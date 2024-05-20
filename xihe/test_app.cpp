@@ -1,17 +1,18 @@
 #include "test_app.h"
 
 #include "backend/shader_module.h"
+#include "rendering/subpass.h"
 
-bool xihe::TestApp::prepare(Window *window)
+
+xihe::TestSubpass::TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader):
+	rendering::Subpass{render_context, (std::move(vertex_shader)), (std::move(fragment_shader))}
+{}
+
+void xihe::TestSubpass::prepare()
 {
-	if (!XiheApp::prepare(window))
-	{
-		return false;
-	}
+	auto &resource_cache = render_context_.get_device().get_resource_cache();
 
-	auto &resource_cache = get_device()->get_resource_cache();
-
-	vertex_shader_ = std::make_unique< backend::ShaderSource>("tests/test.vert");
+	vertex_shader_   = std::make_unique<backend::ShaderSource>("tests/test.vert");
 	fragment_shader_ = std::make_unique<backend::ShaderSource>("tests/test.frag");
 
 	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, *vertex_shader_);
@@ -26,30 +27,23 @@ bool xihe::TestApp::prepare(Window *window)
 	    .with_usage(vk::BufferUsageFlagBits::eVertexBuffer)
 	    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-	vertex_buffer_ = buffer_builder.build_unique(*get_device());
+	vertex_buffer_ = buffer_builder.build_unique(render_context_.get_device());
 
 	std::vector<Vertex> vertices = {
-		    {{0.0f, -0.5f, 0.0f}},
-		    {{0.5f, 0.5f, 0.0f}},
-		    {{-0.5f, 0.5f, 0.0f}},
-		};
+	    {{0.0f, -0.5f, 0.0f}},
+	    {{0.5f, 0.5f, 0.0f}},
+	    {{-0.5f, 0.5f, 0.0f}},
+	};
 
 	vertex_buffer_->update(vertices.data(), vertices.size() * sizeof(Vertex));
-
-	return true;
 }
 
-void xihe::TestApp::update(float delta_time)
+void xihe::TestSubpass::draw(backend::CommandBuffer &command_buffer)
 {
-	XiheApp::update(delta_time);
-}
+	auto &resource_cache = command_buffer.get_device().get_resource_cache();
 
-void xihe::TestApp::render(backend::CommandBuffer& command_buffer)
-{
-	auto& resource_cache = command_buffer.get_device().get_resource_cache();
-
-	auto& vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, *vertex_shader_);
-	auto& frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, *fragment_shader_);
+	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, *vertex_shader_);
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, *fragment_shader_);
 
 	std::vector<backend::ShaderModule *> shader_modules{&vert_shader_module, &frag_shader_module};
 
@@ -64,9 +58,26 @@ void xihe::TestApp::render(backend::CommandBuffer& command_buffer)
 
 	std::vector<std::reference_wrapper<const backend::Buffer>> buffers;
 	buffers.emplace_back(std::ref(*vertex_buffer_));
-	command_buffer.bind_vertex_buffers(0, buffers, { 0 });
+	command_buffer.bind_vertex_buffers(0, buffers, {0});
 
 	command_buffer.draw(3, 1, 0, 0);
+}
+
+bool xihe::TestApp::prepare(Window *window)
+{
+	if (!XiheApp::prepare(window))
+	{
+		return false;
+	}
+	auto vertex_shader   = backend::ShaderSource{"tests/test.vert"};
+	auto fragment_shader = backend::ShaderSource{"tests/test.frag"};
+
+	auto test_subpass = std::make_unique<TestSubpass>(*render_context_, std::move(vertex_shader), std::move(fragment_shader));
+
+	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
+	subpasses.push_back(std::move(test_subpass));
+	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
+
 }
 
 std::unique_ptr<xihe::Application> create_application()

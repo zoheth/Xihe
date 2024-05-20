@@ -25,8 +25,6 @@ class XiheApp : public Application
 
 	void update(float delta_time) override;
 
-	virtual void render(backend::CommandBuffer &command_buffer){}
-
 	const std::string &get_name() const;
 
 	std::unique_ptr<backend::Device> const       &get_device() const;

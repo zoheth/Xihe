@@ -42,6 +42,8 @@ class RenderContext
 
 	RenderFrame &get_active_frame() const;
 
+	backend::Device &get_device() const;
+
 	void submit(backend::CommandBuffer &command_buffer);
 
 	void submit(const std::vector<backend::CommandBuffer *> &command_buffers);

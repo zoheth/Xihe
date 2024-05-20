@@ -2,19 +2,19 @@
 
 #include "xihe_app.h"
 
+#include "rendering/subpass.h"
+
 namespace xihe
 {
 
-class TestApp : public XiheApp
+class TestSubpass : public rendering::Subpass
 {
   public:
+	TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
 
-	TestApp() = default;
-	~TestApp() = default;
+	void prepare() override;
 
-	bool prepare(Window *window) override;
-	void update(float delta_time) override;
-	void render(backend::CommandBuffer &command_buffer) override;
+	void draw(backend::CommandBuffer &command_buffer) override;
 
   private:
 	struct Vertex
@@ -31,5 +31,15 @@ class TestApp : public XiheApp
 
 	VertexInputState                 vertex_input_state_{};
 	std::unique_ptr<backend::Buffer> vertex_buffer_{nullptr};
+};
+
+class TestApp : public XiheApp
+{
+  public:
+	TestApp()  = default;
+	~TestApp() = default;
+
+	bool prepare(Window *window) override;
+
 };
 }        // namespace xihe

@@ -6,26 +6,27 @@ namespace xihe::backend
 {
 namespace
 {
-inline const vk::AttachmentReference2 *get_depth_resolve_reference(const vk::SubpassDescription2 &subpass_description)
+inline const vk::AttachmentReference *get_depth_resolve_reference(const vk::SubpassDescription &subpass_description)
 {
-	auto description_depth_resolve = static_cast<const vk::SubpassDescriptionDepthStencilResolve *>(subpass_description.pNext);
+	/*auto description_depth_resolve = static_cast<const vk::SubpassDescriptionDepthStencilResolve *>(subpass_description.pNext);
 
-	const vk::AttachmentReference2 *depth_resolve_attachment = nullptr;
+	const vk::AttachmentReference *depth_resolve_attachment = nullptr;
 	if (description_depth_resolve)
 	{
 		depth_resolve_attachment = description_depth_resolve->pDepthStencilResolveAttachment;
 	}
 
-	return depth_resolve_attachment;
+	return depth_resolve_attachment;*/
+	return nullptr;
 }
 
-std::vector<vk::AttachmentDescription2> get_attachment_descriptions(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos)
+std::vector<vk::AttachmentDescription> get_attachment_descriptions(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos)
 {
-	std::vector<vk::AttachmentDescription2> attachment_descriptions;
+	std::vector<vk::AttachmentDescription> attachment_descriptions;
 
 	for (size_t i = 0U; i < attachments.size(); ++i)
 	{
-		vk::AttachmentDescription2 attachment{};
+		vk::AttachmentDescription attachment{};
 
 		attachment.format        = attachments[i].format;
 		attachment.samples       = attachments[i].samples;
@@ -47,9 +48,9 @@ std::vector<vk::AttachmentDescription2> get_attachment_descriptions(const std::v
 	return attachment_descriptions;
 }
 
-std::vector<vk::SubpassDependency2> get_subpass_dependencies(const size_t subpass_count)
+std::vector<vk::SubpassDependency> get_subpass_dependencies(const size_t subpass_count)
 {
-	std::vector<vk::SubpassDependency2> dependencies(subpass_count - 1);
+	std::vector<vk::SubpassDependency> dependencies(subpass_count - 1);
 
 	if (subpass_count > 1)
 	{
@@ -69,7 +70,7 @@ std::vector<vk::SubpassDependency2> get_subpass_dependencies(const size_t subpas
 	return dependencies;
 }
 
-void set_attachment_layouts(std::vector<vk::SubpassDescription2> &subpass_descriptions, std::vector<vk::AttachmentDescription2> &attachment_descriptions)
+void set_attachment_layouts(std::vector<vk::SubpassDescription> &subpass_descriptions, std::vector<vk::AttachmentDescription> &attachment_descriptions)
 {
 	// Make the initial layout same as in the first subpass using that attachment
 	for (auto &subpass : subpass_descriptions)
@@ -176,9 +177,11 @@ void set_attachment_layouts(std::vector<vk::SubpassDescription2> &subpass_descri
 }
 }        // namespace
 
-RenderPass::RenderPass(Device &device, const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
+RenderPass::RenderPass(Device &device, const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses):
+    VulkanResource{VK_NULL_HANDLE, &device},
+    subpass_count_{std::max<size_t>(1, subpasses.size())}
 {
-	assert(device.is_enabled(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME));
+	// assert(device.is_enabled(VK_KHR_CREATE_RENDERPASS_2_EXTENSION_NAME));
 	create_renderpass(attachments, load_store_infos, subpasses);
 }
 
@@ -214,11 +217,11 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 {
 	auto attachment_descriptions = get_attachment_descriptions(attachments, load_store_infos);
 
-	std::vector<std::vector<vk::AttachmentReference2>> input_attachments{subpass_count_};
-	std::vector<std::vector<vk::AttachmentReference2>> color_attachments{subpass_count_};
-	std::vector<std::vector<vk::AttachmentReference2>> depth_stencil_attachments{subpass_count_};
-	std::vector<std::vector<vk::AttachmentReference2>> color_resolve_attachments{subpass_count_};
-	std::vector<std::vector<vk::AttachmentReference2>> depth_resolve_attachments{subpass_count_};
+	std::vector<std::vector<vk::AttachmentReference>> input_attachments{subpass_count_};
+	std::vector<std::vector<vk::AttachmentReference>> color_attachments{subpass_count_};
+	std::vector<std::vector<vk::AttachmentReference>> depth_stencil_attachments{subpass_count_};
+	std::vector<std::vector<vk::AttachmentReference>> color_resolve_attachments{subpass_count_};
+	std::vector<std::vector<vk::AttachmentReference>> depth_resolve_attachments{subpass_count_};
 
 	std::string new_debug_name{};
 	const bool  needs_debug_name = get_debug_name().empty();
@@ -250,9 +253,9 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 		// Fill input attachments references
 		for (auto i_attachment : subpass.input_attachments)
 		{
-			auto default_layout = common::is_depth_format(attachment_descriptions[i_attachment].format) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			auto default_layout = common::is_depth_format(attachment_descriptions[i_attachment].format) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
 			auto initial_layout = attachments[i_attachment].initial_layout == vk::ImageLayout::eUndefined ? default_layout : attachments[i_attachment].initial_layout;
-			input_attachments[i].push_back(vk::AttachmentReference2(i_attachment, initial_layout));
+			input_attachments[i].emplace_back(i_attachment, initial_layout);
 		}
 
 		for (auto r_attachment : subpass.color_resolve_attachments)
@@ -281,14 +284,14 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 		}
 	}
 
-	std::vector<vk::SubpassDescription2> subpass_descriptions;
+	std::vector<vk::SubpassDescription> subpass_descriptions;
 	subpass_descriptions.reserve(subpass_count_);
 	vk::SubpassDescriptionDepthStencilResolve depth_resolve{};
 	for (size_t i = 0; i < subpasses.size(); ++i)
 	{
 		auto &subpass = subpasses[i];
 
-		vk::SubpassDescription2 subpass_description{};
+		vk::SubpassDescription subpass_description{};
 
 		subpass_description.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
@@ -307,12 +310,13 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 
 			if (!depth_resolve_attachments[i].empty())
 			{
-				// If the pNext list of VkSubpassDescription2 includes a VkSubpassDescriptionDepthStencilResolve structure,
+				// If the pNext list of VkSubpassDescription includes a VkSubpassDescriptionDepthStencilResolve structure,
 				// then that structure describes multisample resolve operations for the depth/stencil attachment in a subpass
 				depth_resolve.depthResolveMode = subpass.depth_stencil_resolve_mode;
 
-				depth_resolve.pDepthStencilResolveAttachment = depth_resolve_attachments[i].data();
-				subpass_description.pNext                    = &depth_resolve;
+				// VkSubpassDescription cannot have pNext point to a VkSubpassDescriptionDepthStencilResolveKHR containing a VkAttachmentReference
+				// depth_resolve.pDepthStencilResolveAttachment = depth_resolve_attachments[i].data();
+				// subpass_description.pNext                    = &depth_resolve;
 
 				auto &reference = depth_resolve_attachments[i][0];
 				// Set it only if not defined yet
@@ -329,7 +333,7 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 	// Default subpass
 	if (subpasses.empty())
 	{
-		vk::SubpassDescription2 subpass_description{};
+		vk::SubpassDescription subpass_description{};
 		subpass_description.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 		uint32_t default_depth_stencil_attachment{vk::AttachmentUnused};
 
@@ -369,7 +373,7 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 
 	const auto &subpass_dependencies = get_subpass_dependencies(subpass_count_);
 
-	vk::RenderPassCreateInfo2 create_info{};
+	vk::RenderPassCreateInfo create_info{};
 	create_info.attachmentCount = to_u32(attachment_descriptions.size());
 	create_info.pAttachments    = attachment_descriptions.data();
 	create_info.subpassCount    = to_u32(subpass_descriptions.size());
@@ -377,7 +381,7 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 	create_info.dependencyCount = to_u32(subpass_dependencies.size());
 	create_info.pDependencies   = subpass_dependencies.data();
 
-	auto result = get_device().get_handle().createRenderPass2(&create_info, nullptr, &get_handle());
+	auto result = get_device().get_handle().createRenderPass(&create_info, nullptr, &get_handle());
 
 	if (result != vk::Result::eSuccess)
 	{

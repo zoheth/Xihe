@@ -6,11 +6,17 @@
 #include "image.h"
 #include "render_pass.h"
 #include "rendering/pipeline_state.h"
-#include "rendering/subpass.h"
 #include "resources_management/resource_binding_state.h"
 #include "vulkan_resource.h"
 
-namespace xihe::backend
+namespace xihe
+{
+namespace rendering
+{
+class Subpass;
+}
+
+namespace backend
 {
 class CommandPool;
 class DescriptorSetLayout;
@@ -45,17 +51,17 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_info);
 
-	void begin_render_pass(const rendering::RenderTarget                          &        render_target,
-	                       const std::vector<common::LoadStoreInfo>               &        load_store_infos,
-	                       const std::vector<vk::ClearValue>                              &clear_values,
-	                       const std::vector<std::unique_ptr<rendering::Subpass>> &        subpasses,
-	                       vk::SubpassContents                                             contents = vk::SubpassContents::eInline);
+	void begin_render_pass(const rendering::RenderTarget                          &render_target,
+	                       const std::vector<common::LoadStoreInfo>               &load_store_infos,
+	                       const std::vector<vk::ClearValue>                      &clear_values,
+	                       const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses,
+	                       vk::SubpassContents                                     contents = vk::SubpassContents::eInline);
 
-	void begin_render_pass(const rendering::RenderTarget &render_target,
-	                       const RenderPass        &render_pass,
-	                       const Framebuffer       &framebuffer,
-	                       const std::vector<vk::ClearValue>     &clear_values,
-	                       vk::SubpassContents                    contents = vk::SubpassContents::eInline);
+	void begin_render_pass(const rendering::RenderTarget     &render_target,
+	                       const RenderPass                  &render_pass,
+	                       const Framebuffer                 &framebuffer,
+	                       const std::vector<vk::ClearValue> &clear_values,
+	                       vk::SubpassContents                contents = vk::SubpassContents::eInline);
 
 	void next_subpass();
 
@@ -133,4 +139,5 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	std::unordered_map<uint32_t, DescriptorSetLayout const *> descriptor_set_layout_binding_state_;
 };
-}        // namespace xihe::backend
+}        // namespace backend
+}        // namespace xihe

@@ -4,7 +4,7 @@
 
 namespace xihe::rendering
 {
-Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &vertex_shader, backend::ShaderSource &fragment_shader) :
+Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :
     render_context_{render_context},
     vertex_shader_{std::move(vertex_shader)},
     fragment_shader_{std::move(fragment_shader_)}

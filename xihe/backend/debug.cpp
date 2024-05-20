@@ -3,6 +3,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "backend/command_buffer.h"
+#include "backend/device.h"
 
 namespace xihe::backend
 {
