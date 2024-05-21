@@ -26,7 +26,7 @@ class Instance
 	Instance &operator=(const Instance &) = delete;
 	Instance &operator=(Instance &&)      = delete;
 
-	VkInstance get_handle() const;
+	vk::Instance get_handle() const;
 
 	PhysicalDevice &get_suitable_gpu(vk::SurfaceKHR) const;
 

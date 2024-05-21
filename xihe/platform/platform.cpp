@@ -150,6 +150,16 @@ void Platform::set_focus(const bool focused)
 	focused_ = focused;
 }
 
+void Platform::set_window_properties(const Window::OptionalProperties &properties)
+{
+	window_properties_.title         = properties.title.has_value() ? properties.title.value() : window_properties_.title;
+	window_properties_.mode          = properties.mode.has_value() ? properties.mode.value() : window_properties_.mode;
+	window_properties_.resizable     = properties.resizable.has_value() ? properties.resizable.value() : window_properties_.resizable;
+	window_properties_.vsync         = properties.vsync.has_value() ? properties.vsync.value() : window_properties_.vsync;
+	window_properties_.extent.width  = properties.extent.width.has_value() ? properties.extent.width.value() : window_properties_.extent.width;
+	window_properties_.extent.height = properties.extent.height.has_value() ? properties.extent.height.value() : window_properties_.extent.height;
+}
+
 const std::string & Platform::get_working_directory()
 {
 	return working_directory_;

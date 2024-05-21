@@ -259,11 +259,7 @@ Device::~Device()
 	command_pool_.reset();
 	fence_pool_.reset();
 
-	if (memory_allocator_ != nullptr)
-	{
-		vmaDestroyAllocator(memory_allocator_);
-		memory_allocator_ = nullptr;
-	}
+	allocated::shutdown();
 
 	if (get_handle())
 	{

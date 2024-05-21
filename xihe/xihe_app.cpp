@@ -14,7 +14,29 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 namespace xihe
 {
 XiheApp::~XiheApp()
-{}
+{
+
+	if (device_)
+	{
+		device_->get_handle().waitIdle();
+	}
+
+	// Todo Currently, vertex_buffer is temporarily in render_pipeline.
+	// Therefore, we need to release vertex_buffer first.
+	// Afterward, vertex_buffer will be moved to scene_graph.
+	render_pipeline_.reset();
+
+	render_context_.reset();
+
+	device_.reset();
+
+	if (surface_)
+	{
+		instance_->get_handle().destroySurfaceKHR(surface_);
+	}
+
+	instance_.reset();
+}
 
 bool XiheApp::prepare(Window *window)
 {
@@ -128,6 +150,15 @@ void XiheApp::update(float delta_time)
 	command_buffer.end();
 
 	render_context_->submit(command_buffer);
+}
+
+void XiheApp::finish()
+{
+	Application::finish();
+	if (device_)
+	{
+		device_->get_handle().waitIdle();
+	}
 }
 
 const std::string &XiheApp::get_name() const

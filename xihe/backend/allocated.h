@@ -106,15 +106,17 @@ VmaAllocator &get_memory_allocator();
 
 void shutdown();
 
-class AllocateBase
+class AllocatedBase
 {
   public:
-	AllocateBase() = default;
-	AllocateBase(const VmaAllocationCreateInfo &alloc_create_info);
-	AllocateBase(AllocateBase &&other) noexcept;
+	AllocatedBase() = default;
+	AllocatedBase(const VmaAllocationCreateInfo &alloc_create_info);
+	AllocatedBase(AllocatedBase &&other) noexcept;
 
-	AllocateBase &operator=(AllocateBase &&other)      = delete;
-	AllocateBase &operator=(const AllocateBase &other) = delete;
+	AllocatedBase &operator=(AllocatedBase &&other)      = delete;
+	AllocatedBase &operator=(const AllocatedBase &other) = delete;
+
+	virtual ~AllocatedBase();
 
 	const uint8_t   *get_data() const;
 	vk::DeviceMemory get_memory() const;
@@ -169,7 +171,7 @@ class AllocateBase
 
 template <typename HandleType,
           typename ParentType = VulkanResource<HandleType>>
-class Allocated : public ParentType, public AllocateBase
+class Allocated : public ParentType, public AllocatedBase
 {
   public:
 	using ParentType::ParentType;
@@ -177,16 +179,17 @@ class Allocated : public ParentType, public AllocateBase
 	Allocated()                  = delete;
 	Allocated(const Allocated &) = delete;
 
+
 	template <typename... Args>
 	Allocated(const VmaAllocationCreateInfo &alloc_create_info, Args &&...args) :
 	    backend::VulkanResource<HandleType>{std::forward<Args>(args)...},
-	    AllocateBase(alloc_create_info)
+	    AllocatedBase(alloc_create_info)
 	{
 	}
 
 	Allocated(Allocated &&other) noexcept :
 	    backend::VulkanResource<HandleType>{std::move(other)},
-	    AllocateBase(std::move(other))
+	    AllocatedBase(std::move(other))
 	{
 	}
 

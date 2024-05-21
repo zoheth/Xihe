@@ -58,8 +58,6 @@ class Device : public backend::VulkanResource<vk::Device>
 	// std::vector<vk::ExtensionProperties> device_extensions_;
 	std::vector<const char *>            enabled_extensions_;
 
-	VmaAllocator memory_allocator_{VK_NULL_HANDLE};
-
 	std::vector<std::vector<Queue>> queues_;
 
 	std::unique_ptr<DebugUtils> debug_utils_{nullptr};

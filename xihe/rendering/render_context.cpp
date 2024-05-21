@@ -232,7 +232,7 @@ void RenderContext::end_frame(vk::Semaphore semaphore)
 
 	if (acquired_semaphore_)
 	{
-		get_active_frame().release_owned_semaphore(semaphore);
+		get_active_frame().release_owned_semaphore(acquired_semaphore_);
 		acquired_semaphore_ = nullptr;
 	}
 	frame_active_ = false;

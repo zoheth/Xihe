@@ -146,6 +146,28 @@ DescriptorSetLayout::DescriptorSetLayout(Device &device, const uint32_t set_inde
 	}
 }
 
+DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout &&other) :
+    device_{other.device_},
+    shader_modules_{other.shader_modules_},
+    handle_{other.handle_},
+    set_index_{other.set_index_},
+    bindings_{std::move(other.bindings_)},
+    binding_flags_{std::move(other.binding_flags_)},
+    bindings_lookup_{std::move(other.bindings_lookup_)},
+    binding_flags_lookup_{std::move(other.binding_flags_lookup_)},
+    resources_lookup_{std::move(other.resources_lookup_)}
+{
+	other.handle_ = VK_NULL_HANDLE;
+}
+
+DescriptorSetLayout::~DescriptorSetLayout()
+{
+	if (handle_ != VK_NULL_HANDLE)
+	{
+		device_.get_handle().destroyDescriptorSetLayout(handle_);
+	}
+}
+
 vk::DescriptorSetLayout DescriptorSetLayout::get_handle() const
 {
 	return handle_;

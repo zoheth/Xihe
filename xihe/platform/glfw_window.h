@@ -21,6 +21,8 @@ class GlfwWindow : public Window
 
 	bool should_close() override;
 
+	void process_events() override;
+
   private:
 	GLFWwindow *handle_{nullptr};
 };

@@ -78,6 +78,8 @@ bool xihe::TestApp::prepare(Window *window)
 	subpasses.push_back(std::move(test_subpass));
 	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
 
+	return true;
+
 }
 
 std::unique_ptr<xihe::Application> create_application()

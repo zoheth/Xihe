@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <optional>
 
 #include "backend/instance.h"
 
@@ -16,6 +17,11 @@ class Window
 		uint32_t height;
 	};
 
+	struct OptionalExtent
+	{
+		std::optional<uint32_t> width;
+		std::optional<uint32_t> height;
+	};
 	enum class Mode
 	{
 		kHeadless,
@@ -30,6 +36,15 @@ class Window
 		OFF,
 		ON,
 		kDefault
+	};
+
+	struct OptionalProperties
+	{
+		std::optional<std::string> title;
+		std::optional<Mode>        mode;
+		std::optional<bool>        resizable;
+		std::optional<Vsync>       vsync;
+		OptionalExtent        extent;
 	};
 
 	struct Properties

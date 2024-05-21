@@ -121,6 +121,12 @@ class Image : public allocated::Allocated<vk::Image>
 	      uint32_t                num_queue_families = 0,
 	      const uint32_t         *queue_families     = nullptr);
 
+	Image(const Image &) = delete;
+
+	Image(Image &&other) noexcept;
+
+	~Image() override;
+
 	uint8_t *map();
 
 	vk::ImageType                    get_type() const;

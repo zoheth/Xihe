@@ -21,6 +21,9 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 	}
 
 	xihe::WindowsPlatform platform{};
+	xihe::Window::OptionalProperties properties{};
+	properties.title = "Xi He";
+	platform.set_window_properties(properties);
 
 	const auto code = platform.initialize();
 	platform.start_app("xihe", create_application);

@@ -19,6 +19,12 @@ class DescriptorSetLayout
 	                    const std::vector<ShaderModule *> &shader_modules,
 	                    const std::vector<ShaderResource> &resource_set);
 
+	DescriptorSetLayout(const DescriptorSetLayout &) = delete;
+
+	DescriptorSetLayout(DescriptorSetLayout &&other);
+
+	~DescriptorSetLayout();
+
 	vk::DescriptorSetLayout get_handle() const;
 
 	uint32_t get_index() const;

@@ -35,6 +35,8 @@ public:
 
 	void set_focus(bool focused);
 
+	void set_window_properties(const Window::OptionalProperties &properties);
+
 	/**
 	 * \brief Returns the working directory of the application set by the platform
 	 */

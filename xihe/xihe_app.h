@@ -25,6 +25,8 @@ class XiheApp : public Application
 
 	void update(float delta_time) override;
 
+	void finish() override;
+
 	const std::string &get_name() const;
 
 	std::unique_ptr<backend::Device> const       &get_device() const;

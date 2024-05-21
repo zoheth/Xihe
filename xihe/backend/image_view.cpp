@@ -32,6 +32,25 @@ ImageView::ImageView(Image &image, vk::ImageViewType view_type, vk::Format forma
 	image_->get_views().emplace(this);
 }
 
+ImageView::ImageView(ImageView &&other):
+    VulkanResource{std::move(other)},
+    image_{other.image_},
+    format_{other.format_},
+    subresource_range_{other.subresource_range_}
+{
+	auto &views = image_->get_views();
+	views.erase(&other);
+	views.emplace(this);
+}
+
+ImageView::~ImageView()
+{
+	if (has_device())
+	{
+		get_device().get_handle().destroyImageView(get_handle());
+	}
+}
+
 vk::Format ImageView::get_format() const
 {
 	return format_;

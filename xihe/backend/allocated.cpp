@@ -24,11 +24,11 @@ void shutdown()
 	}
 }
 
-AllocateBase::AllocateBase(const VmaAllocationCreateInfo &alloc_create_info) :
+AllocatedBase::AllocatedBase(const VmaAllocationCreateInfo &alloc_create_info) :
     alloc_create_info_(alloc_create_info)
 {}
 
-AllocateBase::AllocateBase(AllocateBase &&other) noexcept :
+AllocatedBase::AllocatedBase(AllocatedBase &&other) noexcept :
     alloc_create_info_(std::exchange(other.alloc_create_info_, {})),
     allocation_(std::exchange(other.allocation_, {})),
     mapped_data_(std::exchange(other.mapped_data_, {})),
@@ -36,19 +36,22 @@ AllocateBase::AllocateBase(AllocateBase &&other) noexcept :
     persistent_(std::exchange(other.persistent_, {}))
 {}
 
-const uint8_t *AllocateBase::get_data() const
+AllocatedBase::~AllocatedBase()
+{}
+
+const uint8_t *AllocatedBase::get_data() const
 {
 	return mapped_data_;
 }
 
-vk::DeviceMemory AllocateBase::get_memory() const
+vk::DeviceMemory AllocatedBase::get_memory() const
 {
 	VmaAllocationInfo alloc_info;
 	vmaGetAllocationInfo(get_memory_allocator(), allocation_, &alloc_info);
 	return alloc_info.deviceMemory;
 }
 
-void AllocateBase::flush(vk::DeviceSize offset, vk::DeviceSize size)
+void AllocatedBase::flush(vk::DeviceSize offset, vk::DeviceSize size)
 {
 	if (!coherent_)
 	{
@@ -56,12 +59,12 @@ void AllocateBase::flush(vk::DeviceSize offset, vk::DeviceSize size)
 	}
 }
 
-bool AllocateBase::mapped() const
+bool AllocatedBase::mapped() const
 {
 	return mapped_data_ != nullptr;
 }
 
-uint8_t *AllocateBase::map()
+uint8_t *AllocatedBase::map()
 {
 	if (!persistent_ && !mapped())
 	{
@@ -71,7 +74,7 @@ uint8_t *AllocateBase::map()
 	return mapped_data_;
 }
 
-void AllocateBase::unmap()
+void AllocatedBase::unmap()
 {
 	if (!persistent_ && mapped())
 	{
@@ -80,7 +83,7 @@ void AllocateBase::unmap()
 	}
 }
 
-size_t AllocateBase::update(const uint8_t *data, size_t size, size_t offset)
+size_t AllocatedBase::update(const uint8_t *data, size_t size, size_t offset)
 {
 	if (persistent_)
 	{
@@ -97,12 +100,12 @@ size_t AllocateBase::update(const uint8_t *data, size_t size, size_t offset)
 	return size;
 }
 
-size_t AllocateBase::update(const void *data, size_t size, size_t offset)
+size_t AllocatedBase::update(const void *data, size_t size, size_t offset)
 {
 	return update(reinterpret_cast<const uint8_t *>(data), size, offset);
 }
 
-void AllocateBase::post_create(VmaAllocationInfo const &allocation_info)
+void AllocatedBase::post_create(VmaAllocationInfo const &allocation_info)
 {
 	VkMemoryPropertyFlags memory_properties;
 	vmaGetAllocationMemoryProperties(get_memory_allocator(), allocation_, &memory_properties);
@@ -112,7 +115,7 @@ void AllocateBase::post_create(VmaAllocationInfo const &allocation_info)
 	persistent_  = mapped();
 }
 
-vk::Buffer AllocateBase::create_buffer(vk::BufferCreateInfo const &create_info)
+vk::Buffer AllocatedBase::create_buffer(vk::BufferCreateInfo const &create_info)
 {
 	VkBufferCreateInfo const &create_info_c = create_info.operator VkBufferCreateInfo const &();
 	VkBuffer                  buffer;
@@ -125,7 +128,7 @@ vk::Buffer AllocateBase::create_buffer(vk::BufferCreateInfo const &create_info)
 	return buffer;
 }
 
-vk::Image AllocateBase::create_image(vk::ImageCreateInfo const &create_info)
+vk::Image AllocatedBase::create_image(vk::ImageCreateInfo const &create_info)
 {
 	assert(0 < create_info.mipLevels && "Images should have at least one level");
 	assert(0 < create_info.arrayLayers && "Images should have at least one layer");
@@ -142,7 +145,7 @@ vk::Image AllocateBase::create_image(vk::ImageCreateInfo const &create_info)
 	return image;
 }
 
-void AllocateBase::destroy_buffer(vk::Buffer buffer)
+void AllocatedBase::destroy_buffer(vk::Buffer buffer)
 {
 	if (buffer != VK_NULL_HANDLE && allocation_ != VK_NULL_HANDLE)
 	{
@@ -152,7 +155,7 @@ void AllocateBase::destroy_buffer(vk::Buffer buffer)
 	}
 }
 
-void AllocateBase::destroy_image(vk::Image image)
+void AllocatedBase::destroy_image(vk::Image image)
 {
 	if (image != VK_NULL_HANDLE && allocation_ != VK_NULL_HANDLE)
 	{
@@ -162,7 +165,7 @@ void AllocateBase::destroy_image(vk::Image image)
 	}
 }
 
-void AllocateBase::clear()
+void AllocatedBase::clear()
 {
 	mapped_data_       = nullptr;
 	persistent_        = false;

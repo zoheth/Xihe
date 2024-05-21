@@ -303,7 +303,7 @@ Instance::~Instance()
 	}
 }
 
-VkInstance Instance::get_handle() const
+vk::Instance Instance::get_handle() const
 {
 	return handle_;
 }

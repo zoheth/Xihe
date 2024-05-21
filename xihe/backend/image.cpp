@@ -88,6 +88,24 @@ Image::Image(Device                 &device,
 {
 }
 
+Image::Image(Image &&other) noexcept:
+    Allocated{std::move(other)},
+    create_info_{std::exchange(other.create_info_, {})},
+    subresource_{std::exchange(other.subresource_, {})},
+    views_(std::exchange(other.views_, {}))
+{
+	// Update image views references to this image to avoid dangling pointers
+	for (auto &view : views_)
+	{
+		view->set_image(*this);
+	}
+}
+
+Image::~Image()
+{
+	destroy_image(get_handle());
+}
+
 uint8_t *Image::map()
 {
 	if (create_info_.tiling != vk::ImageTiling::eLinear)

@@ -27,17 +27,22 @@ vk::Semaphore SemaphorePool::request_semaphore()
 	{
 		return semaphores_[active_semaphore_count_++];
 	}
+
+	vk::Semaphore           semaphore;
 	vk::SemaphoreCreateInfo create_info{};
-	vk::Result              result = device_.get_handle().createSemaphore(&create_info, nullptr, &semaphores_.emplace_back());
+
+	vk::Result result = device_.get_handle().createSemaphore(&create_info, nullptr, &semaphore);
 
 	if (result != vk::Result::eSuccess)
 	{
 		throw std::runtime_error{"Failed to create semaphore"};
 	}
 
+	semaphores_.push_back(semaphore);
+
 	active_semaphore_count_++;
 
-	return semaphores_.back();
+	return semaphore;
 }
 
 vk::Semaphore SemaphorePool::request_semaphore_with_ownership()

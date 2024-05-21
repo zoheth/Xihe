@@ -6,8 +6,8 @@
 #include <spdlog/spdlog.h>
 
 #include "common/logging.h"
-#include "platform/platform.h"
 #include "platform/input_events.h"
+#include "platform/platform.h"
 
 namespace xihe
 {
@@ -244,8 +244,8 @@ void mouse_button_callback(GLFWwindow *window, int button, int action, int /*mod
 
 }        // namespace
 
-GlfwWindow::GlfwWindow(Platform *platform, const Window::Properties &properties)
-	: Window(properties)
+GlfwWindow::GlfwWindow(Platform *platform, const Window::Properties &properties) :
+    Window(properties)
 {
 	if (!glfwInit())
 	{
@@ -261,7 +261,7 @@ GlfwWindow::GlfwWindow(Platform *platform, const Window::Properties &properties)
 		{
 			auto       *monitor = glfwGetPrimaryMonitor();
 			const auto *mode    = glfwGetVideoMode(monitor);
-			handle_              = glfwCreateWindow(mode->width, mode->height, properties.title.c_str(), monitor, nullptr);
+			handle_             = glfwCreateWindow(mode->width, mode->height, properties.title.c_str(), monitor, nullptr);
 			break;
 		}
 
@@ -341,5 +341,10 @@ std::vector<const char *> GlfwWindow::get_required_surface_extensions() const
 bool GlfwWindow::should_close()
 {
 	return glfwWindowShouldClose(handle_);
+}
+
+void GlfwWindow::process_events()
+{
+	glfwPollEvents();
 }
 }        // namespace xihe
