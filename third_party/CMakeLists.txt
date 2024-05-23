@@ -55,6 +55,12 @@ target_sources(vma INTERFACE ${VMA_DIR}/vk_mem_alloc.h)
 target_include_directories(vma SYSTEM INTERFACE ${VMA_DIR})
 target_link_libraries(vma INTERFACE vulkan)
 
+# tinygltf
+add_library(tinygltf INTERFACE)
+set(TINYGLTF_DIR ${CMAKE_CURRENT_SOURCE_DIR}/tinygltf)
+target_sources(tinygltf INTERFACE ${TINYGLTF_DIR}/tiny_gltf.h ${TINYGLTF_DIR}/json.hpp)
+target_include_directories(tinygltf SYSTEM INTERFACE ${TINYGLTF_DIR})
+
 # fmt
 add_subdirectory(fmt)
 set_property(TARGET fmt PROPERTY FOLDER "ThirdParty")

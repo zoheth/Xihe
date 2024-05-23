@@ -11,6 +11,7 @@
 #include "platform/application.h"
 #include "rendering/render_context.h"
 #include "rendering/render_pipeline.h"
+#include "scene_graph/scene.h"
 
 namespace xihe
 {
@@ -63,6 +64,8 @@ class XiheApp : public Application
 	std::unique_ptr<rendering::RenderContext> render_context_;
 
 	std::unique_ptr<rendering::RenderPipeline> render_pipeline_;
+
+	std::unique_ptr<sg::Scene> scene_;
 
 	std::string name_{};
 
