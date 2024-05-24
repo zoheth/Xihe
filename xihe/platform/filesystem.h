@@ -1,9 +1,12 @@
 #pragma once
 #include <string>
+#include <filesystem>
 #include <unordered_map>
 
 namespace xihe::fs
 {
+using Path = std::filesystem::path;
+
 namespace path
 {
 
@@ -24,18 +27,19 @@ enum Type
 	kTemp
 };
 
-extern const std::unordered_map<Type, std::string> kRelativePaths;
+extern const std::unordered_map<Type, Path> kRelativePaths;
 
-const std::string get(Type type, const std::string &file = "");
+Path get(Type type, const Path &file = "");
 
 }        // namespace path
 
+std::string read_text_file(const Path &path);
 
-bool is_directory(const std::string &path);
+std::vector<uint8_t> read_binary_file(const Path &path);
 
-void create_path(const std::string &root, const std::string &path);
+std::string read_shader(const Path &path);
 
-std::string read_text_file(const std::string &filename);
+std::vector<uint8_t> read_asset(const Path &path);
 
-std::string read_shader(const std::string &filename);
+std::string get_extension(const Path &path);
 }        // namespace xihe::fs

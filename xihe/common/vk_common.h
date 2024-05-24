@@ -98,4 +98,9 @@ inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physi
 
 	return depth_format;
 }
+
+void image_layout_transition(vk::CommandBuffer                command_buffer,
+                             vk::Image                        image,
+                             common::ImageMemoryBarrier const &image_memory_barrier,
+                             vk::ImageSubresourceRange const &subresource_range);
 }        // namespace xihe

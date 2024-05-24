@@ -50,6 +50,8 @@ class Device : public backend::VulkanResource<vk::Device>
 
 	ResourceCache &get_resource_cache();
 
+	CommandBuffer &request_command_buffer() const;
+
   private:
 	PhysicalDevice const &gpu_;
 	vk::SurfaceKHR        surface_{nullptr};

@@ -139,17 +139,75 @@ void CommandBuffer::draw(uint32_t vertex_count, uint32_t instance_count, uint32_
 	get_handle().draw(vertex_count, instance_count, first_vertex, first_instance);
 }
 
-void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers, const std::vector<vk::DeviceSize> &offsets)
+void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
 {
-	std::vector<vk::Buffer> buffer_handles(buffers.size(), nullptr);
+	flush(vk::PipelineBindPoint::eGraphics);
 
-	std::ranges::transform(buffers, buffer_handles.begin(), [](const backend::Buffer &buffer) 
-		{ return buffer.get_handle(); });
-
-	get_handle().bindVertexBuffers(first_binding, buffer_handles, offsets);
+	get_handle().drawIndexed(index_count, instance_count, first_index, vertex_offset, first_instance);
 }
 
-void CommandBuffer::image_memory_barrier(const ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier)
+void CommandBuffer::draw_indexed_indirect(const backend::Buffer &buffer, vk::DeviceSize offset, uint32_t draw_count, uint32_t stride)
+{
+	flush(vk::PipelineBindPoint::eGraphics);
+
+	get_handle().drawIndexedIndirect(buffer.get_handle(), offset, draw_count, stride);
+}
+
+void CommandBuffer::dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
+{
+	flush(vk::PipelineBindPoint::eCompute);
+
+	get_handle().dispatch(group_count_x, group_count_y, group_count_z);
+}
+
+void CommandBuffer::dispatch_indirect(const backend::Buffer &buffer, vk::DeviceSize offset)
+{
+	flush(vk::PipelineBindPoint::eCompute);
+
+	get_handle().dispatchIndirect(buffer.get_handle(), offset);
+}
+
+void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data)
+{
+	get_handle().updateBuffer(buffer.get_handle(), offset, data.size(), data.data());
+	
+}
+
+void CommandBuffer::blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions)
+{
+	get_handle().blitImage(src_img.get_handle(), vk::ImageLayout::eTransferSrcOptimal, dst_img.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions, vk::Filter::eLinear);
+}
+
+void CommandBuffer::resolve_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageResolve> &regions)
+{
+	get_handle().resolveImage(src_img.get_handle(), vk::ImageLayout::eTransferSrcOptimal, dst_img.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions);
+
+}
+
+void CommandBuffer::copy_buffer(const backend::Buffer &src_buffer, const backend::Buffer &dst_buffer, vk::DeviceSize size)
+{
+	get_handle().copyBuffer(src_buffer.get_handle(), dst_buffer.get_handle(), vk::BufferCopy(0, 0, size));
+
+}
+
+void CommandBuffer::copy_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageCopy> &regions)
+{
+	get_handle().copyImage(src_img.get_handle(), vk::ImageLayout::eTransferSrcOptimal, dst_img.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions);
+}
+
+void CommandBuffer::copy_buffer_to_image(const backend::Buffer &buffer, const backend::Image &image, const std::vector<vk::BufferImageCopy> &regions)
+{
+	get_handle().copyBufferToImage(buffer.get_handle(), image.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions);
+
+}
+
+void CommandBuffer::copy_image_to_buffer(const backend::Image &image, vk::ImageLayout image_layout, const backend::Buffer &buffer, const std::vector<vk::BufferImageCopy> &regions)
+{
+	get_handle().copyImageToBuffer(image.get_handle(), image_layout, buffer.get_handle(), regions);
+
+}
+
+void CommandBuffer::image_memory_barrier(const backend::ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier) const
 {
 	auto subresource_range = image_view.get_subresource_range();
 	auto format            = image_view.get_format();
@@ -164,19 +222,30 @@ void CommandBuffer::image_memory_barrier(const ImageView &image_view, const comm
 		subresource_range.aspectMask = vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
 	}
 
-	vk::ImageMemoryBarrier image_memory_barrier(memory_barrier.src_access_mask,
-	                                            memory_barrier.dst_access_mask,
-	                                            memory_barrier.old_layout,
-	                                            memory_barrier.new_layout,
-	                                            memory_barrier.old_queue_family,
-	                                            memory_barrier.new_queue_family,
-	                                            image_view.get_image().get_handle(),
-	                                            subresource_range);
+	common::image_layout_transition(get_handle(), image_view.get_image().get_handle(), memory_barrier, subresource_range);
 
-	vk::PipelineStageFlags src_stage_mask = memory_barrier.src_stage_mask;
-	vk::PipelineStageFlags dst_stage_mask = memory_barrier.dst_stage_mask;
+}
 
-	get_handle().pipelineBarrier(src_stage_mask, dst_stage_mask, {}, {}, {}, image_memory_barrier);
+void CommandBuffer::buffer_memory_barrier(const backend::Buffer &buffer, vk::DeviceSize offset, vk::DeviceSize size, const common::BufferMemoryBarrier &memory_barrier)
+{
+	vk::BufferMemoryBarrier buffer_memory_barrier{memory_barrier.src_access_mask, memory_barrier.dst_access_mask, {}, {}, buffer.get_handle(), offset, size};
+	get_handle().pipelineBarrier(memory_barrier.src_stage_mask, memory_barrier.dst_stage_mask, {}, {}, buffer_memory_barrier, {});
+
+}
+
+void CommandBuffer::set_update_after_bind(bool update_after_bind)
+{
+	update_after_bind_ = update_after_bind;
+}
+
+void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers, const std::vector<vk::DeviceSize> &offsets)
+{
+	std::vector<vk::Buffer> buffer_handles(buffers.size(), nullptr);
+
+	std::ranges::transform(buffers, buffer_handles.begin(), [](const backend::Buffer &buffer) 
+		{ return buffer.get_handle(); });
+
+	get_handle().bindVertexBuffers(first_binding, buffer_handles, offsets);
 }
 
 vk::Result CommandBuffer::reset(ResetMode reset_mode)

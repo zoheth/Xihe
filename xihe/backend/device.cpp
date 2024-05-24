@@ -252,6 +252,11 @@ ResourceCache &Device::get_resource_cache()
 	return resource_cache_;
 }
 
+CommandBuffer & Device::request_command_buffer() const
+{
+	return command_pool_->request_command_buffer();
+}
+
 Device::~Device()
 {
 	resource_cache_.clear();

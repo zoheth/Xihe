@@ -67,8 +67,6 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result end();
 
-	void draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
-
 	void bind_vertex_buffers(uint32_t                                                          first_binding,
 	                         const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers,
 	                         const std::vector<vk::DeviceSize>                                &offsets);
@@ -115,6 +113,46 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	 * @brief Check that the render area is an optimal size by comparing to the render area granularity
 	 */
 	bool is_render_size_optimal(const vk::Extent2D &extent, const vk::Rect2D &render_area) const;
+
+	void draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
+
+	void draw_indexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance);
+
+	void draw_indexed_indirect(const backend::Buffer &buffer, vk::DeviceSize offset, uint32_t draw_count, uint32_t stride);
+
+	void dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z);
+
+	void dispatch_indirect(const backend::Buffer &buffer, vk::DeviceSize offset);
+
+	void update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data);
+
+	void blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions);
+
+	void resolve_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageResolve> &regions);
+
+	void copy_buffer(const backend::Buffer &src_buffer, const backend::Buffer &dst_buffer, vk::DeviceSize size);
+
+	void copy_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageCopy> &regions);
+
+	void copy_buffer_to_image(const backend::Buffer &buffer, const backend::Image &image, const std::vector<vk::BufferImageCopy> &regions);
+
+	void copy_image_to_buffer(const backend::Image &image, vk::ImageLayout image_layout, const backend::Buffer &buffer, const std::vector<vk::BufferImageCopy> &regions);
+
+	void image_memory_barrier(const backend::ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier) const;
+
+	void buffer_memory_barrier(const backend::Buffer &buffer, vk::DeviceSize offset, vk::DeviceSize size, const common::BufferMemoryBarrier &memory_barrier);
+
+	void set_update_after_bind(bool update_after_bind);
+
+	/*void reset_query_pool(const QueryPool &query_pool, uint32_t first_query, uint32_t query_count);
+
+	void begin_query(const QueryPool &query_pool, uint32_t query, vk::QueryControlFlags flags);
+
+	void end_query(const QueryPool &query_pool, uint32_t query);
+
+	void write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query);*/
+
+
 
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);

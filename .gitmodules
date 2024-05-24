@@ -28,3 +28,15 @@
 [submodule "third_party/tinygltf"]
 	path = third_party/tinygltf
 	url = https://github.com/syoyo/tinygltf
+[submodule "third_party/CTPL"]
+	path = third_party/CTPL
+	url = https://github.com/vit-vit/CTPL
+[submodule "third_party/stb"]
+	path = third_party/stb
+	url = https://github.com/nothings/stb
+[submodule "third_party/ktx"]
+	path = third_party/ktx
+	url = https://github.com/KhronosGroup/KTX-Software
+[submodule "third_party/astc"]
+	path = third_party/astc
+	url = https://github.com/ARM-software/astc-encoder
