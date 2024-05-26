@@ -257,6 +257,27 @@ CommandBuffer & Device::request_command_buffer() const
 	return command_pool_->request_command_buffer();
 }
 
+vk::Fence Device::request_fence() const
+{
+
+	return fence_pool_->request_fence();
+}
+
+void Device::wait_idle() const
+{
+	get_handle().waitIdle();
+}
+
+FencePool & Device::get_fence_pool() const
+{
+	return *fence_pool_;
+}
+
+CommandPool &Device::get_command_pool() const
+{
+	return *command_pool_;
+}
+
 Device::~Device()
 {
 	resource_cache_.clear();

@@ -71,7 +71,6 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	                         const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers,
 	                         const std::vector<vk::DeviceSize>                                &offsets);
 
-	void image_memory_barrier(const backend::ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier);
 
 	/**
 	 * @brief Reset the command buffer to a state where it can be recorded to

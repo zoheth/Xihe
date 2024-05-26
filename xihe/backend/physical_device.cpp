@@ -70,6 +70,11 @@ vk::PhysicalDeviceFeatures &PhysicalDevice::get_mutable_requested_features()
 	return requested_features_;
 }
 
+vk::FormatProperties PhysicalDevice::get_format_properties(vk::Format format) const
+{
+	return handle_.getFormatProperties(format);
+}
+
 bool PhysicalDevice::has_high_priority_graphics_queue() const
 {
 	return high_priority_graphics_queue_;

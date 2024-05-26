@@ -4,6 +4,7 @@
 #include <queue>
 
 #include "node.h"
+#include "scene_graph/components/sub_mesh.h"
 
 namespace xihe::sg
 {

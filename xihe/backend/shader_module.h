@@ -76,6 +76,16 @@ class ShaderVariant
 
 	size_t get_id() const;
 
+	void add_definitions(const std::vector<std::string> &definitions);
+
+	void add_define(const std::string &def);
+
+	void add_undefine(const std::string &undef);
+
+	void add_runtime_array_size(const std::string &runtime_array_name, size_t size);
+
+	void set_runtime_array_sizes(const std::unordered_map<std::string, size_t> &sizes);
+
 	const std::string                             &get_preamble() const;
 	const std::vector<std::string>                &get_processes() const;
 	const std::unordered_map<std::string, size_t> &get_runtime_array_sizes() const;

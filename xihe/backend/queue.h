@@ -31,6 +31,8 @@ public:
 
 	vk::Bool32 support_present() const;
 
+	vk::Result submit(const std::vector<vk::SubmitInfo> &submit_infos, vk::Fence fence) const;
+
 	void submit(const CommandBuffer &command_buffer, vk::Fence fence) const;
 
 	vk::Result present(vk::PresentInfoKHR &present_info) const;

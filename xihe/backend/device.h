@@ -52,6 +52,14 @@ class Device : public backend::VulkanResource<vk::Device>
 
 	CommandBuffer &request_command_buffer() const;
 
+	vk::Fence request_fence() const;
+
+	void wait_idle() const;
+
+	FencePool &get_fence_pool() const;
+
+	CommandPool &get_command_pool() const;
+
   private:
 	PhysicalDevice const &gpu_;
 	vk::SurfaceKHR        surface_{nullptr};

@@ -6,6 +6,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "node.h"
+
 namespace xihe::sg
 {
 

@@ -55,5 +55,32 @@ vk::Bool32 Queue::support_present() const
 {
 	return can_present_;
 }
+
+vk::Result Queue::submit(const std::vector<vk::SubmitInfo> &submit_infos, vk::Fence fence) const
+{
+	handle_.submit(submit_infos, fence);
+    return vk::Result::eSuccess;
+}
+
+void Queue::submit(const CommandBuffer &command_buffer, vk::Fence fence) const
+{
+	vk::CommandBuffer vk_command_buffer = command_buffer.get_handle();
+	vk::SubmitInfo submit_info{
+	    {},
+	    {},
+        vk_command_buffer};
+
+	handle_.submit(submit_info, fence);
+}
+
+vk::Result Queue::present(vk::PresentInfoKHR &present_info) const
+{
+	if (!can_present_)
+	{
+		return vk::Result::eErrorIncompatibleDisplayKHR;
+	}
+
+	return handle_.presentKHR(present_info);
+}
 }        // namespace backend
 }        // namespace xihe

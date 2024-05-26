@@ -1,11 +1,12 @@
 #pragma once
 
 #include <memory>
+#include <unordered_map>
+
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
 #include <tiny_gltf.h>
-#include <unordered_map>
 
 #define KHR_LIGHTS_PUNCTUAL_EXTENSION "KHR_lights_punctual"
 
@@ -29,6 +30,15 @@ class Scene;
 class SubMesh;
 class Texture;
 }
+
+template <class T, class Y>
+struct TypeCast
+{
+	Y operator()(T value) const noexcept
+	{
+		return static_cast<Y>(value);
+	}
+};
 
 class GltfLoader
 {

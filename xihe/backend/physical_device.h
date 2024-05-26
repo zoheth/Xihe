@@ -36,6 +36,8 @@ class PhysicalDevice
 	vk::PhysicalDeviceFeatures                    get_requested_features() const;
 	vk::PhysicalDeviceFeatures                   &get_mutable_requested_features();
 
+	vk::FormatProperties get_format_properties(vk::Format format) const;
+
 	bool has_high_priority_graphics_queue() const;
 
 	template <typename StructureType>

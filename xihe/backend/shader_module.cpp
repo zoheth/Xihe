@@ -71,6 +71,58 @@ size_t ShaderVariant::get_id() const
 	return id_;
 }
 
+void ShaderVariant::add_definitions(const std::vector<std::string> &definitions)
+{
+	for (auto &definition : definitions)
+	{
+		add_define(definition);
+	}
+}
+
+void ShaderVariant::add_define(const std::string &def)
+{
+	processes_.push_back("D" + def);
+
+	std::string tmp_def = def;
+
+	// The "=" needs to turn into a space
+	size_t pos_equal = tmp_def.find_first_of("=");
+	if (pos_equal != std::string::npos)
+	{
+		tmp_def[pos_equal] = ' ';
+	}
+
+	preamble_.append("#define " + tmp_def + "\n");
+
+	update_id();
+}
+
+void ShaderVariant::add_undefine(const std::string &undef)
+{
+	processes_.push_back("U" + undef);
+
+	preamble_.append("#undef " + undef + "\n");
+
+	update_id();
+}
+
+void ShaderVariant::add_runtime_array_size(const std::string &runtime_array_name, size_t size)
+{
+	if (!runtime_array_sizes_.contains(runtime_array_name))
+	{
+		runtime_array_sizes_.insert({runtime_array_name, size});
+	}
+	else
+	{
+		runtime_array_sizes_[runtime_array_name] = size;
+	}
+}
+
+void ShaderVariant::set_runtime_array_sizes(const std::unordered_map<std::string, size_t> &sizes)
+{
+	runtime_array_sizes_ = sizes;
+}
+
 const std::string & ShaderVariant::get_preamble() const
 {
 	return preamble_;
