@@ -1,5 +1,6 @@
 build
 out
+assets
 .vs
 .vscode
 imgui.ini
