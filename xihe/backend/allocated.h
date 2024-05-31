@@ -116,7 +116,6 @@ class AllocatedBase
 	AllocatedBase &operator=(AllocatedBase &&other)      = delete;
 	AllocatedBase &operator=(const AllocatedBase &other) = delete;
 
-	virtual ~AllocatedBase();
 
 	const uint8_t   *get_data() const;
 	vk::DeviceMemory get_memory() const;
@@ -137,7 +136,7 @@ class AllocatedBase
 	size_t update(const void *data, size_t size, size_t offset = 0);
 
 	template <typename T>
-	size_t update(std::vector<T> &data, size_t offset = 0)
+	size_t update(const std::vector<T> &data, size_t offset = 0)
 	{
 		return update(data.data(), data.size() * sizeof(T), offset);
 	}

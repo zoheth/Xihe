@@ -168,6 +168,30 @@ void RenderFrame::release_owned_semaphore(vk::Semaphore semaphore)
 	semaphore_pool_.release_owned_semaphore(semaphore);
 }
 
+backend::BufferAllocation RenderFrame::allocate_buffer(vk::BufferUsageFlags usage, vk::DeviceSize size, size_t thread_index)
+{
+	assert(thread_index < thread_count_ && "Thread index is out of bounds");
+
+	auto buffer_pool_it = buffer_pools_.find(usage);
+	if (buffer_pool_it == buffer_pools_.end())
+	{
+		throw std::runtime_error{"Buffer pool not found for usage " + vk::to_string(usage)};
+	}
+
+	assert(thread_index < buffer_pool_it->second.size());
+	auto &buffer_pool  = buffer_pool_it->second[thread_index].first;
+	auto &buffer_block = buffer_pool_it->second[thread_index].second;
+
+	bool want_minimal_block = buffer_allocation_strategy_ == BufferAllocationStrategy::kOneAllocationPerBuffer;
+
+	if (want_minimal_block || !buffer_block || !buffer_block->can_allocate(size))
+	{
+		buffer_block = &buffer_pool.request_buffer_block(size, want_minimal_block);
+	}
+
+	return buffer_block->allocate(size);
+}
+
 std::vector<std::unique_ptr<backend::CommandPool>> &RenderFrame::get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode)
 {
 	auto command_pool_it = command_pools_.find(queue.get_family_index());

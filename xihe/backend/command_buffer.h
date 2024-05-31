@@ -11,6 +11,8 @@
 
 namespace xihe
 {
+struct LightingState;
+
 namespace rendering
 {
 class Subpass;
@@ -65,11 +67,55 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void next_subpass();
 
+	void execute_commands(CommandBuffer &secondary_command_buffer);
+
+	void execute_commands(std::vector<CommandBuffer *> &secondary_command_buffers);
+
+	void end_render_pass();
+
 	vk::Result end();
+
+	template <class T>
+	void set_specialization_constant(uint32_t constant_id, const T &data)
+	{
+		set_specialization_constant(constant_id, to_bytes(data));
+	}
+
+	void set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data);
+
+	void push_constants(const std::vector<uint8_t> &values);
+
+	template <typename T>
+	void push_constants(const T &value)
+	{
+		auto data = to_bytes(value);
+
+		uint32_t size = to_u32(stored_push_constants_.size() + data.size());
+
+		if (size > max_push_constants_size_)
+		{
+			LOGE("Push constant limit exceeded ({} / {} bytes)", size, max_push_constants_size_);
+			throw std::runtime_error("Cannot overflow push constant limit");
+		}
+
+		stored_push_constants_.insert(stored_push_constants_.end(), data.begin(), data.end());
+	}
+
+	void bind_buffer(const backend::Buffer &buffer, VkDeviceSize offset, VkDeviceSize range, uint32_t set, uint32_t binding, uint32_t array_element);
+
+	void bind_image(const backend::ImageView &image_view, const backend::Sampler &sampler, uint32_t set, uint32_t binding, uint32_t array_element);
+
+	void bind_image(const backend::ImageView &image_view, uint32_t set, uint32_t binding, uint32_t array_element);
+
+	void bind_input(const backend::ImageView &image_view, uint32_t set, uint32_t binding, uint32_t array_element);
 
 	void bind_vertex_buffers(uint32_t                                                          first_binding,
 	                         const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers,
 	                         const std::vector<vk::DeviceSize>                                &offsets);
+
+	void bind_index_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, vk::IndexType index_type);
+
+	void bind_lighting(LightingState &lighting_state, uint32_t set, uint32_t binding);
 
 
 	/**

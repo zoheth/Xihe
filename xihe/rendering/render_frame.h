@@ -57,6 +57,8 @@ class RenderFrame
 
 	void release_owned_semaphore(vk::Semaphore semaphore);
 
+	backend::BufferAllocation allocate_buffer(vk::BufferUsageFlags usage, vk::DeviceSize size, size_t thread_index = 0);
+
 private:
 	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);
 

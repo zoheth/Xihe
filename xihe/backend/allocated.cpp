@@ -36,8 +36,6 @@ AllocatedBase::AllocatedBase(AllocatedBase &&other) noexcept :
     persistent_(std::exchange(other.persistent_, {}))
 {}
 
-AllocatedBase::~AllocatedBase()
-{}
 
 const uint8_t *AllocatedBase::get_data() const
 {

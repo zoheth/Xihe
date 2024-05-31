@@ -127,6 +127,81 @@ void CommandBuffer::next_subpass()
 	get_handle().nextSubpass(vk::SubpassContents::eInline);
 }
 
+void CommandBuffer::execute_commands(CommandBuffer &secondary_command_buffer)
+{
+	get_handle().executeCommands(secondary_command_buffer.get_handle());
+}
+
+void CommandBuffer::execute_commands(std::vector<CommandBuffer *> &secondary_command_buffers)
+{
+	std::vector<vk::CommandBuffer> command_buffers(secondary_command_buffers.size());
+
+	std::ranges::transform(secondary_command_buffers, command_buffers.begin(), [](CommandBuffer *command_buffer) { return command_buffer->get_handle(); });
+
+	get_handle().executeCommands(command_buffers);
+}
+
+void CommandBuffer::end_render_pass()
+{
+	get_handle().endRenderPass();
+}
+
+void CommandBuffer::set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data)
+{
+	pipeline_state_.set_specialization_constant(constant_id, data);
+}
+
+void CommandBuffer::push_constants(const std::vector<uint8_t> &values)
+{
+	uint32_t size = to_u32(stored_push_constants_.size() + values.size());
+
+	if (size > max_push_constants_size_)
+	{
+		LOGE("Push constant limit of {} exceeded (pushing {} bytes for a total of {} bytes)", max_push_constants_size_, values.size(), size);
+		throw std::runtime_error("Cannot overflow push constant limit");
+	}
+
+	stored_push_constants_.insert(stored_push_constants_.end(), values.begin(), values.end());
+}
+
+void CommandBuffer::bind_buffer(const backend::Buffer &buffer, VkDeviceSize offset, VkDeviceSize range, uint32_t set, uint32_t binding, uint32_t array_element)
+{
+	resource_binding_state_.bind_buffer(buffer, offset, range, set, binding, array_element);
+}
+
+void CommandBuffer::bind_image(const backend::ImageView &image_view, const backend::Sampler &sampler, uint32_t set, uint32_t binding, uint32_t array_element)
+{
+	resource_binding_state_.bind_image(image_view, sampler, set, binding, array_element);
+}
+
+void CommandBuffer::bind_image(const backend::ImageView &image_view, uint32_t set, uint32_t binding, uint32_t array_element)
+{
+	resource_binding_state_.bind_image(image_view, set, binding, array_element);
+}
+
+void CommandBuffer::bind_input(const backend::ImageView &image_view, uint32_t set, uint32_t binding, uint32_t array_element)
+{
+	resource_binding_state_.bind_input(image_view, set, binding, array_element);
+
+}
+
+void CommandBuffer::bind_index_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, vk::IndexType index_type)
+{
+	get_handle().bindIndexBuffer(buffer.get_handle(), offset, index_type);
+}
+
+void CommandBuffer::bind_lighting(LightingState &lighting_state, uint32_t set, uint32_t binding)
+{
+	bind_buffer(lighting_state.light_buffer.get_buffer(),
+	            lighting_state.light_buffer.get_offset(),
+	            lighting_state.light_buffer.get_size(),
+	            set, binding, 0);
+	set_specialization_constant(0, to_u32(lighting_state.directional_lights.size()));
+	set_specialization_constant(1, to_u32(lighting_state.point_lights.size()));
+	set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
+	
+}
+
 vk::Result CommandBuffer::end()
 {
 	get_handle().end();

@@ -26,6 +26,8 @@ struct LightingState
 	backend::BufferAllocation light_buffer;
 };
 
+glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
+
 namespace rendering
 {
 	class Subpass

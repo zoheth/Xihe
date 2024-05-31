@@ -8,6 +8,7 @@
 
 namespace xihe
 {
+
 namespace sg
 {
 class Scene;
@@ -77,17 +78,17 @@ class GeometrySubpass : public Subpass
 	 *        into opaque and transparent in the arrays provided
 	 */
 	void get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &opaque_nodes,
-	                      std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &transparent_nodes);
+	                      std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &transparent_nodes) const;
 
-	sg::Camera &camera;
+	sg::Camera &camera_;
 
-	std::vector<sg::Mesh *> meshes;
+	std::vector<sg::Mesh *> meshes_;
 
-	sg::Scene &scene;
+	sg::Scene &scene_;
 
-	uint32_t thread_index{0};
+	uint32_t thread_index_{0};
 
-	RasterizationState base_rasterization_state{};
+	RasterizationState base_rasterization_state_{};
 };
 }
 }

@@ -121,3 +121,12 @@ void Subpass::set_debug_name(const std::string &name)
 	debug_name_ = name;
 }
 }        // namespace xihe::rendering
+
+glm::mat4 xihe::vulkan_style_projection(const glm::mat4 &proj)
+{
+	// Flip Y in clipspace. X = -1, Y = -1 is topLeft in Vulkan.
+	glm::mat4 mat = proj;
+	mat[1][1] *= -1;
+
+	return mat;
+}

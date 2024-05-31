@@ -50,6 +50,12 @@ class Buffer : public allocated::Allocated<vk::Buffer>
 		return create_staging_buffer(device, sizeof(T) * data.size(), data.data());
 	}
 
+	template <typename T>
+	static Buffer create_staging_buffer(Device &device, const T &data)
+	{
+		return create_staging_buffer(device, sizeof(T), &data);
+	}
+
 	Buffer(Device &device, BufferBuilder const &builder);
 
 	Buffer(const Buffer &) = delete;
@@ -58,6 +64,35 @@ class Buffer : public allocated::Allocated<vk::Buffer>
 
 	Buffer &operator=(const Buffer &) = delete;
 	Buffer &operator=(Buffer &&)      = delete;
+
+	// FIXME should include a stride parameter, because if you want to copy out of a
+	// uniform buffer that's dynamically indexed, you need to account for the aligned
+	// offset of the T values
+	template <typename T>
+	static std::vector<T> copy(std::unordered_map<std::string, backend::Buffer> &buffers, const char *buffer_name)
+	{
+		auto iter = buffers.find(buffer_name);
+		if (iter == buffers.cend())
+		{
+			return {};
+		}
+		auto          &buffer = iter->second;
+		std::vector<T> out;
+
+		const size_t sz = buffer.get_size();
+		out.resize(sz / sizeof(T));
+		const bool already_mapped = buffer.get_data() != nullptr;
+		if (!already_mapped)
+		{
+			buffer.map();
+		}
+		memcpy(&out[0], buffer.get_data(), sz);
+		if (!already_mapped)
+		{
+			buffer.unmap();
+		}
+		return out;
+	}
 
 	uint64_t get_device_address() const;
 
