@@ -72,6 +72,7 @@ bool xihe::TestApp::prepare(Window *window)
 		return false;
 	}
 	load_scene("scenes/sponza/Sponza01.gltf");
+	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	camera_           = &camera_node.get_component<xihe::sg::Camera>();

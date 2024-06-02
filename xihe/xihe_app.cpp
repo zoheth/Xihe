@@ -154,6 +154,21 @@ void XiheApp::update(float delta_time)
 	render_context_->submit(command_buffer);
 }
 
+void XiheApp::input_event(const InputEvent &input_event)
+{
+	Application::input_event(input_event);
+
+	if (scene_ && scene_->has_component<sg::Script>())
+	{
+		const auto scripts = scene_->get_components<sg::Script>();
+
+		for (const auto script : scripts)
+		{
+			script->input_event(input_event);
+		}
+	}
+}
+
 void XiheApp::finish()
 {
 	Application::finish();

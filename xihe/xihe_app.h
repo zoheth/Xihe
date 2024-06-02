@@ -26,6 +26,8 @@ class XiheApp : public Application
 
 	void update(float delta_time) override;
 
+	void input_event(const InputEvent &input_event) override;
+
 	void finish() override;
 
 	const std::string &get_name() const;

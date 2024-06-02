@@ -27,6 +27,8 @@ public:
 
 	void update();
 
+	void close();
+
 	virtual void terminate(ExitCode code);
 
 	virtual void resize(uint32_t width, uint32_t height);

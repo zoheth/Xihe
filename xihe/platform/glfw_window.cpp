@@ -347,4 +347,9 @@ void GlfwWindow::process_events()
 {
 	glfwPollEvents();
 }
+
+void GlfwWindow::close()
+{
+	glfwSetWindowShouldClose(handle_, GLFW_TRUE);
+}
 }        // namespace xihe

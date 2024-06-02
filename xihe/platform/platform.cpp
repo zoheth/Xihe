@@ -106,6 +106,12 @@ void Platform::update()
 	}
 }
 
+void Platform::close()
+{
+	close_requested_ = true;
+	window_->close();
+}
+
 void Platform::terminate(ExitCode code)
 {
 	if (application_)
@@ -143,7 +149,20 @@ void Platform::resize(uint32_t width, uint32_t height)
 }
 
 void Platform::input_event(const InputEvent &input_event)
-{}
+{
+	application_ -> input_event(input_event);
+
+	if (input_event.get_source() == EventSource::Keyboard)
+	{
+		const auto &key_event = static_cast<const KeyInputEvent &>(input_event);
+
+		if (key_event.get_code() == KeyCode::Back ||
+		    key_event.get_code() == KeyCode::Escape)
+		{
+			close();
+		}
+	}
+}
 
 void Platform::set_focus(const bool focused)
 {

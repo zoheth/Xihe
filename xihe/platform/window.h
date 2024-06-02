@@ -62,6 +62,8 @@ class Window
 
 	virtual bool should_close() = 0;
 
+	virtual void close() = 0;
+
 	virtual void process_events();
 
 	Extent resize(const Extent &extent);

@@ -67,6 +67,7 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 	}
 
 	command_buffer.set_color_blend_state(color_blend_state);
+	
 	command_buffer.set_depth_stencil_state(get_depth_stencil_state());
 
 	// Draw transparent objects in back-to-front order
@@ -91,7 +92,7 @@ void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg:
 {
 	GlobalUniform global_uniform{};
 
-	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection() * camera_.get_view());
+	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
 
 	auto &render_frame = render_context_.get_active_frame();
 

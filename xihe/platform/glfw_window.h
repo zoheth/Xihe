@@ -23,6 +23,8 @@ class GlfwWindow : public Window
 
 	void process_events() override;
 
+	void close() override;
+
   private:
 	GLFWwindow *handle_{nullptr};
 };
