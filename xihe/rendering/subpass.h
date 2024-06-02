@@ -1,7 +1,10 @@
 #pragma once
+#include "render_frame.h"
 #include "backend/buffer_pool.h"
 #include "backend/shader_module.h"
 #include "rendering/render_context.h"
+#include "scene_graph/node.h"
+#include "scene_graph/components/light.h"
 
 namespace xihe
 {
@@ -27,6 +30,8 @@ struct LightingState
 };
 
 glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
+
+extern const std::vector<std::string> kLightTypeDefinitions;
 
 namespace rendering
 {
@@ -102,6 +107,68 @@ namespace rendering
 	    const std::string &get_debug_name() const;
 
 	    void set_debug_name(const std::string &name);
+
+		template <typename T>
+	    void allocate_lights(const std::vector<sg::Light *> &scene_lights,
+	                         size_t                          light_count)
+	    {
+		    assert(scene_lights.size() <= (light_count * sg::LightType::kMax) && "Exceeding Max Light Capacity");
+
+		    lighting_state_.directional_lights.clear();
+		    lighting_state_.point_lights.clear();
+		    lighting_state_.spot_lights.clear();
+
+		    for (auto &scene_light : scene_lights)
+		    {
+			    const auto &properties = scene_light->get_properties();
+			    auto       &transform  = scene_light->get_node()->get_transform();
+
+			    Light light{{transform.get_translation(), static_cast<float>(scene_light->get_light_type())},
+			                {properties.color, properties.intensity},
+			                {transform.get_rotation() * properties.direction, properties.range},
+			                {properties.inner_cone_angle, properties.outer_cone_angle}};
+
+			    switch (scene_light->get_light_type())
+			    {
+				    case sg::LightType::kDirectional:
+				    {
+					    if (lighting_state_.directional_lights.size() < light_count)
+					    {
+						    lighting_state_.directional_lights.push_back(light);
+					    }
+					    break;
+				    }
+				    case sg::LightType::kPoint:
+				    {
+					    if (lighting_state_.point_lights.size() < light_count)
+					    {
+						    lighting_state_.point_lights.push_back(light);
+					    }
+					    break;
+				    }
+				    case sg::LightType::kSpot:
+				    {
+					    if (lighting_state_.spot_lights.size() < light_count)
+					    {
+						    lighting_state_.spot_lights.push_back(light);
+					    }
+					    break;
+				    }
+				    default:
+					    break;
+			    }
+		    }
+
+		    T light_info;
+
+		    std::copy(lighting_state_.directional_lights.begin(), lighting_state_.directional_lights.end(), light_info.directional_lights);
+		    std::copy(lighting_state_.point_lights.begin(), lighting_state_.point_lights.end(), light_info.point_lights);
+		    std::copy(lighting_state_.spot_lights.begin(), lighting_state_.spot_lights.end(), light_info.spot_lights);
+
+		    RenderFrame &render_frame          = get_render_context().get_active_frame();
+		    lighting_state_.light_buffer = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(T));
+		    lighting_state_.light_buffer.update(light_info);
+	    }
 
 	protected:
 	    RenderContext &render_context_;

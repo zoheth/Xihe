@@ -148,6 +148,11 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 	end_frame(render_semaphore);
 }
 
+vk::Extent2D const & RenderContext::get_surface_extent() const
+{
+	return surface_extent_;
+}
+
 void RenderContext::begin_frame()
 {
 	if (swapchain_)

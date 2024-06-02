@@ -1,5 +1,8 @@
 ﻿#include "xihe_app.h"
 
+#include "scene_graph/gltf_loader.h"
+#include "scene_graph/script.h"
+
 #include <cassert>
 
 #include <volk.h>
@@ -141,6 +144,8 @@ bool XiheApp::prepare(Window *window)
 
 void XiheApp::update(float delta_time)
 {
+	update_scene(delta_time);
+
 	auto &command_buffer = render_context_->begin();
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -247,6 +252,37 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		render_target.set_layout(0, memory_barrier.new_layout);
 	}
 }
+
+void XiheApp::load_scene(const std::string &path)
+{
+	xihe::GltfLoader loader(*device_);
+
+	scene_ = loader.read_scene_from_file(path);
+
+	if (!scene_)
+	{
+		LOGE("Cannot load scene: {}", path.c_str());
+		throw std::runtime_error("Cannot load scene: " + path);
+	}
+}
+
+void XiheApp::update_scene(float delta_time)
+{
+	if (scene_)
+	{
+		if (scene_->has_component<sg::Script>())
+		{
+			const auto scripts = scene_->get_components<sg::Script>();
+
+			for (const auto script : scripts)
+			{
+				script->update(delta_time);
+			}
+		}
+	}
+}
+
+
 
 void XiheApp::add_instance_extension(const char *extension, bool optional)
 {

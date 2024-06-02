@@ -147,8 +147,8 @@ vk::ShaderStageFlags PipelineLayout::get_push_constant_range_stage(uint32_t size
 
 DescriptorSetLayout const &PipelineLayout::get_descriptor_set_layout(const uint32_t set_index) const
 {
-	auto it = std::ranges::find_if(descriptor_set_layouts_,
-	                               [&set_index](auto const *descriptor_set_layout) { return descriptor_set_layout->get_index() == set_index; });
+	auto                                                                          it = std::ranges::find_if(descriptor_set_layouts_,
+	                               [&set_index](const DescriptorSetLayout * const descriptor_set_layout) { return descriptor_set_layout->get_index() == set_index; });
 	if (it == descriptor_set_layouts_.end())
 	{
 		throw std::runtime_error("Couldn't find descriptor set layout at set index " + to_string(set_index));

@@ -3,6 +3,7 @@
 #include "xihe_app.h"
 
 #include "rendering/subpass.h"
+#include "scene_graph/components/camera.h"
 
 namespace xihe
 {
@@ -40,6 +41,9 @@ class TestApp : public XiheApp
 	~TestApp() = default;
 
 	bool prepare(Window *window) override;
+
+private:
+	xihe::sg::Camera *camera_{nullptr};
 
 };
 }        // namespace xihe

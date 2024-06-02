@@ -48,6 +48,8 @@ class RenderContext
 
 	void submit(const std::vector<backend::CommandBuffer *> &command_buffers);
 
+	vk::Extent2D const &get_surface_extent() const;
+
   private:
 	void begin_frame();
 

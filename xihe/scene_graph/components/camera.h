@@ -9,6 +9,8 @@
 
 namespace xihe::sg
 {
+class Scene;
+
 class Camera : public Component
 {
   public:
@@ -77,4 +79,7 @@ class PerspectiveCamera : public Camera
 
 	float near_plane_{0.1f};
 };
+
+Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent);
+
 }

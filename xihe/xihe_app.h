@@ -37,9 +37,12 @@ class XiheApp : public Application
 	std::unique_ptr<backend::Instance> const     &get_instance() const;
 
 
+protected:
 	virtual void draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
 
+	void load_scene(const std::string &path);
 
+	void update_scene(float delta_time);
 
   private:
 

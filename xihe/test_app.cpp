@@ -2,10 +2,11 @@
 
 #include "backend/shader_module.h"
 #include "rendering/subpass.h"
+#include "rendering/subpasses/forward_subpass.h"
+#include "scene_graph/components/camera.h"
 
-
-xihe::TestSubpass::TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader):
-	rendering::Subpass{render_context, (std::move(vertex_shader)), (std::move(fragment_shader))}
+xihe::TestSubpass::TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :
+    rendering::Subpass{render_context, (std::move(vertex_shader)), (std::move(fragment_shader))}
 {}
 
 void xihe::TestSubpass::prepare()
@@ -69,17 +70,32 @@ bool xihe::TestApp::prepare(Window *window)
 	{
 		return false;
 	}
-	auto vertex_shader   = backend::ShaderSource{"tests/test.vert"};
+
+	load_scene("scenes/sponza/Sponza01.gltf");
+	assert(scene_ && "Scene not loaded");
+	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
+	camera_           = &camera_node.get_component<xihe::sg::Camera>();
+
+	backend::ShaderSource vert_shader("base.vert");
+	backend::ShaderSource frag_shader("base.frag");
+
+	auto scene_subpass = std::make_unique<rendering::ForwardSubpass>(
+	    *render_context_,
+	    std::move(vert_shader), std::move(frag_shader), *scene_, *camera_);
+
+
+	/*auto vertex_shader   = backend::ShaderSource{"tests/test.vert"};
 	auto fragment_shader = backend::ShaderSource{"tests/test.frag"};
 
-	auto test_subpass = std::make_unique<TestSubpass>(*render_context_, std::move(vertex_shader), std::move(fragment_shader));
+	auto test_subpass = std::make_unique<TestSubpass>(*render_context_, std::move(vertex_shader), std::move(fragment_shader));*/
 
 	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
-	subpasses.push_back(std::move(test_subpass));
+	// subpasses.push_back(std::move(test_subpass));
+	subpasses.push_back(std::move(scene_subpass));
+
 	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
 
 	return true;
-
 }
 
 std::unique_ptr<xihe::Application> create_application()

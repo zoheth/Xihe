@@ -1,8 +1,25 @@
 #include "subpass.h"
 
+#include "scene_graph/components/light.h"
+
 #include <utility>
 
-namespace xihe::rendering
+namespace xihe
+{
+const std::vector<std::string> kLightTypeDefinitions = {
+    "DIRECTIONAL_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kDirectional)),
+    "POINT_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kPoint)),
+    "SPOT_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kSpot))};
+
+glm::mat4 xihe::vulkan_style_projection(const glm::mat4 &proj)
+{
+	// Flip Y in clipspace. X = -1, Y = -1 is topLeft in Vulkan.
+	glm::mat4 mat = proj;
+	mat[1][1] *= -1;
+
+	return mat;
+}
+namespace rendering
 {
 Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :
     render_context_{render_context},
@@ -13,7 +30,7 @@ Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_s
 void Subpass::update_render_target_attachments(RenderTarget &render_target)
 {
 	render_target.set_input_attachments(input_attachments_);
-    render_target.set_output_attachments(output_attachments_);
+	render_target.set_output_attachments(output_attachments_);
 }
 
 void Subpass::draw(backend::CommandBuffer &command_buffer)
@@ -52,13 +69,11 @@ void Subpass::set_input_attachments(std::vector<uint32_t> input)
 const std::vector<uint32_t> &Subpass::get_output_attachments() const
 {
 	return output_attachments_;
-
 }
 
 void Subpass::set_output_attachments(std::vector<uint32_t> output)
 {
 	output_attachments_ = std::move(output);
-
 }
 
 void Subpass::set_sample_count(vk::SampleCountFlagBits sample_count)
@@ -120,13 +135,5 @@ void Subpass::set_debug_name(const std::string &name)
 {
 	debug_name_ = name;
 }
-}        // namespace xihe::rendering
-
-glm::mat4 xihe::vulkan_style_projection(const glm::mat4 &proj)
-{
-	// Flip Y in clipspace. X = -1, Y = -1 is topLeft in Vulkan.
-	glm::mat4 mat = proj;
-	mat[1][1] *= -1;
-
-	return mat;
-}
+}        // namespace rendering
+}        // namespace xihe
