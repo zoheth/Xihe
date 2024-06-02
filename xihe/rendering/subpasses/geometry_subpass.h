@@ -46,7 +46,7 @@ class GeometrySubpass : public Subpass
   public:
 	GeometrySubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Scene &scene, sg::Camera &camera);
 
-	virtual ~GeometrySubpass() = default;
+	~GeometrySubpass() override = default;
 
 	virtual void prepare() override;
 

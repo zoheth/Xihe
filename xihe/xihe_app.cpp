@@ -24,10 +24,7 @@ XiheApp::~XiheApp()
 		device_->get_handle().waitIdle();
 	}
 
-	// Todo Currently, vertex_buffer is temporarily in render_pipeline.
-	// Therefore, we need to release vertex_buffer first.
-	// Afterward, vertex_buffer will be moved to scene_graph.
-	render_pipeline_.reset();
+	scene_.reset();
 
 	render_context_.reset();
 

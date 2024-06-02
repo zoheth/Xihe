@@ -13,8 +13,8 @@
 
 namespace xihe::rendering
 {
-ForwardSubpass::ForwardSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_source, backend::ShaderSource &&fragment_source, sg::Scene &scene_, sg::Camera &camera) :
-    GeometrySubpass{render_context, std::move(vertex_source), std::move(fragment_source), scene_, camera}
+ForwardSubpass::ForwardSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_source, backend::ShaderSource &&fragment_source, sg::Scene &scene, sg::Camera &camera) :
+    GeometrySubpass{render_context, std::move(vertex_source), std::move(fragment_source), scene, camera}
 {
 }
 

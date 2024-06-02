@@ -8,6 +8,35 @@ DescriptorPool::DescriptorPool(Device &device, const DescriptorSetLayout &descri
     device_{device},
     descriptor_set_layout_{&descriptor_set_layout}
 {
+	const auto &bindings = descriptor_set_layout.get_bindings();
+
+	std::map<vk::DescriptorType, std::uint32_t> descriptor_type_counts;
+
+	for (auto &binding : bindings)
+	{
+		descriptor_type_counts[binding.descriptorType] += binding.descriptorCount;
+	}
+
+	pool_sizes_.resize(descriptor_type_counts.size());
+
+	auto it = pool_sizes_.begin();
+
+	for (const auto &descriptor_type_count : descriptor_type_counts)
+	{
+		it->type            = descriptor_type_count.first;
+		it->descriptorCount = descriptor_type_count.second * pool_size;
+		++it;
+	}
+
+	pool_max_sets_ = pool_size;
+}
+
+DescriptorPool::~DescriptorPool()
+{
+	for (auto pool : pools_)
+	{
+		device_.get_handle().destroyDescriptorPool(pool);
+	}
 }
 
 const DescriptorSetLayout &DescriptorPool::get_descriptor_set_layout() const

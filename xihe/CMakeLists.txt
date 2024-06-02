@@ -29,6 +29,7 @@ target_link_libraries(xihe PUBLIC
     spdlog
     ktx
     stb
+     ${ASTC_TARGET}
     ctpl
     glfw
     tinygltf

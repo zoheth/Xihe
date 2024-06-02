@@ -33,6 +33,8 @@ class Device : public backend::VulkanResource<vk::Device>
 	bool is_extension_supported(std::string const &extension) const;
 	bool is_enabled(std::string const &extension) const;
 
+	bool is_image_format_supported(vk::Format format) const;
+
 	PhysicalDevice const &get_gpu() const;
 
 	DebugUtils const &get_debug_utils() const;

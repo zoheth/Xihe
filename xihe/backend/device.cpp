@@ -305,6 +305,15 @@ bool Device::is_enabled(std::string const &extension) const
 	           [extension](const char *enabled_extension) { return extension == enabled_extension; }) != enabled_extensions_.end();
 }
 
+bool Device::is_image_format_supported(vk::Format format) const
+{
+	vk::ImageFormatProperties image_format_properties;
+
+	const auto result = gpu_.get_handle().getImageFormatProperties(format, vk::ImageType::e2D, vk::ImageTiling::eOptimal, vk::ImageUsageFlags(), vk::ImageCreateFlags(), &image_format_properties);
+
+	return result != vk::Result::eErrorFormatNotSupported;
+}
+
 PhysicalDevice const &Device::get_gpu() const
 {
 	return gpu_;

@@ -15,6 +15,7 @@
 #include "common/logging.h"
 #include "common/timer.h"
 #include "components/light.h"
+#include "components/image/astc.h"
 #include "platform/filesystem.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
@@ -392,11 +393,11 @@ std::unique_ptr<sg::Scene> GltfLoader::read_scene_from_file(const std::string &f
 		LOGW("{}", warn.c_str());
 	}
 
-	if (gltf_file_path.has_parent_path())
-	{
-		model_path_ = gltf_file_path.parent_path().string();
-	}
-	else
+	const size_t pos = file_name.find_last_of('/');
+
+	model_path_ = file_name.substr(0, pos);
+
+	if (pos == std::string::npos)
 	{
 		model_path_.clear();
 	}
@@ -491,7 +492,7 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 		auto &command_buffer = device_.request_command_buffer();
 
-		command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit, 0);
+		command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit, nullptr);
 
 		size_t batch_size = 0;
 
@@ -1022,17 +1023,17 @@ std::unique_ptr<sg::Image> GltfLoader::parse_image(tinygltf::Image &gltf_image) 
 		image          = sg::Image::load(gltf_image.name, image_uri, sg::Image::kUnknown);
 	}
 
-	// todo
-	//// Check whether the format is supported by the GPU
-	// if (sg::is_astc(image->get_format()))
-	//{
-	//	if (!device_.is_image_format_supported(image->get_format()))
-	//	{
-	//		LOGW("ASTC not supported: decoding {}", image->get_name());
-	//		image = std::make_unique<sg::Astc>(*image);
-	//		image->generate_mipmaps();
-	//	}
-	// }
+
+	// Check whether the format is supported by the GPU
+	 if (sg::is_astc(image->get_format()))
+	{
+		if (!device_.is_image_format_supported(image->get_format()))
+		{
+			LOGW("ASTC not supported: decoding {}", image->get_name());
+			image = std::make_unique<sg::Astc>(*image);
+			image->generate_mipmaps();
+		}
+	 }
 
 	image->create_vk_image(device_);
 

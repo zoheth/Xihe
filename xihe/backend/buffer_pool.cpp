@@ -89,10 +89,10 @@ BufferAllocation BufferBlock::allocate(vk::DeviceSize size)
 {
 	assert(can_allocate(size) && "Cannot allocate requested size");
 
-	auto aligned_offset = aligned_offset();
-	offset_             = aligned_offset + size;
+	auto aligned = aligned_offset();
+	offset_      = aligned + size;
 
-	return BufferAllocation{*buffer_, size, aligned_offset};
+	return BufferAllocation{*buffer_, size, aligned};
 }
 
 vk::DeviceSize BufferBlock::get_size() const
@@ -123,7 +123,7 @@ BufferBlock &BufferPool::request_buffer_block(vk::DeviceSize minimum_size, bool 
 
 	if (it == buffer_blocks_.end())
 	{
-		LOGD("Building #{} buffer block ({})", buffer_blocks_.size(), usage_);
+		LOGD("Building #{} buffer block ({})", buffer_blocks_.size(), to_string(usage_));
 
 		vk::DeviceSize new_block_size = minimal ? minimum_size : std::max(block_size_, minimum_size);
 
@@ -133,9 +133,6 @@ BufferBlock &BufferPool::request_buffer_block(vk::DeviceSize minimum_size, bool 
 
 	return *it->get();
 }
-
-// BufferBlock &BufferPool::request_buffer_block(vk::DeviceSize minimum_size, bool minimal)
-//{}
 
 void BufferPool::reset()
 {

@@ -13,9 +13,11 @@ class DescriptorSetLayout;
 class DescriptorPool
 {
   public:
-	static constexpr uint32_t kMaxSetsPerPool = 16;
+	static constexpr uint32_t max_sets_per_pool_ = 16;
 
-	DescriptorPool(Device &device, const DescriptorSetLayout &descriptor_set_layout, uint32_t pool_size = kMaxSetsPerPool);
+	DescriptorPool(Device &device, const DescriptorSetLayout &descriptor_set_layout, uint32_t pool_size = max_sets_per_pool_);
+
+	~DescriptorPool();
 
 	const DescriptorSetLayout &get_descriptor_set_layout() const;
 	void                       set_descriptor_set_layout(const DescriptorSetLayout &set_layout);

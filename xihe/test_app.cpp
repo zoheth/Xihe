@@ -1,6 +1,7 @@
 #include "test_app.h"
 
 #include "backend/shader_module.h"
+#include "platform/filesystem.h"
 #include "rendering/subpass.h"
 #include "rendering/subpasses/forward_subpass.h"
 #include "scene_graph/components/camera.h"
@@ -70,7 +71,6 @@ bool xihe::TestApp::prepare(Window *window)
 	{
 		return false;
 	}
-
 	load_scene("scenes/sponza/Sponza01.gltf");
 	assert(scene_ && "Scene not loaded");
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());

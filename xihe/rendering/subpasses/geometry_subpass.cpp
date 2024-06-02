@@ -16,7 +16,7 @@ namespace xihe::rendering
 GeometrySubpass::GeometrySubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Scene &scene, sg::Camera &camera) :
     Subpass{render_context, std::move(vertex_shader), std::move(fragment_shader)},
     camera_{camera},
-    meshes_{scene_.get_components<sg::Mesh>()},
+    meshes_{scene.get_components<sg::Mesh>()},
     scene_{scene}
 {}
 
@@ -156,14 +156,14 @@ void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::S
 
 		vk::VertexInputAttributeDescription vertex_attribute{
 		    input_resource.location,
-		    input_resource.binding,
+		    input_resource.location,
 		    attribute.format,
 		    attribute.offset};
 
 		vertex_input_state.attributes.push_back(vertex_attribute);
 
 		vk::VertexInputBindingDescription vertex_binding{
-		    input_resource.binding,
+		    input_resource.location,
 		    attribute.stride};
 
 		vertex_input_state.bindings.push_back(vertex_binding);

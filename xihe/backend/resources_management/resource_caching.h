@@ -646,7 +646,7 @@ T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map
 	LOGD("Building #{} cache object ({})", res_id, res_type);
 
 	// Only error handle in release
-#ifndef DEBUG
+#ifndef XH_DEBUG
 	try
 	{
 #endif
@@ -666,7 +666,7 @@ T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map
 			size_t index = record_helper.record(*recorder, args...);
 			record_helper.index(*recorder, index, res_it->second);
 		}
-#ifndef DEBUG
+#ifndef XH_DEBUG
 	}
 	catch (const std::exception &e)
 	{
