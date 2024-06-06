@@ -309,7 +309,7 @@ bool Device::is_image_format_supported(vk::Format format) const
 {
 	vk::ImageFormatProperties image_format_properties;
 
-	const auto result = gpu_.get_handle().getImageFormatProperties(format, vk::ImageType::e2D, vk::ImageTiling::eOptimal, vk::ImageUsageFlags(), vk::ImageCreateFlags(), &image_format_properties);
+	const auto result = gpu_.get_handle().getImageFormatProperties(format, vk::ImageType::e2D, vk::ImageTiling::eOptimal, vk::ImageUsageFlagBits::eSampled, vk::ImageCreateFlags(), &image_format_properties);
 
 	return result != vk::Result::eErrorFormatNotSupported;
 }

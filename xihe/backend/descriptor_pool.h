@@ -26,8 +26,9 @@ class DescriptorPool
 
 	vk::DescriptorSet allocate();
 
-private:
+  private:
 	uint32_t find_available_pool(uint32_t pool_index);
+
   private:
 	Device &device_;
 
@@ -42,4 +43,22 @@ private:
 
 	std::unordered_map<VkDescriptorSet, uint32_t> set_pool_mapping_;
 };
+
+class BindlessDescriptorPool
+{
+  public:
+	static constexpr uint32_t bindless_texture_binding_ = 10;
+	static constexpr uint32_t max_bindless_resources_   = 1024;
+
+	BindlessDescriptorPool(Device &device);
+
+  private:
+	Device &device_;
+
+	vk::DescriptorPool handle_{VK_NULL_HANDLE};
+
+	vk::DescriptorSetLayout bindless_descriptor_layout_;
+	vk::DescriptorSet       bindless_descriptor_set_;
+};
+
 }        // namespace xihe::backend

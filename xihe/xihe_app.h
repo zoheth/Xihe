@@ -83,5 +83,6 @@ protected:
 	/** @brief Set of device extensions to be enabled for this example and whether they are optional (must be set in the derived constructor) */
 	std::unordered_map<const char *, bool> device_extensions_;
 
+	vk::PhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_properties_{};
 };
 }        // namespace xihe

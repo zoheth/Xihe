@@ -308,6 +308,23 @@ void XiheApp::add_device_extension(const char *extension, bool optional)
 
 void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
+	gpu.get_mutable_requested_features().shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+
+	auto &features = gpu.request_extension_features<vk::PhysicalDeviceDescriptorIndexingFeatures>();
+
+	features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
+
+	features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	features.descriptorBindingPartiallyBound              = VK_TRUE;
+	features.descriptorBindingUpdateUnusedWhilePending    = VK_TRUE;
+	features.descriptorBindingVariableDescriptorCount     = VK_TRUE;
+
+	features.runtimeDescriptorArray = VK_TRUE;
+
+	vk::PhysicalDeviceProperties2 device_properties{};
+	device_properties.pNext = &descriptor_indexing_properties_;
+	
+	gpu.get_handle().getProperties2(&device_properties);
 }
 
 void XiheApp::create_render_context()

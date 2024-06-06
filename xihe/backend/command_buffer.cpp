@@ -494,7 +494,7 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 			auto    &resource_set      = resource_set_it.second;
 
 			// Don't update resource set if it's not in the update list OR its state hasn't changed
-			if (!resource_set.is_dirty() && (update_descriptor_sets.find(descriptor_set_id) == update_descriptor_sets.end()))
+			if (!resource_set.is_dirty() && (!update_descriptor_sets.contains(descriptor_set_id)))
 			{
 				continue;
 			}
@@ -583,7 +583,7 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 					}
 
 					assert((!update_after_bind_ ||
-					        (buffer_infos.count(binding_index) > 0 || (image_infos.count(binding_index) > 0))) &&
+					        (buffer_infos.contains(binding_index) || (image_infos.contains(binding_index)))) &&
 					       "binding index with no buffer or image infos can't be checked for adding to bindings_to_update");
 				}
 			}

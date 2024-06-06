@@ -52,6 +52,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debug_callback(VkDebugReportFlagsEXT flags, VkDeb
 	}
 	return VK_FALSE;
 }
+#endif
 
 bool validate_layers(const std::vector<const char *>        &required,
                      const std::vector<vk::LayerProperties> &available)
@@ -106,7 +107,7 @@ bool enable_extension(const char                                 *required_ext_n
 	LOGI("Extension {} not found", required_ext_name);
 	return false;
 }
-#endif
+
 }        // namespace
 
 namespace backend
