@@ -40,6 +40,11 @@ PipelineLayout &ResourceCache::request_pipeline_layout(const std::vector<ShaderM
 	return request_resource(device_, recorder_, pipeline_layout_mutex_, state_.pipeline_layouts, shader_modules);
 }
 
+PipelineLayout &ResourceCache::request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout)
+{
+	return request_resource(device_, recorder_, pipeline_layout_mutex_, state_.pipeline_layouts, shader_modules, bindless_descriptor_set_layout);
+}
+
 DescriptorSetLayout &ResourceCache::request_descriptor_set_layout(const uint32_t set_index, const std::vector<ShaderModule *> &shader_modules, const std::vector<ShaderResource> &set_resources)
 {
 	return request_resource(device_, recorder_, descriptor_set_layout_mutex_, state_.descriptor_set_layouts, set_index, shader_modules, set_resources);

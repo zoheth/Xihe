@@ -8,54 +8,7 @@ PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *>
     device_(device),
     shader_modules_(shader_modules)
 {
-	// Collect and combine all the shader resources from all the shader modules
-	// Collect them all into a map that is indexed by the name of the resource
-	for (auto *shader_module : shader_modules)
-	{
-		for (const auto &shader_resource : shader_module->get_resources())
-		{
-			std::string key = shader_resource.name;
-
-			if (shader_resource.type == ShaderResourceType::kInput || shader_resource.type == ShaderResourceType::kOutput)
-			{
-				key = to_string(shader_resource.stages) + "_" + key;
-			}
-
-			auto it = shader_resources_.find(key);
-
-			if (it != shader_resources_.end())
-			{
-				// Append stage flags if resource already exists
-				it->second.stages |= shader_resource.stages;
-			}
-			else
-			{
-				// Create a new entry in the map
-				shader_resources_.emplace(key, shader_resource);
-			}
-		}
-	}
-
-	// Sift through the map of name indexed shader resources
-	// Separate them into their respective sets
-	for (auto &it : shader_resources_)
-	{
-		auto &shader_resource = it.second;
-
-		// Find binding by set index in the map.
-		auto it2 = shader_sets_.find(shader_resource.set);
-
-		if (it2 != shader_sets_.end())
-		{
-			// Add resource to the found set index
-			it2->second.push_back(shader_resource);
-		}
-		else
-		{
-			// Create a new set index and with the first resource
-			shader_sets_.emplace(shader_resource.set, std::vector<ShaderResource>{shader_resource});
-		}
-	}
+	aggregate_shader_resources();
 
 	// Create a descriptor set layout for each shader set in the shader modules
 	for (auto &shader_set_it : shader_sets_)
@@ -69,6 +22,40 @@ PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *>
 	{
 		descriptor_set_layout_handles.push_back(descriptor_set_layout ? descriptor_set_layout->get_handle() : nullptr);
 	}
+
+	// Collect all the push constant shader resources
+	std::vector<vk::PushConstantRange> push_constant_ranges;
+	for (auto &push_constant_resource : get_resources(ShaderResourceType::kPushConstant))
+	{
+		push_constant_ranges.push_back({push_constant_resource.stages, push_constant_resource.offset, push_constant_resource.size});
+	}
+
+	vk::PipelineLayoutCreateInfo create_info({}, descriptor_set_layout_handles, push_constant_ranges);
+
+	handle_ = device_.get_handle().createPipelineLayout(create_info);
+}
+
+PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout):
+    device_(device),
+    shader_modules_(shader_modules)
+{
+	aggregate_shader_resources();
+
+	// Iterate over all shader sets except the last one to create descriptor set layouts.
+	// The last set is intended to be used as a bindless descriptor set, hence it is skipped.
+	for (auto shader_set_it = shader_sets_.begin(); shader_set_it != std::prev(shader_sets_.end()); ++shader_set_it)
+	{
+		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it->first, shader_modules, shader_set_it->second));
+	}
+
+	// Collect all the descriptor set layout handles, maintaining set order
+	std::vector<vk::DescriptorSetLayout> descriptor_set_layout_handles;
+	for (auto descriptor_set_layout : descriptor_set_layouts_)
+	{
+		descriptor_set_layout_handles.push_back(descriptor_set_layout ? descriptor_set_layout->get_handle() : nullptr);
+	}
+
+	descriptor_set_layout_handles.push_back(bindless_descriptor_set_layout);
 
 	// Collect all the push constant shader resources
 	std::vector<vk::PushConstantRange> push_constant_ranges;
@@ -164,5 +151,57 @@ const std::unordered_map<uint32_t, std::vector<ShaderResource>> &PipelineLayout:
 bool PipelineLayout::has_descriptor_set_layout(const uint32_t set_index) const
 {
 	return set_index < descriptor_set_layouts_.size();
+}
+
+void PipelineLayout::aggregate_shader_resources()
+{
+	// Collect and combine all the shader resources from all the shader modules
+	// Collect them all into a map that is indexed by the name of the resource
+	for (auto *shader_module : shader_modules_)
+	{
+		for (const auto &shader_resource : shader_module->get_resources())
+		{
+			std::string key = shader_resource.name;
+
+			if (shader_resource.type == ShaderResourceType::kInput || shader_resource.type == ShaderResourceType::kOutput)
+			{
+				key = to_string(shader_resource.stages) + "_" + key;
+			}
+
+			auto it = shader_resources_.find(key);
+
+			if (it != shader_resources_.end())
+			{
+				// Append stage flags if resource already exists
+				it->second.stages |= shader_resource.stages;
+			}
+			else
+			{
+				// Create a new entry in the map
+				shader_resources_.emplace(key, shader_resource);
+			}
+		}
+	}
+
+	// Sift through the map of name indexed shader resources
+	// Separate them into their respective sets
+	for (auto &it : shader_resources_)
+	{
+		auto &shader_resource = it.second;
+
+		// Find binding by set index in the map.
+		auto it2 = shader_sets_.find(shader_resource.set);
+
+		if (it2 != shader_sets_.end())
+		{
+			// Add resource to the found set index
+			it2->second.push_back(shader_resource);
+		}
+		else
+		{
+			// Create a new set index and with the first resource
+			shader_sets_.emplace(shader_resource.set, std::vector<ShaderResource>{shader_resource});
+		}
+	}
 }
 }        // namespace xihe::backend

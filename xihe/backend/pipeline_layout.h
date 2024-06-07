@@ -15,6 +15,7 @@ class PipelineLayout
 {
   public:
 	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules);
+	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout);
 
 	PipelineLayout(const PipelineLayout &) = delete;
 	PipelineLayout(PipelineLayout &&other);
@@ -37,6 +38,9 @@ class PipelineLayout
 	DescriptorSetLayout const                                       &get_descriptor_set_layout(const uint32_t set_index) const;
 	const std::unordered_map<uint32_t, std::vector<ShaderResource>> &get_shader_sets() const;
 	bool                                                             has_descriptor_set_layout(const uint32_t set_index) const;
+
+private:
+	void aggregate_shader_resources();
 
   private:
 	Device            &device_;

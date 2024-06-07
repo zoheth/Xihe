@@ -65,4 +65,13 @@ private:
 	// Each binding number is mapped to a hash of the binding description that it will be updated to.
 	std::unordered_map<uint32_t, size_t> updated_bindings_;
 };
+
+
+class BindlessDescriptorSet
+{
+public:
+
+
+};
+
 }        // namespace xihe::backend

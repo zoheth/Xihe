@@ -56,6 +56,7 @@ class ResourceCache
 	ShaderModule &request_shader_module(vk::ShaderStageFlagBits stage, const ShaderSource &glsl_source, const ShaderVariant &shader_variant = {});
 
 	PipelineLayout &request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules);
+	PipelineLayout &request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout);
 
 	DescriptorSetLayout &request_descriptor_set_layout(const uint32_t                     set_index,
 	                                                   const std::vector<ShaderModule *> &shader_modules,

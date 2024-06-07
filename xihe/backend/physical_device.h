@@ -40,31 +40,38 @@ class PhysicalDevice
 
 	bool has_high_priority_graphics_queue() const;
 
-	template <typename StructureType>
-	StructureType &request_extension_features()
+	template <typename T>
+	T &request_extension_features()
 	{
 		if (!instance_.is_enabled(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME))
 		{
 			throw std::runtime_error("Couldn't request feature from device as " + std::string(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME) + " isn't enabled!");
 		}
-
-		const vk::StructureType structure_type = StructureType::structureType;
+	
+		const vk::StructureType structure_type = T::structureType;
 
 		const auto it = extension_features_.find(structure_type);
 		if (it != extension_features_.end())
 		{
-			return *static_cast<StructureType *>(it->second.get());
+			return *static_cast<T *>(it->second.get());
 		}
 
-		vk::StructureChain<vk::PhysicalDeviceFeatures2KHR, StructureType> feature_chain =
-		    handle_.getFeatures2<vk::PhysicalDeviceFeatures2KHR, StructureType>();
+		// Get the extension feature
 
-		// .template get<StructureType>() <=> .get<StructureType>()
-		// Use 'template' keyword to clarify that 'get<StructureType>()' is a template method call in 'vk::StructureChain',
-		// avoiding confusion with comparison operators '<' and '>'.
-		extension_features_.insert({structure_type, std::make_shared<StructureType>(feature_chain.template get<StructureType>())});
 
-		auto *extension_ptr = static_cast<StructureType *>(extension_features_.at(structure_type).get());
+		vk::PhysicalDeviceFeatures2KHR physical_device_features;
+		physical_device_features = handle_.getFeatures2KHR();
+
+		T                            extension;
+		physical_device_features.pNext = &extension;
+		
+
+		// Insert the extension feature into the extension feature map so its ownership is held
+		extension_features_.insert({structure_type, std::make_shared<T>(extension)});
+
+		// Pull out the dereferenced void pointer, we can assume its type based on the template
+		auto *extension_ptr = static_cast<T *>(extension_features_.find(structure_type)->second.get());
+
 
 		if (last_requested_extension_feature_)
 		{

@@ -19,7 +19,7 @@ namespace xihe
 class XiheApp : public Application
 {
   public:
-	XiheApp() = default;
+	XiheApp();
 	~XiheApp();
 
 	bool prepare(Window *window) override;
@@ -47,6 +47,8 @@ protected:
 	void update_scene(float delta_time);
 
   private:
+
+	void update_bindless_descriptor_sets();
 
 	void add_instance_extension(const char *extension, bool optional = false);
 	void add_device_extension(const char *extension, bool optional = false);

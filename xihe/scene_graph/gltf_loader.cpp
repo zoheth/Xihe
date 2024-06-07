@@ -537,6 +537,8 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 	LOGI("Time spent loading images: {} seconds across {} threads.", xihe::to_string(elapsed_time), thread_count);
 
 	// Load textures
+	std::unique_ptr<sg::BindlessTextures> bindless_textures = std::make_unique<sg::BindlessTextures>("bindless_textures");
+
 	auto images                  = scene.get_components<sg::Image>();
 	auto samplers                = scene.get_components<sg::Sampler>();
 	auto default_sampler_linear  = create_default_sampler(TINYGLTF_TEXTURE_FILTER_LINEAR);
@@ -575,8 +577,8 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 				used_nearest_sampler = true;
 			}
 		}
-
-		scene.add_component(std::move(texture));
+		bindless_textures->add_texture(std::move(texture));
+		//scene.add_component(std::move(texture));
 	}
 
 	scene.add_component(std::move(default_sampler_linear));
@@ -584,12 +586,14 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 		scene.add_component(std::move(default_sampler_nearest));
 
 	// Load materials
-	bool                       has_textures = scene.has_component<sg::Texture>();
+	/*bool                       has_textures = scene.has_component<sg::Texture>();
 	std::vector<sg::Texture *> textures;
 	if (has_textures)
 	{
 		textures = scene.get_components<sg::Texture>();
-	}
+	}*/
+
+	auto textures = bindless_textures->get_textures();
 
 	for (auto &gltf_material : model_.materials)
 	{
@@ -633,6 +637,8 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 		scene.add_component(std::move(material));
 	}
+
+	scene.add_component(std::move(bindless_textures));
 
 	auto default_material = create_default_material();
 

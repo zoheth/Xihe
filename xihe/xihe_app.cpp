@@ -1,5 +1,6 @@
 ﻿#include "xihe_app.h"
 
+#include "scene_graph/components/texture.h"
 #include "scene_graph/gltf_loader.h"
 #include "scene_graph/script.h"
 
@@ -16,9 +17,19 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
 namespace xihe
 {
+XiheApp::XiheApp()
+{
+	add_instance_extension(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+	add_device_extension(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+	add_device_extension(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+
+	// Works around a validation layer bug with descriptor pool allocation with VARIABLE_COUNT.
+	// See: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2350.
+	add_device_extension(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
+}
+
 XiheApp::~XiheApp()
 {
-
 	if (device_)
 	{
 		device_->get_handle().waitIdle();
@@ -249,7 +260,6 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
 	}
 
-
 	command_buffer.get_handle().endRenderPass();
 
 	{
@@ -263,6 +273,8 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		command_buffer.image_memory_barrier(views[0], memory_barrier);
 		render_target.set_layout(0, memory_barrier.new_layout);
 	}
+
+	update_bindless_descriptor_sets();
 }
 
 void XiheApp::load_scene(const std::string &path)
@@ -294,7 +306,22 @@ void XiheApp::update_scene(float delta_time)
 	}
 }
 
-
+void XiheApp::update_bindless_descriptor_sets()
+{
+	if (scene_)
+	{
+		if (scene_->has_component<sg::BindlessTextures>())
+		{
+			const auto textures = scene_->get_components<sg::BindlessTextures>()[0]->get_textures();
+			
+			for (uint32_t i = 0; i<textures.size(); ++i)
+			{
+				vk::DescriptorImageInfo image_info = textures[i]->get_descriptor_image_info();
+				render_context_->update_bindless_descriptor_set(i, image_info);
+			}
+		}
+	}
+}
 
 void XiheApp::add_instance_extension(const char *extension, bool optional)
 {
@@ -315,16 +342,17 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
 
 	features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
+	features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
 	features.descriptorBindingPartiallyBound              = VK_TRUE;
 	features.descriptorBindingUpdateUnusedWhilePending    = VK_TRUE;
 	features.descriptorBindingVariableDescriptorCount     = VK_TRUE;
 
 	features.runtimeDescriptorArray = VK_TRUE;
 
-	vk::PhysicalDeviceProperties2 device_properties{};
+	/*vk::PhysicalDeviceProperties2 device_properties{};
 	device_properties.pNext = &descriptor_indexing_properties_;
-	
-	gpu.get_handle().getProperties2(&device_properties);
+
+	gpu.get_handle().getProperties2(&device_properties);*/
 }
 
 void XiheApp::create_render_context()
@@ -351,7 +379,7 @@ void XiheApp::set_viewport_and_scissor(backend::CommandBuffer const &command_buf
 }
 }        // namespace xihe
 
-//std::unique_ptr<xihe::Application> create_application()
+// std::unique_ptr<xihe::Application> create_application()
 //{
 //	return std::make_unique<xihe::XiheApp>();
-//}
+// }

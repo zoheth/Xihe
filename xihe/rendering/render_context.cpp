@@ -20,6 +20,8 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 	{
 		swapchain_ = std::make_unique<backend::Swapchain>(device, surface, present_mode, present_mode_priority_list, surface_format_priority_list);
 	}
+
+	create_bindless_descriptor_set();
 }
 
 void RenderContext::prepare(size_t thread_count, RenderTarget::CreateFunc create_render_target_func)
@@ -151,6 +153,21 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 vk::Extent2D const & RenderContext::get_surface_extent() const
 {
 	return surface_extent_;
+}
+
+void RenderContext::update_bindless_descriptor_set(uint32_t index, vk::DescriptorImageInfo image_info)
+{
+	assert(index < max_bindless_resources_);
+
+	vk::WriteDescriptorSet write_descriptor_set{
+	    bindless_descriptor_set_,
+	    bindless_texture_binding_,
+	    index,
+	    1,
+	    vk::DescriptorType::eCombinedImageSampler,
+	    &image_info};
+
+	device_.get_handle().updateDescriptorSets(write_descriptor_set, nullptr);
 }
 
 void RenderContext::begin_frame()
@@ -323,5 +340,93 @@ void RenderContext::update_swapchain(const vk::Extent2D &extent)
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, extent);
 
 	recreate();
+}
+
+void RenderContext::create_bindless_descriptor_set()
+{
+	std::vector<vk::DescriptorPoolSize> pool_sizes_bindless =
+	    {
+	        {vk::DescriptorType::eCombinedImageSampler,
+	         max_bindless_resources_},
+	        {vk::DescriptorType::eStorageImage,
+	         max_bindless_resources_}
+
+	    };
+	auto pool_size_count = to_u32(pool_sizes_bindless.size());
+
+	vk::DescriptorPool           vk_descriptor_pool{VK_NULL_HANDLE};
+	vk::DescriptorPoolCreateInfo pool_create_info{};
+
+	pool_create_info.flags         = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
+	pool_create_info.maxSets       = max_bindless_resources_ * pool_size_count;
+	pool_create_info.poolSizeCount = pool_size_count;
+	pool_create_info.pPoolSizes    = pool_sizes_bindless.data();
+
+	vk::Result result = device_.get_handle().createDescriptorPool(&pool_create_info, nullptr, &vk_descriptor_pool);
+
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to create bindless descriptor pool"};
+	}
+
+	std::vector<vk::DescriptorSetLayoutBinding> bindings;
+
+	bindings.emplace_back(bindless_texture_binding_,
+	                      vk::DescriptorType::eCombinedImageSampler,
+	                      max_bindless_resources_,
+	                      vk::ShaderStageFlagBits::eAll,
+	                      nullptr);
+
+	bindings.emplace_back(bindless_texture_binding_ + 1,
+	                      vk::DescriptorType::eStorageImage,
+	                      max_bindless_resources_,
+	                      vk::ShaderStageFlagBits::eAll,
+	                      nullptr);
+
+	vk::DescriptorSetLayoutCreateInfo layout_create_info{
+	    vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
+	    bindings};
+
+	std::vector<vk::DescriptorBindingFlags> binding_flags = {
+	    vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound,
+	    vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound};
+
+	vk::DescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{
+	    binding_flags};
+
+
+	layout_create_info.pNext = &extended_info;
+
+	result = device_.get_handle().createDescriptorSetLayout(&layout_create_info, nullptr, &bindless_descriptor_set_layout_);
+
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to create bindless descriptor set layout"};
+	}
+
+	vk::DescriptorSetAllocateInfo allocate_info{};
+	allocate_info.descriptorPool     = vk_descriptor_pool;
+	allocate_info.descriptorSetCount = 1;
+	allocate_info.pSetLayouts        = &bindless_descriptor_set_layout_;
+
+	vk::DescriptorSetVariableDescriptorCountAllocateInfo variable_count_info{
+	    max_bindless_resources_ - 1};
+
+
+	result = device_.get_handle().allocateDescriptorSets(&allocate_info, &bindless_descriptor_set_);
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to allocate bindless descriptor set"};
+	}
+}
+
+vk::DescriptorSetLayout RenderContext::get_bindless_descriptor_set_layout() const
+{
+	return bindless_descriptor_set_layout_;
+}
+
+vk::DescriptorSet RenderContext::get_bindless_descriptor_set() const
+{
+	return bindless_descriptor_set_;
 }
 }        // namespace xihe::rendering

@@ -37,6 +37,8 @@ class ResourceRecord
 
 	size_t register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules);
 
+	size_t register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout);
+
 	size_t register_render_pass(const std::vector<rendering::Attachment> &        attachments,
 	                            const std::vector<common::LoadStoreInfo>         &load_store_infos,
 	                            const std::vector<SubpassInfo>           &        subpasses);

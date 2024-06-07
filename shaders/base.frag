@@ -1,4 +1,4 @@
-#version 320 es
+#version 450
 /* Copyright (c) 2019-2020, Arm Limited and Contributors
  *
  * SPDX-License-Identifier: Apache-2.0
@@ -18,8 +18,10 @@
 
 precision highp float;
 
+#extension GL_EXT_nonuniform_qualifier : require
+
 #ifdef HAS_BASE_COLOR_TEXTURE
-layout(set = 0, binding = 0) uniform sampler2D base_color_texture;
+layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
 #endif
 
 layout(location = 0) in vec4 in_pos;
@@ -84,7 +86,8 @@ void main(void)
 	vec4 base_color = vec4(1.0, 0.0, 0.0, 1.0);
 
 #ifdef HAS_BASE_COLOR_TEXTURE
-	base_color = texture(base_color_texture, in_uv);
+	//base_color = texture(base_color_texture, in_uv);
+	base_color = texture(global_textures[nonuniformEXT(1)], in_uv);
 #else
 	base_color = pbr_material_uniform.base_color_factor;
 #endif

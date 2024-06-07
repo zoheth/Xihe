@@ -67,6 +67,20 @@ size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *
 	return pipeline_layout_indices_.back();
 }
 
+size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout)
+{
+	pipeline_layout_indices_.push_back(pipeline_layout_indices_.size());
+
+	std::vector<size_t> shader_indices(shader_modules.size());
+	std::ranges::transform(shader_modules, shader_indices.begin(), [this](const ShaderModule *shader_module) {
+		return shader_module_to_index_.at(shader_module);
+	});
+
+	write(stream_, ResourceType::kPipelineLayout, shader_indices, bindless_descriptor_set_layout);
+
+	return pipeline_layout_indices_.back();
+}
+
 size_t ResourceRecord::register_render_pass(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
 {
 	render_pass_indices_.push_back(render_pass_indices_.size());
