@@ -10,12 +10,12 @@ namespace xihe::backend
 class Device;
 class ShaderModule;
 class DescriptorSetLayout;
+class BindlessDescriptorSet;
 
 class PipelineLayout
 {
   public:
-	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules);
-	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout);
+	PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, BindlessDescriptorSet *bindless_descriptor_set = nullptr);
 
 	PipelineLayout(const PipelineLayout &) = delete;
 	PipelineLayout(PipelineLayout &&other);
@@ -39,6 +39,10 @@ class PipelineLayout
 	const std::unordered_map<uint32_t, std::vector<ShaderResource>> &get_shader_sets() const;
 	bool                                                             has_descriptor_set_layout(const uint32_t set_index) const;
 
+	vk::DescriptorSet get_bindless_descriptor_set() const;
+
+	uint32_t get_bindless_descriptor_set_index() const;
+
 private:
 	void aggregate_shader_resources();
 
@@ -53,5 +57,8 @@ private:
 	std::unordered_map<uint32_t, std::vector<ShaderResource>> shader_sets_;
 
 	std::vector<DescriptorSetLayout *> descriptor_set_layouts_;
+
+	BindlessDescriptorSet *bindless_descriptor_set_{nullptr};
+	uint32_t 			 bindless_descriptor_set_index_{0};
 };
 }        // namespace xihe::backend

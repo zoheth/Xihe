@@ -67,7 +67,7 @@ std::vector<Texture *> BindlessTextures::get_textures()
 void BindlessTextures::add_texture(std::unique_ptr<Texture> &&texture)
 {
 	textures_.push_back(std::move(texture));
-	texture_map_.emplace(textures_.back()->get_name(), textures_.size() - 1);
+	texture_map_.emplace(textures_.back()->get_name(), static_cast<uint32_t>(textures_.size() - 1));
 }
 
 uint32_t BindlessTextures::get_texture_index(const std::string &name)

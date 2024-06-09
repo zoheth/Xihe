@@ -38,14 +38,14 @@ class DescriptorSet
 		return image_infos_;
 	}
 
-private:
+  private:
 	/**
 	 * \brief Prepares the descriptor set to have its contents updated by loading a vector of write operations
 	 *		  Cannot be called twice during the lifetime of a DescriptorSet
 	 */
 	void prepare();
 
-private:
+  private:
 	Device &device_;
 
 	const DescriptorSetLayout &descriptor_set_layout_;
@@ -66,12 +66,27 @@ private:
 	std::unordered_map<uint32_t, size_t> updated_bindings_;
 };
 
-
 class BindlessDescriptorSet
 {
-public:
+  public:
+	explicit BindlessDescriptorSet(Device &device);
 
+	~BindlessDescriptorSet();
 
+	vk::DescriptorSet get_handle() const;
+
+	vk::DescriptorSetLayout get_layout() const;
+
+	void update(uint32_t index, vk::DescriptorImageInfo image_info);
+
+	static constexpr uint32_t bindless_texture_binding_ = 10;
+	static constexpr uint32_t max_bindless_resources_   = 1024;
+
+  private:
+	Device                 &device_;
+	vk::DescriptorSet       handle_{VK_NULL_HANDLE};
+	vk::DescriptorPool      descriptor_pool_;
+	vk::DescriptorSetLayout bindless_descriptor_set_layout_;
 };
 
 }        // namespace xihe::backend

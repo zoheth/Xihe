@@ -185,8 +185,6 @@ void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::S
 		}
 	}
 
-	command_buffer.get_handle().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipeline_layout.get_handle(), 1, {render_context_.get_bindless_descriptor_set()}, {});
-
 	draw_submesh_command(command_buffer, sub_mesh);
 }
 
@@ -216,7 +214,7 @@ backend::PipelineLayout &GeometrySubpass::prepare_pipeline_layout(backend::Comma
 			shader_module->set_resource_mode(name, mode);
 		}
 	}
-	return command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set_layout());
+	return command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
 }
 
 void GeometrySubpass::prepare_push_constants(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh)

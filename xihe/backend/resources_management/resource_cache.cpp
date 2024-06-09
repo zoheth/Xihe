@@ -35,14 +35,9 @@ ShaderModule &ResourceCache::request_shader_module(vk::ShaderStageFlagBits stage
 	return request_resource(device_, recorder_, shader_module_mutex_, state_.shader_modules, stage, glsl_source, entry_point, shader_variant);
 }
 
-PipelineLayout &ResourceCache::request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules)
+PipelineLayout &ResourceCache::request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, BindlessDescriptorSet *bindless_descriptor_set)
 {
-	return request_resource(device_, recorder_, pipeline_layout_mutex_, state_.pipeline_layouts, shader_modules);
-}
-
-PipelineLayout &ResourceCache::request_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout)
-{
-	return request_resource(device_, recorder_, pipeline_layout_mutex_, state_.pipeline_layouts, shader_modules, bindless_descriptor_set_layout);
+	return request_resource(device_, recorder_, pipeline_layout_mutex_, state_.pipeline_layouts, shader_modules, bindless_descriptor_set);
 }
 
 DescriptorSetLayout &ResourceCache::request_descriptor_set_layout(const uint32_t set_index, const std::vector<ShaderModule *> &shader_modules, const std::vector<ShaderResource> &set_resources)

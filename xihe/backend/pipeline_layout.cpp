@@ -4,16 +4,29 @@
 
 namespace xihe::backend
 {
-PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules) :
+PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, BindlessDescriptorSet *bindless_descriptor_set) :
     device_(device),
-    shader_modules_(shader_modules)
+    shader_modules_(shader_modules),
+	bindless_descriptor_set_{bindless_descriptor_set}
 {
 	aggregate_shader_resources();
 
-	// Create a descriptor set layout for each shader set in the shader modules
-	for (auto &shader_set_it : shader_sets_)
+	if (bindless_descriptor_set)
 	{
-		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it.first, shader_modules, shader_set_it.second));
+		// Iterate over all shader sets except the last one to create descriptor set layouts.
+		// The last set is intended to be used as a bindless descriptor set, hence it is skipped.
+		for (auto shader_set_it = shader_sets_.begin(); shader_set_it != std::prev(shader_sets_.end()); ++shader_set_it)
+		{
+			descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it->first, shader_modules, shader_set_it->second));
+		}
+	}
+	else
+	{
+		// Create a descriptor set layout for each shader set in the shader modules
+		for (auto &shader_set_it : shader_sets_)
+		{
+			descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it.first, shader_modules, shader_set_it.second));
+		}
 	}
 
 	// Collect all the descriptor set layout handles, maintaining set order
@@ -23,45 +36,17 @@ PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *>
 		descriptor_set_layout_handles.push_back(descriptor_set_layout ? descriptor_set_layout->get_handle() : nullptr);
 	}
 
-	// Collect all the push constant shader resources
-	std::vector<vk::PushConstantRange> push_constant_ranges;
-	for (auto &push_constant_resource : get_resources(ShaderResourceType::kPushConstant))
+	if (bindless_descriptor_set)
 	{
-		push_constant_ranges.push_back({push_constant_resource.stages, push_constant_resource.offset, push_constant_resource.size});
+		descriptor_set_layout_handles.push_back(bindless_descriptor_set->get_layout());
+		bindless_descriptor_set_index_ = static_cast<uint32_t>(descriptor_set_layout_handles.size() - 1);
 	}
-
-	vk::PipelineLayoutCreateInfo create_info({}, descriptor_set_layout_handles, push_constant_ranges);
-
-	handle_ = device_.get_handle().createPipelineLayout(create_info);
-}
-
-PipelineLayout::PipelineLayout(Device &device, const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout):
-    device_(device),
-    shader_modules_(shader_modules)
-{
-	aggregate_shader_resources();
-
-	// Iterate over all shader sets except the last one to create descriptor set layouts.
-	// The last set is intended to be used as a bindless descriptor set, hence it is skipped.
-	for (auto shader_set_it = shader_sets_.begin(); shader_set_it != std::prev(shader_sets_.end()); ++shader_set_it)
-	{
-		descriptor_set_layouts_.emplace_back(&device_.get_resource_cache().request_descriptor_set_layout(shader_set_it->first, shader_modules, shader_set_it->second));
-	}
-
-	// Collect all the descriptor set layout handles, maintaining set order
-	std::vector<vk::DescriptorSetLayout> descriptor_set_layout_handles;
-	for (auto descriptor_set_layout : descriptor_set_layouts_)
-	{
-		descriptor_set_layout_handles.push_back(descriptor_set_layout ? descriptor_set_layout->get_handle() : nullptr);
-	}
-
-	descriptor_set_layout_handles.push_back(bindless_descriptor_set_layout);
 
 	// Collect all the push constant shader resources
 	std::vector<vk::PushConstantRange> push_constant_ranges;
 	for (auto &push_constant_resource : get_resources(ShaderResourceType::kPushConstant))
 	{
-		push_constant_ranges.push_back({push_constant_resource.stages, push_constant_resource.offset, push_constant_resource.size});
+		push_constant_ranges.emplace_back(push_constant_resource.stages, push_constant_resource.offset, push_constant_resource.size);
 	}
 
 	vk::PipelineLayoutCreateInfo create_info({}, descriptor_set_layout_handles, push_constant_ranges);
@@ -75,7 +60,9 @@ PipelineLayout::PipelineLayout(PipelineLayout &&other) :
     shader_modules_{std::move(other.shader_modules_)},
     shader_resources_{std::move(other.shader_resources_)},
     shader_sets_{std::move(other.shader_sets_)},
-    descriptor_set_layouts_{std::move(other.descriptor_set_layouts_)}
+    descriptor_set_layouts_{std::move(other.descriptor_set_layouts_)},
+	bindless_descriptor_set_{other.bindless_descriptor_set_},
+	bindless_descriptor_set_index_{other.bindless_descriptor_set_index_}
 {
 	other.handle_ = nullptr;
 }
@@ -134,8 +121,8 @@ vk::ShaderStageFlags PipelineLayout::get_push_constant_range_stage(uint32_t size
 
 DescriptorSetLayout const &PipelineLayout::get_descriptor_set_layout(const uint32_t set_index) const
 {
-	auto                                                                          it = std::ranges::find_if(descriptor_set_layouts_,
-	                               [&set_index](const DescriptorSetLayout * const descriptor_set_layout) { return descriptor_set_layout->get_index() == set_index; });
+	auto it = std::ranges::find_if(descriptor_set_layouts_,
+	                               [&set_index](const DescriptorSetLayout *const descriptor_set_layout) { return descriptor_set_layout->get_index() == set_index; });
 	if (it == descriptor_set_layouts_.end())
 	{
 		throw std::runtime_error("Couldn't find descriptor set layout at set index " + to_string(set_index));
@@ -151,6 +138,20 @@ const std::unordered_map<uint32_t, std::vector<ShaderResource>> &PipelineLayout:
 bool PipelineLayout::has_descriptor_set_layout(const uint32_t set_index) const
 {
 	return set_index < descriptor_set_layouts_.size();
+}
+
+vk::DescriptorSet PipelineLayout::get_bindless_descriptor_set() const
+{
+	if (bindless_descriptor_set_)
+	{
+		return bindless_descriptor_set_->get_handle();
+	}
+	return nullptr;
+}
+
+uint32_t PipelineLayout::get_bindless_descriptor_set_index() const
+{
+	return bindless_descriptor_set_index_;
 }
 
 void PipelineLayout::aggregate_shader_resources()

@@ -21,7 +21,7 @@ DescriptorSet::DescriptorSet(Device &device, const DescriptorSetLayout &descript
 void DescriptorSet::update(const std::vector<uint32_t> &bindings_to_update)
 {
 	std::vector<vk::WriteDescriptorSet> write_operations;
-	std::vector<size_t>               write_operation_hashes;
+	std::vector<size_t>                 write_operation_hashes;
 
 	// If the 'bindings_to_update' vector is empty, we want to write to all the bindings
 	// (but skipping all to-update bindings that haven't been written yet)
@@ -158,12 +158,12 @@ void DescriptorSet::prepare()
 	// Iterate over all image bindings
 	for (auto &binding_it : image_infos_)
 	{
-		auto binding_index = binding_it.first;
+		auto  binding_index     = binding_it.first;
 		auto &binding_resources = binding_it.second;
 
 		if (auto binding_info = descriptor_set_layout_.get_layout_binding(binding_index))
 		{
-			for (auto &element_it :binding_resources)
+			for (auto &element_it : binding_resources)
 			{
 				auto &image_info = element_it.second;
 
@@ -184,5 +184,111 @@ void DescriptorSet::prepare()
 			LOGE("Shader layout set does not use image binding at #{}", binding_index);
 		}
 	}
+}
+
+BindlessDescriptorSet::BindlessDescriptorSet(Device &device) :
+    device_{device}
+{
+	std::vector<vk::DescriptorPoolSize> pool_sizes_bindless =
+	    {
+	        {vk::DescriptorType::eCombinedImageSampler,
+	         max_bindless_resources_},
+	        {vk::DescriptorType::eStorageImage,
+	         max_bindless_resources_}
+
+	    };
+	auto pool_size_count = to_u32(pool_sizes_bindless.size());
+
+	vk::DescriptorPoolCreateInfo pool_create_info{};
+
+	pool_create_info.flags         = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind;
+	pool_create_info.maxSets       = max_bindless_resources_ * pool_size_count;
+	pool_create_info.poolSizeCount = pool_size_count;
+	pool_create_info.pPoolSizes    = pool_sizes_bindless.data();
+
+	vk::Result result = device_.get_handle().createDescriptorPool(&pool_create_info, nullptr, &descriptor_pool_);
+
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to create bindless descriptor pool"};
+	}
+
+	std::vector<vk::DescriptorSetLayoutBinding> bindings;
+
+	bindings.emplace_back(bindless_texture_binding_,
+	                      vk::DescriptorType::eCombinedImageSampler,
+	                      max_bindless_resources_,
+	                      vk::ShaderStageFlagBits::eAll,
+	                      nullptr);
+
+	bindings.emplace_back(bindless_texture_binding_ + 1,
+	                      vk::DescriptorType::eStorageImage,
+	                      max_bindless_resources_,
+	                      vk::ShaderStageFlagBits::eAll,
+	                      nullptr);
+
+	vk::DescriptorSetLayoutCreateInfo layout_create_info{
+	    vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool,
+	    bindings};
+
+	std::vector<vk::DescriptorBindingFlags> binding_flags = {
+	    vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound,
+	    vk::DescriptorBindingFlagBits::eUpdateAfterBind | vk::DescriptorBindingFlagBits::ePartiallyBound};
+
+	vk::DescriptorSetLayoutBindingFlagsCreateInfoEXT extended_info{
+	    binding_flags};
+
+	layout_create_info.pNext = &extended_info;
+
+	result = device_.get_handle().createDescriptorSetLayout(&layout_create_info, nullptr, &bindless_descriptor_set_layout_);
+
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to create bindless descriptor set layout"};
+	}
+
+	vk::DescriptorSetAllocateInfo allocate_info{};
+	allocate_info.descriptorPool     = descriptor_pool_;
+	allocate_info.descriptorSetCount = 1;
+	allocate_info.pSetLayouts        = &bindless_descriptor_set_layout_;
+
+	vk::DescriptorSetVariableDescriptorCountAllocateInfo variable_count_info{
+	    max_bindless_resources_ - 1};
+
+	result = device_.get_handle().allocateDescriptorSets(&allocate_info, &handle_);
+	if (result != vk::Result::eSuccess)
+	{
+		throw std::runtime_error{"Failed to allocate bindless descriptor set"};
+	}
+}
+
+BindlessDescriptorSet::~BindlessDescriptorSet()
+{
+	device_.get_handle().destroyDescriptorSetLayout(bindless_descriptor_set_layout_);
+	device_.get_handle().destroyDescriptorPool(descriptor_pool_);
+}
+
+vk::DescriptorSet BindlessDescriptorSet::get_handle() const
+{
+	return handle_;
+}
+
+vk::DescriptorSetLayout BindlessDescriptorSet::get_layout() const
+{
+	return bindless_descriptor_set_layout_;
+}
+
+void BindlessDescriptorSet::update(uint32_t index, vk::DescriptorImageInfo image_info)
+{
+	vk::WriteDescriptorSet write_descriptor_set{
+	    handle_,
+	    bindless_texture_binding_,
+	    index,
+	    1,
+	    vk::DescriptorType::eCombinedImageSampler,
+	    &image_info,
+	    nullptr};
+
+	device_.get_handle().updateDescriptorSets({write_descriptor_set}, {});
 }
 }        // namespace xihe::backend

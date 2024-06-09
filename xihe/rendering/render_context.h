@@ -50,10 +50,8 @@ class RenderContext
 
 	vk::Extent2D const &get_surface_extent() const;
 
-	void update_bindless_descriptor_set(uint32_t index, vk::DescriptorImageInfo image_info);
+	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
-	vk::DescriptorSetLayout get_bindless_descriptor_set_layout() const;
-	vk::DescriptorSet get_bindless_descriptor_set() const;
   private:
 	void begin_frame();
 
@@ -70,10 +68,6 @@ class RenderContext
 
 	void update_swapchain(const vk::Extent2D &extent);
 
-	void create_bindless_descriptor_set();
-
-	static constexpr uint32_t bindless_texture_binding_ = 10;
-	static constexpr uint32_t max_bindless_resources_   = 1024;
   private:
 
 	backend::Device &device_;
@@ -99,8 +93,6 @@ class RenderContext
 
 	size_t thread_count_{1};
 
-	// todo Consider where these two should be placed, and consider destruction.
-	vk::DescriptorSet bindless_descriptor_set_;
-	vk::DescriptorSetLayout bindless_descriptor_set_layout_;
+	std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
 };
 }        // namespace xihe::rendering

@@ -317,7 +317,8 @@ void XiheApp::update_bindless_descriptor_sets()
 			for (uint32_t i = 0; i<textures.size(); ++i)
 			{
 				vk::DescriptorImageInfo image_info = textures[i]->get_descriptor_image_info();
-				render_context_->update_bindless_descriptor_set(i, image_info);
+
+				render_context_->get_bindless_descriptor_set()->update(i, image_info);
 			}
 		}
 	}

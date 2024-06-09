@@ -595,6 +595,10 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 			get_handle().bindDescriptorSets(pipeline_bind_point, pipeline_layout.get_handle(), descriptor_set_id, descriptor_set_handle, dynamic_offsets);
 		}
 	}
+	if (const auto bindless_descriptor_set = pipeline_layout.get_bindless_descriptor_set())
+	{
+		get_handle().bindDescriptorSets(pipeline_bind_point, pipeline_layout.get_handle(), pipeline_layout.get_bindless_descriptor_set_index(), bindless_descriptor_set, {});
+	}
 }
 
 void CommandBuffer::flush_pipeline_state(vk::PipelineBindPoint pipeline_bind_point)

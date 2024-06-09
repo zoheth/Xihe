@@ -53,21 +53,7 @@ size_t ResourceRecord::register_shader_module(vk::ShaderStageFlagBits stage, con
 	return shader_module_indices_.back();
 }
 
-size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules)
-{
-	pipeline_layout_indices_.push_back(pipeline_layout_indices_.size());
-
-	std::vector<size_t>                                                                       shader_indices(shader_modules.size());
-	std::ranges::transform(shader_modules, shader_indices.begin(), [this](const ShaderModule *shader_module) {
-		return shader_module_to_index_.at(shader_module);
-	});
-
-	write(stream_, ResourceType::kPipelineLayout, shader_indices);
-
-	return pipeline_layout_indices_.back();
-}
-
-size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, vk::DescriptorSetLayout bindless_descriptor_set_layout)
+size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *> &shader_modules, BindlessDescriptorSet *bindless_descriptor_set)
 {
 	pipeline_layout_indices_.push_back(pipeline_layout_indices_.size());
 
@@ -76,7 +62,7 @@ size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *
 		return shader_module_to_index_.at(shader_module);
 	});
 
-	write(stream_, ResourceType::kPipelineLayout, shader_indices, bindless_descriptor_set_layout);
+	write(stream_, ResourceType::kPipelineLayout, shader_indices, bindless_descriptor_set);
 
 	return pipeline_layout_indices_.back();
 }
