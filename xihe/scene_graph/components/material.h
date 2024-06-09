@@ -18,6 +18,8 @@ enum class AlphaMode
 	kBlend
 };
 
+
+
 class Material : public Component
 {
   public:
@@ -49,10 +51,16 @@ class PbrMaterial : public Material
 
 	virtual std::type_index get_type() override;
 
+	void set_texture_index(const std::string &name, uint32_t texture_index);
+
 	glm::vec4 base_color_factor{0.0f, 0.0f, 0.0f, 0.0f};
 
 	float metallic_factor{0.0f};
 
 	float roughness_factor{0.0f};
+
+	// x = diffuse index, y = roughness index, z = normal index, w = occlusion index.
+    // Occlusion and roughness are encoded in the same texture
+	glm::uvec4 texture_indices{2, 0, 0, 0};
 };
 }

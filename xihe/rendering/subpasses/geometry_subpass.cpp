@@ -222,6 +222,7 @@ void GeometrySubpass::prepare_push_constants(backend::CommandBuffer &command_buf
 	const auto pbr_material = dynamic_cast<const sg::PbrMaterial *>(sub_mesh.get_material());
 
 	PBRMaterialUniform pbr_material_uniform;
+	pbr_material_uniform.texture_indices   = pbr_material->texture_indices;
 	pbr_material_uniform.base_color_factor = pbr_material->base_color_factor;
 	pbr_material_uniform.metallic_factor   = pbr_material->metallic_factor;
 	pbr_material_uniform.roughness_factor  = pbr_material->roughness_factor;

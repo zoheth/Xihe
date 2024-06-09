@@ -614,6 +614,8 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 				}
 
 				material->textures[tex_name] = tex;
+
+				material->set_texture_index(tex_name, gltf_value.second.TextureIndex());
 			}
 		}
 
@@ -632,6 +634,8 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 				}
 
 				material->textures[tex_name] = tex;
+
+				material->set_texture_index(tex_name, gltf_value.second.TextureIndex());
 			}
 		}
 

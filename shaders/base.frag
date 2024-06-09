@@ -20,9 +20,6 @@ precision highp float;
 
 #extension GL_EXT_nonuniform_qualifier : require
 
-#ifdef HAS_BASE_COLOR_TEXTURE
-layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
-#endif
 
 layout(location = 0) in vec4 in_pos;
 layout(location = 1) in vec2 in_uv;
@@ -38,13 +35,23 @@ layout(set = 0, binding = 1) uniform GlobalUniform
 }
 global_uniform;
 
+
+
+#ifdef HAS_BASE_COLOR_TEXTURE
+layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
+#endif
+
 // Push constants come with a limitation in the size of data.
 // The standard requires at least 128 bytes
 layout(push_constant, std430) uniform PBRMaterialUniform
 {
+	// x = diffuse index, y = roughness index, z = normal index, w = occlusion index.
+	// Occlusion and roughness are encoded in the same texture
+	uvec4       texture_indices;
 	vec4  base_color_factor;
 	float metallic_factor;
 	float roughness_factor;
+
 }
 pbr_material_uniform;
 
@@ -87,7 +94,7 @@ void main(void)
 
 #ifdef HAS_BASE_COLOR_TEXTURE
 	//base_color = texture(base_color_texture, in_uv);
-	base_color = texture(global_textures[nonuniformEXT(1)], in_uv);
+	base_color = texture(global_textures[nonuniformEXT(pbr_material_uniform.texture_indices.x)], in_uv);
 #else
 	base_color = pbr_material_uniform.base_color_factor;
 #endif

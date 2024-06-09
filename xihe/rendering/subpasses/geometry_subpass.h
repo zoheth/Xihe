@@ -32,6 +32,8 @@ struct alignas(16) GlobalUniform
  */
 struct PBRMaterialUniform
 {
+	glm::uvec4 texture_indices;
+
 	glm::vec4 base_color_factor;
 
 	float metallic_factor;
