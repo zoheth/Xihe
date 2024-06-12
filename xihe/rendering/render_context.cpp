@@ -24,7 +24,7 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
 }
 
-void RenderContext::prepare(size_t thread_count, RenderTarget::CreateFunc create_render_target_func)
+void RenderContext::prepare(size_t thread_count, const RenderTarget::CreateFunc &create_render_target_func)
 {
 	device_.get_handle().waitIdle();
 
@@ -328,6 +328,17 @@ void RenderContext::update_swapchain(const vk::Extent2D &extent)
 	device_.get_resource_cache().clear_framebuffers();
 
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, extent);
+
+	recreate();
+}
+
+void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags)
+{
+	assert(swapchain_);
+
+	device_.get_resource_cache().clear_framebuffers();
+
+	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, image_usage_flags);
 
 	recreate();
 }

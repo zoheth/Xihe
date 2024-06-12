@@ -32,7 +32,7 @@ class RenderContext
 	 * \param thread_count The number of threads in the application, necessary to allocate this many resource pools for each RenderFrame
 	 * \param create_render_target_func A function delegate, used to create a RenderTarget
 	 */
-	void prepare(size_t thread_count = 1, RenderTarget::CreateFunc create_render_target_func = RenderTarget::kDefaultCreateFunc);
+	void prepare(size_t thread_count = 1, const RenderTarget::CreateFunc &create_render_target_func = RenderTarget::kDefaultCreateFunc);
 
 	void recreate();
 
@@ -52,7 +52,6 @@ class RenderContext
 
 	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
-  private:
 	void begin_frame();
 
 	void end_frame(vk::Semaphore semaphore);
@@ -67,6 +66,8 @@ class RenderContext
 	bool handle_surface_changes(bool force_update = false);
 
 	void update_swapchain(const vk::Extent2D &extent);
+
+	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
 
   private:
 

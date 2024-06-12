@@ -255,7 +255,8 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 		{
 			auto default_layout = common::is_depth_format(attachment_descriptions[i_attachment].format) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
 			auto initial_layout = attachments[i_attachment].initial_layout == vk::ImageLayout::eUndefined ? default_layout : attachments[i_attachment].initial_layout;
-			input_attachments[i].emplace_back(i_attachment, initial_layout);
+			// todo 
+			input_attachments[i].emplace_back(i_attachment, default_layout);
 		}
 
 		for (auto r_attachment : subpass.color_resolve_attachments)

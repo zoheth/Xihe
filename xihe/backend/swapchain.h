@@ -27,6 +27,8 @@ class Swapchain
 
 	Swapchain(Swapchain &old_swapchain, const uint32_t image_count);
 
+	Swapchain(Swapchain &old_swapchain, const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
+
 	Swapchain(Device                                  &device,
 	          vk::SurfaceKHR                           surface,
 	          const vk::PresentModeKHR                 present_mode,

@@ -37,12 +37,16 @@ class TestSubpass : public rendering::Subpass
 class TestApp : public XiheApp
 {
   public:
-	TestApp()  = default;
-	~TestApp() = default;
+	TestApp()           = default;
+	~TestApp() override = default;
 
 	bool prepare(Window *window) override;
 
+protected:
+	std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
+
 private:
+
 	xihe::sg::Camera *camera_{nullptr};
 
 };

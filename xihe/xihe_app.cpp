@@ -28,6 +28,22 @@ XiheApp::XiheApp()
 	add_device_extension(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
 }
 
+std::unique_ptr<rendering::RenderTarget> XiheApp::create_render_target(backend::Image &&swapchain_image)
+{
+	vk::Format depth_format = common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle());
+
+	backend::Image depth_image{swapchain_image.get_device(), swapchain_image.get_extent(),
+	                           depth_format,
+	                           vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
+	                           VMA_MEMORY_USAGE_GPU_ONLY};
+
+	std::vector<backend::Image> images;
+	images.push_back(std::move(swapchain_image));
+	images.push_back(std::move(depth_image));
+
+	return std::make_unique<rendering::RenderTarget>(std::move(images));
+}
+
 XiheApp::~XiheApp()
 {
 	if (device_)
@@ -220,6 +236,36 @@ std::unique_ptr<backend::Instance> const &XiheApp::get_instance() const
 	return instance_;
 }
 
+rendering::RenderContext & XiheApp::get_render_context()
+{
+	if (has_render_context())
+	{
+		return *render_context_;
+	}
+	else
+	{
+		throw std::runtime_error("Render context is not initialized.");
+	}
+}
+
+rendering::RenderContext const & XiheApp::get_render_context() const
+{
+	if (has_render_context())
+	{
+		return *render_context_;
+	}
+	else
+	{
+		throw std::runtime_error("Render context is not initialized.");
+	}
+}
+
+bool XiheApp::has_render_context() const
+{
+	return render_context_ != nullptr;
+}
+
+
 void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
 {
 	auto &views = render_target.get_views();
@@ -253,14 +299,7 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 		render_target.set_layout(1, memory_barrier.new_layout);
 	}
 
-	set_viewport_and_scissor(command_buffer, render_target.get_extent());
-
-	if (render_pipeline_)
-	{
-		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
-	}
-
-	command_buffer.get_handle().endRenderPass();
+	draw_renderpass(command_buffer, render_target);
 
 	{
 		common::ImageMemoryBarrier memory_barrier{};
@@ -275,6 +314,18 @@ void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarg
 	}
 
 	update_bindless_descriptor_sets();
+}
+
+void XiheApp::draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
+{
+	set_viewport_and_scissor(command_buffer, render_target.get_extent());
+
+	if (render_pipeline_)
+	{
+		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
+	}
+
+	command_buffer.get_handle().endRenderPass();
 }
 
 void XiheApp::load_scene(const std::string &path)
@@ -313,8 +364,8 @@ void XiheApp::update_bindless_descriptor_sets()
 		if (scene_->has_component<sg::BindlessTextures>())
 		{
 			const auto textures = scene_->get_components<sg::BindlessTextures>()[0]->get_textures();
-			
-			for (uint32_t i = 0; i<textures.size(); ++i)
+
+			for (uint32_t i = 0; i < textures.size(); ++i)
 			{
 				vk::DescriptorImageInfo image_info = textures[i]->get_descriptor_image_info();
 
@@ -368,9 +419,11 @@ void XiheApp::create_render_context()
 	render_context_ = std::make_unique<rendering::RenderContext>(*get_device(), surface_, *window_, present_mode, present_mode_priority_list, surface_priority_list);
 }
 
-void XiheApp::prepare_render_context() const
+void XiheApp::prepare_render_context() 
 {
-	render_context_->prepare();
+	render_context_->prepare(1, [this](backend::Image &&swapchain_image) {
+		return create_render_target(std::move(swapchain_image));
+	});
 }
 
 void XiheApp::set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)

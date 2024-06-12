@@ -229,6 +229,19 @@ Swapchain::Swapchain(Swapchain &old_swapchain, const uint32_t image_count):
               old_swapchain.get_handle()}
 {}
 
+Swapchain::Swapchain(Swapchain &old_swapchain, const std::set<vk::ImageUsageFlagBits> &image_usage_flags):
+    Swapchain{old_swapchain.device_,
+              old_swapchain.surface_,
+              old_swapchain.properties_.present_mode,
+              old_swapchain.present_mode_priority_list_,
+              old_swapchain.surface_format_priority_list_,
+              old_swapchain.properties_.extent,
+              old_swapchain.properties_.image_count,
+              old_swapchain.properties_.pre_transform,
+              image_usage_flags,
+              old_swapchain.get_handle()}
+{}
+
 Swapchain::Swapchain(Device                                  &device,
                      vk::SurfaceKHR                           surface,
                      const vk::PresentModeKHR                 present_mode,

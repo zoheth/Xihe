@@ -5,10 +5,10 @@
 
 #include "backend/debug.h"
 #include "backend/device.h"
-#include "backend/physical_device.h"
 #include "backend/instance.h"
-#include "platform/window.h"
+#include "backend/physical_device.h"
 #include "platform/application.h"
+#include "platform/window.h"
 #include "rendering/render_context.h"
 #include "rendering/render_pipeline.h"
 #include "scene_graph/scene.h"
@@ -20,7 +20,7 @@ class XiheApp : public Application
 {
   public:
 	XiheApp();
-	~XiheApp();
+	~XiheApp() override;
 
 	bool prepare(Window *window) override;
 
@@ -38,16 +38,22 @@ class XiheApp : public Application
 	std::unordered_map<const char *, bool> const &get_instance_extensions() const;
 	std::unique_ptr<backend::Instance> const     &get_instance() const;
 
+	rendering::RenderContext       &get_render_context();
+	rendering::RenderContext const &get_render_context() const;
+	bool                            has_render_context() const;
 
-protected:
+  protected:
 	virtual void draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
+
+	virtual void draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
 
 	void load_scene(const std::string &path);
 
 	void update_scene(float delta_time);
 
-  private:
+	virtual std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image);
 
+  private:
 	void update_bindless_descriptor_sets();
 
 	void add_instance_extension(const char *extension, bool optional = false);
@@ -59,7 +65,7 @@ protected:
 	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
 
 	void create_render_context();
-	void prepare_render_context() const;
+	void prepare_render_context();
 
 	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
@@ -76,7 +82,7 @@ protected:
 
 	std::string name_{};
 
-	uint32_t                               api_version_ = VK_API_VERSION_1_0;
+	uint32_t api_version_ = VK_API_VERSION_1_0;
 
 	vk::SurfaceKHR surface_{};
 
