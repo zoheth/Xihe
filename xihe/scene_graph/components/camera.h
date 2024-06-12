@@ -80,6 +80,57 @@ class PerspectiveCamera : public Camera
 	float near_plane_{0.1f};
 };
 
+class OrthographicCamera : public Camera
+{
+  public:
+	OrthographicCamera(const std::string &name);
+
+	OrthographicCamera(const std::string &name, float left, float right, float bottom, float top, float near_plane, float far_plane);
+
+	virtual ~OrthographicCamera() = default;
+
+	void set_bounds(glm::vec3 min_bounds, glm::vec3 max_bounds);
+
+	void set_left(float left);
+
+	float get_left() const;
+
+	void set_right(float right);
+
+	float get_right() const;
+
+	void set_bottom(float bottom);
+
+	float get_bottom() const;
+
+	void set_top(float top);
+
+	float get_top() const;
+
+	void set_near_plane(float near_plane);
+
+	float get_near_plane() const;
+
+	void set_far_plane(float far_plane);
+
+	float get_far_plane() const;
+
+	virtual glm::mat4 get_projection() override;
+
+  private:
+	float left_{-1.0f};
+
+	float right_{1.0f};
+
+	float bottom_{-1.0f};
+
+	float top_{1.0f};
+
+	float near_plane_{0.0f};
+
+	float far_plane_{1.0f};
+};
+
 Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent);
 
 }

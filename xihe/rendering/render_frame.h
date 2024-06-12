@@ -55,6 +55,8 @@ class RenderFrame
 
 	void update_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
+	void set_active_render_target(RenderTarget *render_target);
+
 	void release_owned_semaphore(vk::Semaphore semaphore);
 
 	backend::BufferAllocation allocate_buffer(vk::BufferUsageFlags usage, vk::DeviceSize size, size_t thread_index = 0);
@@ -75,6 +77,8 @@ private:
 	backend::Device &device_;
 
 	std::unique_ptr<rendering::RenderTarget> swapchain_render_target_;
+
+	RenderTarget *active_render_target_;
 
 	/// Commands pools associated to the frame
 	std::map<uint32_t, std::vector<std::unique_ptr<backend::CommandPool>>> command_pools_;

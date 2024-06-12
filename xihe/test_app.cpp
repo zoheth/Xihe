@@ -5,11 +5,8 @@
 #include "rendering/subpass.h"
 #include "rendering/subpasses/forward_subpass.h"
 #include "rendering/subpasses/lighting_subpass.h"
+#include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
-
-xihe::TestSubpass::TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :
-    rendering::Subpass{render_context, (std::move(vertex_shader)), (std::move(fragment_shader))}
-{}
 
 std::unique_ptr<xihe::rendering::RenderTarget> xihe::TestApp::create_render_target(backend::Image &&swapchain_image)
 {
@@ -35,6 +32,16 @@ std::unique_ptr<xihe::rendering::RenderTarget> xihe::TestApp::create_render_targ
 	image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | rt_usage_flags);
 	backend::Image normal_image = image_builder.build(device);
 
+
+	// Shadow map
+	backend::ImageBuilder shadow_image_builder{2048,2048,1};
+	shadow_image_builder.with_format(common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle()));
+	shadow_image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled);
+	shadow_image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
+
+	backend::Image shadow_map = shadow_image_builder.build(device);
+	
+
 	std::vector<backend::Image> images;
 
 	// Attachment 0
@@ -49,62 +56,41 @@ std::unique_ptr<xihe::rendering::RenderTarget> xihe::TestApp::create_render_targ
 	// Attachment 3
 	images.push_back(std::move(normal_image));
 
+	// Attachment 4
+	images.push_back(std::move(shadow_map));
+
 	return std::make_unique<rendering::RenderTarget>(std::move(images));
 }
 
-void xihe::TestSubpass::prepare()
+std::unique_ptr<xihe::rendering::RenderTarget> xihe::TestApp::create_render_target(backend::Image &&swapchain_image)
+
+void xihe::TestApp::draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
 {
-	auto &resource_cache = render_context_.get_device().get_resource_cache();
+	set_viewport_and_scissor(command_buffer, render_target.get_extent());
 
-	vertex_shader_   = std::make_unique<backend::ShaderSource>("tests/test.vert");
-	fragment_shader_ = std::make_unique<backend::ShaderSource>("tests/test.frag");
 
-	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, *vertex_shader_);
-	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, *fragment_shader_);
 
-	vertex_input_state_.bindings.emplace_back(0, to_u32(sizeof(Vertex)), vk::VertexInputRate::eVertex);
+	if (render_pipeline_)
+	{
+		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
+	}
 
-	vertex_input_state_.attributes.emplace_back(0, 0, vk::Format::eR32G32B32Sfloat, to_u32(offsetof(Vertex, position)));
-
-	backend::BufferBuilder buffer_builder{sizeof(Vertex) * 3};
-	buffer_builder
-	    .with_usage(vk::BufferUsageFlagBits::eVertexBuffer)
-	    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-	vertex_buffer_ = buffer_builder.build_unique(render_context_.get_device());
-
-	std::vector<Vertex> vertices = {
-	    {{0.0f, -0.5f, 0.0f}},
-	    {{0.5f, 0.5f, 0.0f}},
-	    {{-0.5f, 0.5f, 0.0f}},
-	};
-
-	vertex_buffer_->update(vertices.data(), vertices.size() * sizeof(Vertex));
+	command_buffer.get_handle().endRenderPass();
 }
 
-void xihe::TestSubpass::draw(backend::CommandBuffer &command_buffer)
+std::unique_ptr<xihe::rendering::RenderPipeline> xihe::TestApp::create_shadow_render_pipeline()
 {
-	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+	auto vertex_shader   = backend::ShaderSource{"shadow/csm.vert"};
+	auto fragment_shader = backend::ShaderSource{"shadow.frag"};
 
-	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, *vertex_shader_);
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, *fragment_shader_);
+	auto shadow_subpass = std::make_unique<rendering::ShadowSubpass>(*render_context_, std::move(vertex_shader), std::move(fragment_shader), *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera_), 0);
 
-	std::vector<backend::ShaderModule *> shader_modules{&vert_shader_module, &frag_shader_module};
+	shadow_subpass->set_output_attachments({4});
 
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules);
-	command_buffer.bind_pipeline_layout(pipeline_layout);
+	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
+	subpasses.push_back(std::move(shadow_subpass));
 
-	RasterizationState rasterization_state{};
-	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
-	command_buffer.set_rasterization_state(rasterization_state);
-
-	command_buffer.set_vertex_input_state(vertex_input_state_);
-
-	std::vector<std::reference_wrapper<const backend::Buffer>> buffers;
-	buffers.emplace_back(std::ref(*vertex_buffer_));
-	command_buffer.bind_vertex_buffers(0, buffers, {0});
-
-	command_buffer.draw(3, 1, 0, 0);
+	shadow_render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
 }
 
 bool xihe::TestApp::prepare(Window *window)
@@ -180,7 +166,14 @@ bool xihe::TestApp::prepare(Window *window)
 
 	render_pipeline_->set_clear_value(clear_value);
 
+	create_shadow_render_pipeline();
+
 	return true;
+}
+
+void xihe::TestApp::update(float delta_time)
+{
+	XiheApp::update(delta_time);
 }
 
 std::unique_ptr<xihe::Application> create_application()

@@ -128,4 +128,96 @@ Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D e
 
 	return *camera_node;
 }
+
+OrthographicCamera::OrthographicCamera(const std::string &name) :
+    Camera{name}
+{}
+
+OrthographicCamera::OrthographicCamera(const std::string &name, float left, float right, float bottom, float top, float near_plane, float far_plane) :
+    Camera{name},
+    left_{left},
+    right_{right},
+    top_{top},
+    bottom_{bottom},
+    near_plane_{near_plane},
+    far_plane_{far_plane}
+{
+}
+
+void OrthographicCamera::set_bounds(glm::vec3 min_bounds, glm::vec3 max_bounds)
+{
+	left_       = min_bounds.x;
+	right_      = max_bounds.x;
+	bottom_     = min_bounds.y;
+	top_        = max_bounds.y;
+	near_plane_ = min_bounds.z;
+	far_plane_  = max_bounds.z;
+}
+
+void OrthographicCamera::set_left(float new_left)
+{
+	left_ = new_left;
+}
+
+float OrthographicCamera::get_left() const
+{
+	return left_;
+}
+
+void OrthographicCamera::set_right(float new_right)
+{
+	right_ = new_right;
+}
+
+float OrthographicCamera::get_right() const
+{
+	return right_;
+}
+
+void OrthographicCamera::set_bottom(float new_bottom)
+{
+	bottom_ = new_bottom;
+}
+
+float OrthographicCamera::get_bottom() const
+{
+	return bottom_;
+}
+
+void OrthographicCamera::set_top(float new_top)
+{
+	top_ = new_top;
+}
+
+float OrthographicCamera::get_top() const
+{
+	return top_;
+}
+
+void OrthographicCamera::set_near_plane(float new_near_plane)
+{
+	near_plane_ = new_near_plane;
+}
+
+float OrthographicCamera::get_near_plane() const
+{
+	return near_plane_;
+}
+
+void OrthographicCamera::set_far_plane(float new_far_plane)
+{
+	far_plane_ = new_far_plane;
+}
+
+float OrthographicCamera::get_far_plane() const
+{
+	return far_plane_;
+}
+
+glm::mat4 OrthographicCamera::get_projection()
+{
+	// Note: Using reversed depth-buffer for increased precision, so Znear and Zfar are flipped
+	return glm::ortho(left_, right_, bottom_, top_, far_plane_, near_plane_);
+}
+
 }

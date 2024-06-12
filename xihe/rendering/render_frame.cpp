@@ -13,6 +13,7 @@ RenderFrame::RenderFrame(backend::Device &device, std::unique_ptr<RenderTarget> 
     semaphore_pool_{device},
     thread_count_{thread_count}
 {
+	active_render_target_ = swapchain_render_target_.get();
 	for (auto &usage_it : supported_usage_map_)
 	{
 		auto [buffer_pool_it, inserted] = buffer_pools_.emplace(usage_it.first, std::vector<std::pair<backend::BufferPool, backend::BufferBlock *>>{});
@@ -52,12 +53,12 @@ backend::CommandBuffer &RenderFrame::request_command_buffer(const backend::Queue
 
 RenderTarget &RenderFrame::get_render_target()
 {
-	return *swapchain_render_target_;
+	return *active_render_target_;
 }
 
 RenderTarget const &RenderFrame::get_render_target() const
 {
-	return *swapchain_render_target_;
+	return *active_render_target_;
 }
 
 vk::DescriptorSet RenderFrame::request_descriptor_set(const backend::DescriptorSetLayout &descriptor_set_layout, const BindingMap<vk::DescriptorBufferInfo> &buffer_infos, const BindingMap<vk::DescriptorImageInfo> &image_infos, bool update_after_bind, size_t thread_index)
@@ -161,7 +162,11 @@ void RenderFrame::clear_descriptors()
 void RenderFrame::update_render_target(std::unique_ptr<RenderTarget> &&render_target)
 {
 	swapchain_render_target_ = std::move(render_target);
+	active_render_target_   = swapchain_render_target_.get();
 }
+
+void RenderFrame::set_active_render_target(RenderTarget *render_target)
+{}
 
 void RenderFrame::release_owned_semaphore(vk::Semaphore semaphore)
 {
