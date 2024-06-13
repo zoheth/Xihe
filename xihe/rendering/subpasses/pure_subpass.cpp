@@ -1,5 +1,7 @@
 #include "pure_subpass.h"
 
+#include "rendering/render_context.h"
+
 namespace xihe::rendering
 {
 TestSubpass::TestSubpass(rendering::RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :

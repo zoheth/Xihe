@@ -1,5 +1,6 @@
 #include "shadow_subpass.h"
 
+#include "rendering/render_context.h"
 #include "rendering/render_frame.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"

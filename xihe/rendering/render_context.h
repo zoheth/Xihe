@@ -4,6 +4,8 @@
 #include "backend/device.h"
 #include "backend/swapchain.h"
 #include "platform/window.h"
+#include "rendering/rdg_pass.h"
+#include "rendering/rdg_passes/main_pass.h"
 #include "rendering/render_target.h"
 
 namespace xihe::rendering
@@ -30,9 +32,8 @@ class RenderContext
 	/**
 	 * \brief Prepares the RenderFrames for rendering
 	 * \param thread_count The number of threads in the application, necessary to allocate this many resource pools for each RenderFrame
-	 * \param create_render_target_func A function delegate, used to create a RenderTarget
 	 */
-	void prepare(size_t thread_count = 1, const RenderTarget::CreateFunc &create_render_target_func = RenderTarget::kDefaultCreateFunc);
+	void prepare(size_t thread_count = 1);
 
 	void recreate();
 
@@ -56,7 +57,7 @@ class RenderContext
 
 	void end_frame(vk::Semaphore semaphore);
 
-	vk::Semaphore submit(const backend::Queue                       & queue,
+	vk::Semaphore submit(const backend::Queue                        &queue,
 	                     const std::vector<backend::CommandBuffer *> &command_buffers,
 	                     vk::Semaphore                                wait_semaphore,
 	                     vk::PipelineStageFlags                       wait_pipeline_stage);
@@ -69,8 +70,15 @@ class RenderContext
 
 	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
 
-  private:
+	/*template <typename T, typename... Args>
+	void add_pass(std::string name, Args &&...args);*/
+	void add_pass(std::string name, sg::Scene &scene);
 
+	void render(backend::CommandBuffer &command_buffer);
+
+	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
+
+  private:
 	backend::Device &device_;
 
 	const Window &window_;
@@ -88,12 +96,73 @@ class RenderContext
 	bool     frame_active_{false};
 	uint32_t active_frame_index_{0};
 
-	RenderTarget::CreateFunc create_render_target_func_ = RenderTarget::kDefaultCreateFunc;
-
 	vk::SurfaceTransformFlagBitsKHR pre_transform_{vk::SurfaceTransformFlagBitsKHR::eIdentity};
 
 	size_t thread_count_{1};
 
 	std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
+
+	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
 };
+
+//template <typename T, typename... Args>
+//void RenderContext::add_pass(std::string name, Args &&...args)
+//{
+//	if (rdg_passes_.contains(name))
+//	{
+//		throw std::runtime_error{"Pass with name " + name + " already exists"};
+//	}
+//
+//	rdg_passes_.emplace(std::move(name), T{this, std::forward<Args>(args)...});
+//
+//	surface_extent_ = swapchain_->get_extent();
+//	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
+//
+//	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
+//
+//	for (size_t i = 0 ; i<swapchain_->get_images().size(); ++i)
+//	{
+//		if (rdg_passes_[name].use_swapchain_image())
+//		{
+//			auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+//			auto render_target   = rdg_passes_[name].create_render_target(std::move(swapchain_image));
+//			frames_[i]->update_render_target(name, std::move(render_target));
+//		}
+//		else
+//		{
+//			auto render_target = rdg_passes_[name].create_render_target();
+//			frames_[i]->update_render_target(name, std::move(render_target));
+//		}
+//	}
+//}
+
+inline void RenderContext::add_pass(std::string name, sg::Scene &scene)
+{
+	if (rdg_passes_.contains(name))
+	{
+		throw std::runtime_error{"Pass with name " + name + " already exists"};
+	}
+
+	rdg_passes_.emplace(name, std::make_unique<MainPass>(*this, scene));
+
+	surface_extent_ = swapchain_->get_extent();
+	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
+
+	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
+
+	for (size_t i = 0 ; i<swapchain_->get_images().size(); ++i)
+	{
+		if (rdg_passes_[name]->use_swapchain_image())
+		{
+			auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+			auto render_target   = rdg_passes_[name]->create_render_target(std::move(swapchain_image));
+			frames_[i]->update_render_target(name, std::move(render_target));
+		}
+		else
+		{
+			auto render_target = rdg_passes_[name]->create_render_target();
+			frames_[i]->update_render_target(name, std::move(render_target));
+		}
+	}
+ }
 }        // namespace xihe::rendering

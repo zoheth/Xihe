@@ -1,10 +1,9 @@
 #pragma once
-#include "render_frame.h"
 #include "backend/buffer_pool.h"
 #include "backend/shader_module.h"
-#include "rendering/render_context.h"
-#include "scene_graph/node.h"
+#include "render_frame.h"
 #include "scene_graph/components/light.h"
+#include "scene_graph/node.h"
 
 namespace xihe
 {
@@ -35,171 +34,172 @@ extern const std::vector<std::string> kLightTypeDefinitions;
 
 namespace rendering
 {
-	class Subpass
+class RenderContext;
+class Subpass
+{
+  public:
+	Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
+
+	Subpass(const Subpass &) = delete;
+
+	Subpass(Subpass &&) = default;
+
+	virtual ~Subpass() = default;
+
+	Subpass &operator=(const Subpass &) = delete;
+
+	Subpass &operator=(Subpass &&) = delete;
+
+	/**
+	 * @brief Prepares the shaders and shader variants for a subpass
+	 */
+	virtual void prepare() = 0;
+
+	/**
+	 * @brief Updates the render target attachments with the ones stored in this subpass
+	 *        This function is called by the RenderPipeline before beginning the render
+	 *        pass and before proceeding with a new subpass.
+	 */
+	void update_render_target_attachments(RenderTarget &render_target);
+
+	/**
+	 * @brief Draw virtual function
+	 * @param command_buffer Command buffer to use to record draw commands
+	 */
+	virtual void draw(backend::CommandBuffer &command_buffer);
+
+	RenderContext &get_render_context();
+
+	const backend::ShaderSource &get_vertex_shader() const;
+
+	const backend::ShaderSource &get_fragment_shader() const;
+
+	DepthStencilState &get_depth_stencil_state();
+
+	const std::vector<uint32_t> &get_input_attachments() const;
+
+	void set_input_attachments(std::vector<uint32_t> input);
+
+	const std::vector<uint32_t> &get_output_attachments() const;
+
+	void set_output_attachments(std::vector<uint32_t> output);
+
+	void set_sample_count(vk::SampleCountFlagBits sample_count);
+
+	const std::vector<uint32_t> &get_color_resolve_attachments() const;
+
+	void set_color_resolve_attachments(std::vector<uint32_t> color_resolve);
+
+	const bool &get_disable_depth_stencil_attachment() const;
+
+	void set_disable_depth_stencil_attachment(bool disable_depth_stencil);
+
+	const uint32_t &get_depth_stencil_resolve_attachment() const;
+
+	void set_depth_stencil_resolve_attachment(uint32_t depth_stencil_resolve);
+
+	vk::ResolveModeFlagBits get_depth_stencil_resolve_mode() const;
+
+	void set_depth_stencil_resolve_mode(vk::ResolveModeFlagBits mode);
+
+	LightingState &get_lighting_state();
+
+	const std::string &get_debug_name() const;
+
+	void set_debug_name(const std::string &name);
+
+	template <typename T>
+	void allocate_lights(const std::vector<sg::Light *> &scene_lights,
+	                     size_t                          light_count)
 	{
-	public:
-	    Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
+		assert(scene_lights.size() <= (light_count * sg::LightType::kMax) && "Exceeding Max Light Capacity");
 
-		Subpass(const Subpass &) = delete;
+		lighting_state_.directional_lights.clear();
+		lighting_state_.point_lights.clear();
+		lighting_state_.spot_lights.clear();
 
-	    Subpass(Subpass &&) = default;
+		for (auto &scene_light : scene_lights)
+		{
+			const auto &properties = scene_light->get_properties();
+			auto       &transform  = scene_light->get_node()->get_transform();
 
-	    virtual ~Subpass() = default;
+			Light light{{transform.get_translation(), static_cast<float>(scene_light->get_light_type())},
+			            {properties.color, properties.intensity},
+			            {transform.get_rotation() * properties.direction, properties.range},
+			            {properties.inner_cone_angle, properties.outer_cone_angle}};
 
-	    Subpass &operator=(const Subpass &) = delete;
+			switch (scene_light->get_light_type())
+			{
+				case sg::LightType::kDirectional:
+				{
+					if (lighting_state_.directional_lights.size() < light_count)
+					{
+						lighting_state_.directional_lights.push_back(light);
+					}
+					break;
+				}
+				case sg::LightType::kPoint:
+				{
+					if (lighting_state_.point_lights.size() < light_count)
+					{
+						lighting_state_.point_lights.push_back(light);
+					}
+					break;
+				}
+				case sg::LightType::kSpot:
+				{
+					if (lighting_state_.spot_lights.size() < light_count)
+					{
+						lighting_state_.spot_lights.push_back(light);
+					}
+					break;
+				}
+				default:
+					break;
+			}
+		}
 
-	    Subpass &operator=(Subpass &&) = delete;
+		T light_info;
 
-	    /**
-	     * @brief Prepares the shaders and shader variants for a subpass
-	     */
-	    virtual void prepare() = 0;
+		std::copy(lighting_state_.directional_lights.begin(), lighting_state_.directional_lights.end(), light_info.directional_lights);
+		std::copy(lighting_state_.point_lights.begin(), lighting_state_.point_lights.end(), light_info.point_lights);
+		std::copy(lighting_state_.spot_lights.begin(), lighting_state_.spot_lights.end(), light_info.spot_lights);
 
-	    /**
-	     * @brief Updates the render target attachments with the ones stored in this subpass
-	     *        This function is called by the RenderPipeline before beginning the render
-	     *        pass and before proceeding with a new subpass.
-	     */
-	    void update_render_target_attachments(RenderTarget &render_target);
+		RenderFrame &render_frame    = get_render_context().get_active_frame();
+		lighting_state_.light_buffer = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(T));
+		lighting_state_.light_buffer.update(light_info);
+	}
 
-	    /**
-	     * @brief Draw virtual function
-	     * @param command_buffer Command buffer to use to record draw commands
-	     */
-	    virtual void draw(backend::CommandBuffer &command_buffer);
+  protected:
+	RenderContext &render_context_;
 
-	    RenderContext &get_render_context();
+	vk::SampleCountFlagBits sample_count_{vk::SampleCountFlagBits::e1};
 
-	    const backend::ShaderSource &get_vertex_shader() const;
+	std::unordered_map<std::string, backend::ShaderResourceMode> resource_mode_map_;
 
-	    const backend::ShaderSource &get_fragment_shader() const;
+	LightingState lighting_state_;
 
-	    DepthStencilState &get_depth_stencil_state();
+  private:
+	std::string debug_name_{};
 
-	    const std::vector<uint32_t> &get_input_attachments() const;
+	backend::ShaderSource vertex_shader_;
 
-	    void set_input_attachments(std::vector<uint32_t> input);
+	backend::ShaderSource fragment_shader_;
 
-	    const std::vector<uint32_t> &get_output_attachments() const;
+	DepthStencilState depth_stencil_state_{};
 
-	    void set_output_attachments(std::vector<uint32_t> output);
+	bool disable_depth_stencil_attachment_{false};
 
-	    void set_sample_count(vk::SampleCountFlagBits sample_count);
+	vk::ResolveModeFlagBits depth_stencil_resolve_mode_{};
 
-	    const std::vector<uint32_t> &get_color_resolve_attachments() const;
+	std::vector<uint32_t> input_attachments_{};
 
-	    void set_color_resolve_attachments(std::vector<uint32_t> color_resolve);
+	std::vector<uint32_t> output_attachments_{0};
 
-	    const bool &get_disable_depth_stencil_attachment() const;
+	std::vector<uint32_t> color_resolve_attachments_{};
 
-	    void set_disable_depth_stencil_attachment(bool disable_depth_stencil);
+	uint32_t depth_stencil_resolve_attachment_{vk::AttachmentUnused};
+};
+}        // namespace rendering
 
-	    const uint32_t &get_depth_stencil_resolve_attachment() const;
-
-	    void set_depth_stencil_resolve_attachment(uint32_t depth_stencil_resolve);
-
-	    vk::ResolveModeFlagBits get_depth_stencil_resolve_mode() const;
-
-	    void set_depth_stencil_resolve_mode(vk::ResolveModeFlagBits mode);
-
-	    LightingState &get_lighting_state();
-
-	    const std::string &get_debug_name() const;
-
-	    void set_debug_name(const std::string &name);
-
-		template <typename T>
-	    void allocate_lights(const std::vector<sg::Light *> &scene_lights,
-	                         size_t                          light_count)
-	    {
-		    assert(scene_lights.size() <= (light_count * sg::LightType::kMax) && "Exceeding Max Light Capacity");
-
-		    lighting_state_.directional_lights.clear();
-		    lighting_state_.point_lights.clear();
-		    lighting_state_.spot_lights.clear();
-
-		    for (auto &scene_light : scene_lights)
-		    {
-			    const auto &properties = scene_light->get_properties();
-			    auto       &transform  = scene_light->get_node()->get_transform();
-
-			    Light light{{transform.get_translation(), static_cast<float>(scene_light->get_light_type())},
-			                {properties.color, properties.intensity},
-			                {transform.get_rotation() * properties.direction, properties.range},
-			                {properties.inner_cone_angle, properties.outer_cone_angle}};
-
-			    switch (scene_light->get_light_type())
-			    {
-				    case sg::LightType::kDirectional:
-				    {
-					    if (lighting_state_.directional_lights.size() < light_count)
-					    {
-						    lighting_state_.directional_lights.push_back(light);
-					    }
-					    break;
-				    }
-				    case sg::LightType::kPoint:
-				    {
-					    if (lighting_state_.point_lights.size() < light_count)
-					    {
-						    lighting_state_.point_lights.push_back(light);
-					    }
-					    break;
-				    }
-				    case sg::LightType::kSpot:
-				    {
-					    if (lighting_state_.spot_lights.size() < light_count)
-					    {
-						    lighting_state_.spot_lights.push_back(light);
-					    }
-					    break;
-				    }
-				    default:
-					    break;
-			    }
-		    }
-
-		    T light_info;
-
-		    std::copy(lighting_state_.directional_lights.begin(), lighting_state_.directional_lights.end(), light_info.directional_lights);
-		    std::copy(lighting_state_.point_lights.begin(), lighting_state_.point_lights.end(), light_info.point_lights);
-		    std::copy(lighting_state_.spot_lights.begin(), lighting_state_.spot_lights.end(), light_info.spot_lights);
-
-		    RenderFrame &render_frame          = get_render_context().get_active_frame();
-		    lighting_state_.light_buffer = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(T));
-		    lighting_state_.light_buffer.update(light_info);
-	    }
-
-	protected:
-	    RenderContext &render_context_;
-
-		vk::SampleCountFlagBits sample_count_{vk::SampleCountFlagBits::e1};
-
-		std::unordered_map<std::string, backend::ShaderResourceMode> resource_mode_map_;
-
-		LightingState lighting_state_;
-
-	private:
-	    std::string debug_name_{};
-
-		backend::ShaderSource vertex_shader_;
-
-		backend::ShaderSource fragment_shader_;
-
-		DepthStencilState depth_stencil_state_{};
-
-		bool disable_depth_stencil_attachment_{false};
-
-		vk::ResolveModeFlagBits depth_stencil_resolve_mode_{};
-
-		std::vector<uint32_t> input_attachments_{};
-
-		std::vector<uint32_t> output_attachments_{0};
-
-		std::vector<uint32_t> color_resolve_attachments_{};
-
-		uint32_t depth_stencil_resolve_attachment_{vk::AttachmentUnused};
-	};
-}
-
-}
+}        // namespace xihe

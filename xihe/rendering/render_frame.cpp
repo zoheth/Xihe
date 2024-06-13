@@ -6,14 +6,12 @@ constexpr uint32_t kBufferPoolBlockSize = 256;
 
 namespace xihe::rendering
 {
-RenderFrame::RenderFrame(backend::Device &device, std::unique_ptr<RenderTarget> &&render_target, size_t thread_count) :
+RenderFrame::RenderFrame(backend::Device &device, size_t thread_count) :
     device_{device},
-    swapchain_render_target_{std::move(render_target)},
     fence_pool_{device},
     semaphore_pool_{device},
     thread_count_{thread_count}
 {
-	active_render_target_ = swapchain_render_target_.get();
 	for (auto &usage_it : supported_usage_map_)
 	{
 		auto [buffer_pool_it, inserted] = buffer_pools_.emplace(usage_it.first, std::vector<std::pair<backend::BufferPool, backend::BufferBlock *>>{});
@@ -24,7 +22,7 @@ RenderFrame::RenderFrame(backend::Device &device, std::unique_ptr<RenderTarget> 
 
 		for (size_t i = 0; i < thread_count; ++i)
 		{
-			buffer_pool_it->second.push_back(std::make_pair(backend::BufferPool{device, kBufferPoolBlockSize * 1024 * usage_it.second, usage_it.first}, nullptr));
+			buffer_pool_it->second.emplace_back(backend::BufferPool{device, kBufferPoolBlockSize * 1024 * usage_it.second, usage_it.first}, nullptr);
 		}
 	}
 
@@ -51,14 +49,22 @@ backend::CommandBuffer &RenderFrame::request_command_buffer(const backend::Queue
 	return (*command_pool_it)->request_command_buffer(level);
 }
 
-RenderTarget &RenderFrame::get_render_target()
+RenderTarget &RenderFrame::get_render_target(const std::string &rdg_name)
 {
-	return *active_render_target_;
+	if (!render_targets_.contains(rdg_name))
+	{
+		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
+	}
+	return *render_targets_[rdg_name];
 }
 
-RenderTarget const &RenderFrame::get_render_target() const
+RenderTarget const &RenderFrame::get_render_target(const std::string &rdg_name) const
 {
-	return *active_render_target_;
+	if (!render_targets_.contains(rdg_name))
+	{
+		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
+	}
+	return *render_targets_.at(rdg_name);
 }
 
 vk::DescriptorSet RenderFrame::request_descriptor_set(const backend::DescriptorSetLayout &descriptor_set_layout, const BindingMap<vk::DescriptorBufferInfo> &buffer_infos, const BindingMap<vk::DescriptorImageInfo> &image_infos, bool update_after_bind, size_t thread_index)
@@ -159,14 +165,11 @@ void RenderFrame::clear_descriptors()
 	}
 }
 
-void RenderFrame::update_render_target(std::unique_ptr<RenderTarget> &&render_target)
+void RenderFrame::update_render_target(std::string rdg_name, std::unique_ptr<RenderTarget> &&render_target)
 {
-	swapchain_render_target_ = std::move(render_target);
-	active_render_target_   = swapchain_render_target_.get();
+	render_targets_.erase(rdg_name);
+	render_targets_.emplace(std::move(rdg_name), std::move(render_target));
 }
-
-void RenderFrame::set_active_render_target(RenderTarget *render_target)
-{}
 
 void RenderFrame::release_owned_semaphore(vk::Semaphore semaphore)
 {

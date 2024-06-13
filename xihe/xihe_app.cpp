@@ -161,7 +161,7 @@ bool XiheApp::prepare(Window *window)
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(get_device()->get_handle());
 
 	create_render_context();
-	prepare_render_context();
+	render_context_->prepare();
 
 	return true;
 }
@@ -174,7 +174,9 @@ void XiheApp::update(float delta_time)
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-	draw(command_buffer, render_context_->get_active_frame().get_render_target());
+	render_context_->render(command_buffer);
+
+	update_bindless_descriptor_sets();
 
 	command_buffer.end();
 
@@ -263,69 +265,6 @@ rendering::RenderContext const & XiheApp::get_render_context() const
 bool XiheApp::has_render_context() const
 {
 	return render_context_ != nullptr;
-}
-
-
-void XiheApp::draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
-{
-	auto &views = render_target.get_views();
-
-	{
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-		command_buffer.image_memory_barrier(views[0], memory_barrier);
-		render_target.set_layout(0, memory_barrier.new_layout);
-
-		// Skip 1 as it is handled later as a depth-stencil attachment
-		for (size_t i = 2; i < views.size(); ++i)
-		{
-			command_buffer.image_memory_barrier(views[i], memory_barrier);
-			render_target.set_layout(static_cast<uint32_t>(i), memory_barrier.new_layout);
-		}
-	}
-
-	{
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.new_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
-
-		command_buffer.image_memory_barrier(views[1], memory_barrier);
-		render_target.set_layout(1, memory_barrier.new_layout);
-	}
-
-	draw_renderpass(command_buffer, render_target);
-
-	{
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-		memory_barrier.src_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eBottomOfPipe;
-
-		command_buffer.image_memory_barrier(views[0], memory_barrier);
-		render_target.set_layout(0, memory_barrier.new_layout);
-	}
-
-	update_bindless_descriptor_sets();
-}
-
-void XiheApp::draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target)
-{
-	set_viewport_and_scissor(command_buffer, render_target.get_extent());
-
-	if (render_pipeline_)
-	{
-		render_pipeline_->draw(command_buffer, render_context_->get_active_frame().get_render_target());
-	}
-
-	command_buffer.get_handle().endRenderPass();
 }
 
 void XiheApp::load_scene(const std::string &path)
@@ -417,13 +356,6 @@ void XiheApp::create_render_context()
 	std::vector<vk::PresentModeKHR> present_mode_priority_list{vk::PresentModeKHR::eMailbox, vk::PresentModeKHR::eFifo, vk::PresentModeKHR::eImmediate};
 
 	render_context_ = std::make_unique<rendering::RenderContext>(*get_device(), surface_, *window_, present_mode, present_mode_priority_list, surface_priority_list);
-}
-
-void XiheApp::prepare_render_context() 
-{
-	render_context_->prepare(1, [this](backend::Image &&swapchain_image) {
-		return create_render_target(std::move(swapchain_image));
-	});
 }
 
 void XiheApp::set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)

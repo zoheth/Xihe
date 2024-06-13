@@ -21,13 +21,9 @@ class TestApp : public XiheApp
 protected:
 	std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
 
-	void create_shadowmap_render_target();
-
-	void draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target) override;
-
 private:
 
-	std::unique_ptr<rendering::RenderPipeline> create_shadow_render_pipeline();
+	void create_shadow_render_pipeline();
 
 	xihe::sg::Camera *camera_{nullptr};
 

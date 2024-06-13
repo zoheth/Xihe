@@ -88,6 +88,8 @@ void RenderPipeline::draw(backend::CommandBuffer &command_buffer, RenderTarget &
 	}
 
 	active_subpass_index_ = 0;
+
+	command_buffer.end_render_pass();
 }
 
 std::unique_ptr<Subpass> &RenderPipeline::get_active_subpass()

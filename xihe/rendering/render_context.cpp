@@ -24,7 +24,7 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
 }
 
-void RenderContext::prepare(size_t thread_count, const RenderTarget::CreateFunc &create_render_target_func)
+void RenderContext::prepare(size_t thread_count)
 {
 	device_.get_handle().waitIdle();
 
@@ -36,14 +36,11 @@ void RenderContext::prepare(size_t thread_count, const RenderTarget::CreateFunc 
 
 	for (auto &image_handle : swapchain_->get_images())
 	{
-		auto swapchain_image = backend::Image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-		auto render_target   = create_render_target_func(std::move(swapchain_image));
-		frames_.emplace_back(std::make_unique<rendering::RenderFrame>(device_, std::move(render_target), thread_count));
+		frames_.emplace_back(std::make_unique<rendering::RenderFrame>(device_, thread_count));
 	}
 
-	create_render_target_func_ = create_render_target_func;
-	thread_count_              = thread_count;
-	prepared_                  = true;
+	thread_count_ = thread_count;
+	prepared_     = true;
 }
 
 void RenderContext::recreate()
@@ -53,25 +50,19 @@ void RenderContext::recreate()
 	vk::Extent2D swapchain_extent = swapchain_->get_extent();
 	vk::Extent3D extent{swapchain_extent.width, swapchain_extent.height, 1};
 
-	auto frame_it = frames_.begin();
+	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
 
-	for (auto &image_handle : swapchain_->get_images())
+	for (uint32_t i = 0; i < frames_.size(); ++i)
 	{
-		backend::Image swapchain_image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-
-		auto render_target = create_render_target_func_(std::move(swapchain_image));
-
-		if (frame_it != frames_.end())
+		for (auto &[rdg_name, rdg_pass] : rdg_passes_)
 		{
-			(*frame_it)->update_render_target(std::move(render_target));
+			if (rdg_pass->use_swapchain_image())
+			{
+				backend::Image swapchain_image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+				auto           render_target = rdg_pass->create_render_target(std::move(swapchain_image));
+				frames_[i]->update_render_target(rdg_name, std::move(render_target));
+			}
 		}
-		else
-		{
-			// Create a new frame if the new swapchain has more images than current frames
-			frames_.emplace_back(std::make_unique<RenderFrame>(device_, std::move(render_target), thread_count_));
-		}
-
-		++frame_it;
 	}
 
 	device_.get_resource_cache().clear_framebuffers();
@@ -79,7 +70,7 @@ void RenderContext::recreate()
 
 void RenderContext::recreate_swapchain()
 {
-	device_.get_handle().waitIdle();
+	/*device_.get_handle().waitIdle();
 	device_.get_resource_cache().clear_framebuffers();
 
 	vk::Extent2D swapchain_extent = swapchain_->get_extent();
@@ -89,12 +80,13 @@ void RenderContext::recreate_swapchain()
 
 	for (auto &image_handle : swapchain_->get_images())
 	{
-		backend::Image swapchain_image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-		auto           render_target = create_render_target_func_(std::move(swapchain_image));
-		(*frame_it)->update_render_target(std::move(render_target));
+	    backend::Image swapchain_image{device_, image_handle, extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+	    auto           render_target = create_render_target_func_(std::move(swapchain_image));
+	    (*frame_it)->update_render_target(std::move(render_target));
 
-		++frame_it;
-	}
+	    ++frame_it;
+	}*/
+	throw std::runtime_error("Not implemented");
 }
 
 backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode reset_mode)
@@ -121,7 +113,7 @@ RenderFrame &RenderContext::get_active_frame() const
 	return *frames_[active_frame_index_];
 }
 
-backend::Device & RenderContext::get_device() const
+backend::Device &RenderContext::get_device() const
 {
 	return device_;
 }
@@ -150,12 +142,12 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 	end_frame(render_semaphore);
 }
 
-vk::Extent2D const & RenderContext::get_surface_extent() const
+vk::Extent2D const &RenderContext::get_surface_extent() const
 {
 	return surface_extent_;
 }
 
-backend::BindlessDescriptorSet * RenderContext::get_bindless_descriptor_set() const
+backend::BindlessDescriptorSet *RenderContext::get_bindless_descriptor_set() const
 {
 	return bindless_descriptor_set_.get();
 }
@@ -215,7 +207,7 @@ void RenderContext::end_frame(vk::Semaphore semaphore)
 
 	if (swapchain_)
 	{
-		vk::SwapchainKHR vk_swapchain = swapchain_->get_handle();
+		vk::SwapchainKHR   vk_swapchain = swapchain_->get_handle();
 		vk::PresentInfoKHR present_info(semaphore, vk_swapchain, active_frame_index_);
 
 		vk::DisplayPresentInfoKHR display_present_info;
@@ -239,7 +231,6 @@ void RenderContext::end_frame(vk::Semaphore semaphore)
 		{
 			handle_surface_changes();
 		}
-
 	}
 
 	if (acquired_semaphore_)
@@ -341,5 +332,24 @@ void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &ima
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, image_usage_flags);
 
 	recreate();
+}
+
+void RenderContext::render(backend::CommandBuffer &command_buffer)
+{
+
+	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
+	{
+		auto &render_target = get_active_frame().get_render_target(rdg_name);
+
+		set_viewport_and_scissor(command_buffer, render_target.get_extent());
+
+		rdg_pass->execute(command_buffer, render_target);
+	}
+}
+
+void RenderContext::set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
+{
+	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
+	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 }        // namespace xihe::rendering

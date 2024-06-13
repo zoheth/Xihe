@@ -43,9 +43,6 @@ class XiheApp : public Application
 	bool                            has_render_context() const;
 
   protected:
-	virtual void draw(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
-
-	virtual void draw_renderpass(backend::CommandBuffer &command_buffer, rendering::RenderTarget &render_target);
 
 	void load_scene(const std::string &path);
 
@@ -67,7 +64,6 @@ class XiheApp : public Application
 	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
 
 	void create_render_context();
-	void prepare_render_context();
 
   protected:
 	std::unique_ptr<backend::Instance> instance_;

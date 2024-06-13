@@ -1,5 +1,6 @@
 #include "lighting_subpass.h"
 
+#include "rendering/render_context.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/scene.h"
 
@@ -41,7 +42,8 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 	assert(pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex).empty());
 	command_buffer.set_vertex_input_state({});
 
-	auto &render_target = get_render_context().get_active_frame().get_render_target();
+	// todo
+	auto &render_target = get_render_context().get_active_frame().get_render_target("main_pass");
 	auto &target_views  = render_target.get_views();
 	assert(3 < target_views.size());
 
