@@ -11,7 +11,7 @@ class ShadowPass : public RdgPass
   public:
 	ShadowPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
 
-	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
+	std::unique_ptr<RenderTarget> create_render_target() override;
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const override;
 
@@ -19,5 +19,8 @@ class ShadowPass : public RdgPass
 	static void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
 
 	static void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
+
+private:
+	RenderContext &render_context_;
 };
 }        // namespace xihe::rendering

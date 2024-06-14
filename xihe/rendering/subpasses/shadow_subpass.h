@@ -44,7 +44,7 @@ private:
 
 	RasterizationState base_rasterization_state_{};
 
-	inline static uint32_t cascade_count_{4};
+	inline static uint32_t cascade_count_{1};
 
 	uint32_t cascade_index_{0};
 

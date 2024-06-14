@@ -18,12 +18,8 @@ class TestApp : public XiheApp
 
 	void update(float delta_time) override;
 
-protected:
-	std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
 
 private:
-
-	void create_shadow_render_pipeline();
 
 	xihe::sg::Camera *camera_{nullptr};
 
