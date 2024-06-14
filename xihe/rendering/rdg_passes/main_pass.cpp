@@ -8,15 +8,13 @@
 
 namespace xihe::rendering
 {
-MainPass::MainPass(RenderContext &render_context, sg::Scene &scene)
+MainPass::MainPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera)
 {
-	auto &camera_node = xihe::sg::add_free_camera(scene, "main_camera", render_context.get_surface_extent());
-	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
 	// Geometry subpass
 	auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
 	auto geometry_fs   = backend::ShaderSource{"deferred/geometry.frag"};
-	auto scene_subpass = std::make_unique<rendering::GeometrySubpass>(render_context, std::move(geometry_vs), std::move(geometry_fs), scene, *camera);
+	auto scene_subpass = std::make_unique<rendering::GeometrySubpass>(render_context, std::move(geometry_vs), std::move(geometry_fs), scene, camera);
 
 	// Outputs are depth, albedo, and normal
 	scene_subpass->set_output_attachments({1, 2, 3});
@@ -24,7 +22,7 @@ MainPass::MainPass(RenderContext &render_context, sg::Scene &scene)
 	// Lighting subpass
 	auto lighting_vs      = backend::ShaderSource{"deferred/lighting.vert"};
 	auto lighting_fs      = backend::ShaderSource{"deferred/lighting.frag"};
-	auto lighting_subpass = std::make_unique<rendering::LightingSubpass>(render_context, std::move(lighting_vs), std::move(lighting_fs), *camera, scene);
+	auto lighting_subpass = std::make_unique<rendering::LightingSubpass>(render_context, std::move(lighting_vs), std::move(lighting_fs), camera, scene);
 
 	// Inputs are depth, albedo, and normal from the geometry subpass
 	lighting_subpass->set_input_attachments({1, 2, 3});

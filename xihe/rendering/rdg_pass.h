@@ -3,14 +3,19 @@
 #include "rendering/render_pipeline.h"
 #include "rendering/render_target.h"
 
-namespace xihe::rendering
+namespace xihe
 {
+namespace rendering
+{
+class RenderPipeline;
+class RenderTarget;
+
 class RdgPass
 {
   public:
-	RdgPass();
+	RdgPass() = default;
 
-	RdgPass(RdgPass &&)      = default;
+	RdgPass(RdgPass &&) = default;
 
 	/// \brief Creates or recreates a render target using a provided swapchain image.
 	/// \param swapchain_image The image from the swapchain used to create the render target.
@@ -32,4 +37,5 @@ class RdgPass
 
 	bool use_swapchain_image_{true};
 };
-}        // namespace xihe::rendering
+}        // namespace rendering
+}        // namespace xihe

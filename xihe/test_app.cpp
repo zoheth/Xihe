@@ -94,7 +94,10 @@ bool xihe::TestApp::prepare(Window *window)
 	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
 
-	get_render_context().add_pass("main_pass", *scene_);
+	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
+	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
+
+	get_render_context().add_pass<rendering::MainPass>("main_pass", *scene_);
 
 	return true;
 }

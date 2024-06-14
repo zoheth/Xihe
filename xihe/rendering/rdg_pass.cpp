@@ -4,10 +4,6 @@
 
 namespace xihe::rendering
 {
-RdgPass::RdgPass()
-{
-	
-}
 
 std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image)
 {
