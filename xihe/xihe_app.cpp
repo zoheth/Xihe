@@ -312,6 +312,8 @@ void XiheApp::update_bindless_descriptor_sets()
 			}
 		}
 	}
+	render_context_->update_rdg_bindless_descriptor_set();
+	render_context_->reset_bindless_index();
 }
 
 void XiheApp::add_instance_extension(const char *extension, bool optional)
@@ -339,6 +341,8 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	features.descriptorBindingVariableDescriptorCount     = VK_TRUE;
 
 	features.runtimeDescriptorArray = VK_TRUE;
+
+	gpu.get_mutable_requested_features().depthClamp = VK_TRUE;
 
 	/*vk::PhysicalDeviceProperties2 device_properties{};
 	device_properties.pNext = &descriptor_indexing_properties_;

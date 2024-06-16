@@ -106,6 +106,16 @@ const uint32_t &Subpass::get_depth_stencil_resolve_attachment() const
 	return depth_stencil_resolve_attachment_;
 }
 
+const uint32_t & Subpass::get_depth_stencil_attachment() const
+{
+	return depth_stencil_attachment_;
+}
+
+void Subpass::set_depth_stencil_attachment(uint32_t depth_attachment)
+{
+	depth_stencil_attachment_ = depth_attachment;
+}
+
 void Subpass::set_depth_stencil_resolve_attachment(uint32_t depth_stencil_resolve)
 {
 	depth_stencil_resolve_attachment_ = depth_stencil_resolve;

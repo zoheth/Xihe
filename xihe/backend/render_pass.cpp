@@ -267,20 +267,29 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 
 		if (!subpass.disable_depth_stencil_attachment)
 		{
-			// Assumption: depth stencil attachment appears in the list before any depth stencil resolve attachment
-			auto it = std::ranges::find_if(attachments, [](const rendering::Attachment attachment) { return common::is_depth_format(attachment.format); });
-			if (it != attachments.end())
+			if (subpass.depth_stencil_attachment)
 			{
-				auto i_depth_stencil = to_u32(std::distance(attachments.begin(), it));
-				auto initial_layout  = it->initial_layout == vk::ImageLayout::eUndefined ? vk::ImageLayout::eDepthStencilAttachmentOptimal : it->initial_layout;
-				depth_stencil_attachments[i].emplace_back(i_depth_stencil, initial_layout);
-
-				if (subpass.depth_stencil_resolve_mode != vk::ResolveModeFlagBits::eNone)
+				auto &attachment     = attachments.at(subpass.depth_stencil_attachment);
+				auto  initial_layout = attachment.initial_layout == vk::ImageLayout::eUndefined ? vk::ImageLayout::eDepthStencilAttachmentOptimal : attachment.initial_layout;
+				depth_stencil_attachments[i].emplace_back(subpass.depth_stencil_attachment, initial_layout); 
+			}
+			else
+			{
+				// Assumption: depth stencil attachment appears in the list before any depth stencil resolve attachment
+				auto it = std::ranges::find_if(attachments, [](const rendering::Attachment attachment) { return common::is_depth_format(attachment.format); });
+				if (it != attachments.end())
 				{
-					auto i_depth_stencil_resolve = subpass.depth_stencil_resolve_attachment;
-					initial_layout               = attachments[i_depth_stencil_resolve].initial_layout == vk::ImageLayout::eUndefined ? vk::ImageLayout::eDepthStencilAttachmentOptimal : attachments[i_depth_stencil_resolve].initial_layout;
-					depth_resolve_attachments[i].emplace_back(i_depth_stencil_resolve, initial_layout);
-				}
+					auto i_depth_stencil = to_u32(std::distance(attachments.begin(), it));
+					auto initial_layout  = it->initial_layout == vk::ImageLayout::eUndefined ? vk::ImageLayout::eDepthStencilAttachmentOptimal : it->initial_layout;
+					depth_stencil_attachments[i].emplace_back(i_depth_stencil, initial_layout);
+
+					if (subpass.depth_stencil_resolve_mode != vk::ResolveModeFlagBits::eNone)
+					{
+						auto i_depth_stencil_resolve = subpass.depth_stencil_resolve_attachment;
+						initial_layout               = attachments[i_depth_stencil_resolve].initial_layout == vk::ImageLayout::eUndefined ? vk::ImageLayout::eDepthStencilAttachmentOptimal : attachments[i_depth_stencil_resolve].initial_layout;
+						depth_resolve_attachments[i].emplace_back(i_depth_stencil_resolve, initial_layout);
+					}
+				}	
 			}
 		}
 	}

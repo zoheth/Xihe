@@ -1,6 +1,7 @@
 #include "lighting_subpass.h"
 
 #include "rendering/render_context.h"
+#include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/scene.h"
 
@@ -35,7 +36,7 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 
 	std::vector shader_modules = {&vert_shader_module, &frag_shader_module};
 
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules);
+	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
 	command_buffer.bind_pipeline_layout(pipeline_layout);
 
 	// we know, that the lighting subpass does not have any vertex stage input -> reset the vertex input state
@@ -68,8 +69,14 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 
 	auto &render_frame = get_render_context().get_active_frame();
 	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform));
-
+	allocation.update(light_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
+
+	// shadow
+	ShadowUniform &shadow_uniform = ShadowSubpass::get_shadow_uniform();
+	allocation                    = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform));
+	allocation.update(shadow_uniform);
+	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
 
 	command_buffer.draw(3, 1, 0, 0);
 }

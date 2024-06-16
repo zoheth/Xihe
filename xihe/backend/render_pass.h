@@ -18,6 +18,7 @@ struct SubpassInfo
 	std::vector<uint32_t> color_resolve_attachments;
 
 	bool                    disable_depth_stencil_attachment;
+	uint32_t                depth_stencil_attachment;			// Used to specify the specific depth attachment number.
 	uint32_t                depth_stencil_resolve_attachment;
 	vk::ResolveModeFlagBits depth_stencil_resolve_mode;
 

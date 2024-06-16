@@ -4,16 +4,26 @@
 
 #include "scene_graph/components/camera.h"
 
+constexpr uint32_t kCascadeCount = 3;
+
 namespace xihe::rendering
 {
+
+struct alignas(16) ShadowUniform
+{
+	float                                cascade_split_depth[4];             // Split depths in view space
+	std::array<glm::mat4, kCascadeCount> shadowmap_projection_matrix;        // Projection matrix used to render shadowmap
+};
+
+
 
 class ShadowSubpass : public Subpass
 {
   public:
-	ShadowSubpass(RenderContext &render_context,
+	ShadowSubpass(RenderContext          &render_context,
 	              backend::ShaderSource &&vertex_source,
-	              backend::ShaderSource   &&fragment_source,
-	              sg::Scene     &scene,
+	              backend::ShaderSource &&fragment_source,
+	              sg::Scene              &scene,
 	              sg::PerspectiveCamera  &camera,
 	              uint32_t                cascade_index);
 
@@ -23,17 +33,18 @@ class ShadowSubpass : public Subpass
 
 	void calculate_cascade_split_depth(float lambda = 0.5);
 
-  protected:
+	static ShadowUniform &get_shadow_uniform() { return shadow_uniform_; }
 
+  protected:
 	void update_uniforms(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index);
 
-	static void draw_submesh(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh, const std::vector<backend::ShaderResource> &vertex_input_resources);
+	void draw_submesh(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh, const std::vector<backend::ShaderResource> &vertex_input_resources);
 
-	void prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face);
+	void prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face) const;
 
 	backend::PipelineLayout &prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules);
 
-private:
+  private:
 	sg::PerspectiveCamera &camera_;
 
 	std::vector<sg::Mesh *> meshes_;
@@ -44,12 +55,14 @@ private:
 
 	RasterizationState base_rasterization_state_{};
 
-	inline static uint32_t cascade_count_{1};
+	inline static uint32_t cascade_count_{kCascadeCount};
 
 	uint32_t cascade_index_{0};
 
 	std::unique_ptr<sg::OrthographicCamera> cascade_camera_;
 
-	inline static std::vector<uint32_t> cascade_splits_{};
+	inline static std::vector<float> cascade_splits_{};
+
+	inline static ShadowUniform shadow_uniform_{};
 };
-}
+}        // namespace xihe::rendering

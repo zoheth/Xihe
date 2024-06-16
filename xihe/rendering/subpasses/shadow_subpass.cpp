@@ -17,7 +17,7 @@ ShadowSubpass::ShadowSubpass(RenderContext &render_context, backend::ShaderSourc
     camera_{camera},
     meshes_{scene.get_components<sg::Mesh>()},
     scene_{scene},
-	cascade_index_{cascade_index}
+    cascade_index_{cascade_index}
 {
 	auto       lights            = scene_.get_components<sg::Light>();
 	sg::Light *directional_light = nullptr;
@@ -29,24 +29,23 @@ ShadowSubpass::ShadowSubpass(RenderContext &render_context, backend::ShaderSourc
 			break;
 		}
 	}
-	assert(cascade_index_<cascade_count_);
+	assert(cascade_index_ < cascade_count_);
 
-	cascade_camera_ = std::make_unique<sg::OrthographicCamera>("cascade_cameras_" + std::to_string(cascade_index_)+std::to_string(cascade_count_));
+	cascade_camera_ = std::make_unique<sg::OrthographicCamera>("cascade_cameras_" + std::to_string(cascade_index_) + std::to_string(cascade_count_));
 	cascade_camera_->set_node(*directional_light->get_node());
 
-	if (cascade_splits_.size() != cascade_count_)
+	if (cascade_splits_.size() != cascade_count_ + 1)
 	{
-		cascade_splits_.resize(cascade_count_);
 		calculate_cascade_split_depth();
 	}
 }
 
 void ShadowSubpass::calculate_cascade_split_depth(float lambda)
 {
-
 	float n = camera_.get_near_plane();
 	float f = camera_.get_far_plane();
-	for (uint32_t index = 0; index < cascade_count_; ++index)
+	cascade_splits_.resize(cascade_count_ + 1);
+	for (uint32_t index = 0; index < cascade_splits_.size(); ++index)
 	{
 		float i = static_cast<float>(index);
 		float N = static_cast<float>(cascade_count_);
@@ -63,7 +62,14 @@ void ShadowSubpass::calculate_cascade_split_depth(float lambda)
 		// so we invert them here as well to match that convention.
 		cascade_splits_[index] = n / (n - f) -
 		                         (f * n) / ((n - f) * c);
+
+		// Store the split depth in the shadow uniform
+		if (index < 4)
+		{
+			shadow_uniform_.cascade_split_depth[index] = cascade_splits_[index];
+		}
 	}
+
 }
 
 void ShadowSubpass::prepare()
@@ -91,54 +97,53 @@ void ShadowSubpass::draw(backend::CommandBuffer &command_buffer)
 			{
 				update_uniforms(command_buffer, *node, thread_index_);
 				draw_submesh(command_buffer, *sub_mesh, vertex_input_resources);
-			}	
+			}
 		}
 	}
 }
 
 void ShadowSubpass::update_uniforms(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index)
 {
-	for (uint32_t i = 0; i < cascade_count_; ++i)
+	glm::mat4              inverse_view_projection = glm::inverse(camera_.get_projection() * camera_.get_view());
+	std::vector<glm::vec3> corners(8);
+	for (uint32_t i = 0; i < 8; i++)
 	{
-		glm::mat4              inverse_view_projection = glm::inverse(camera_.get_projection() * camera_.get_view());
-		std::vector<glm::vec3> corners(8);
-		for (uint32_t i = 0; i < 8; i++)
-		{
-			glm::vec4 homogenous_corner = glm::vec4(
-			    (i & 1) ? 1.0f : -1.0f,
-			    (i & 2) ? 1.0f : -1.0f,
-			    (i & 4) ? cascade_splits_[i] : cascade_splits_[i + 1],
-			    //(i & 4) ? 1.0f : 0.0f,
-			    1.0f);
+		glm::vec4 homogenous_corner = glm::vec4(
+		    (i & 1) ? 1.0f : -1.0f,
+		    (i & 2) ? 1.0f : -1.0f,
+		    (i & 4) ? cascade_splits_[cascade_index_] : cascade_splits_[cascade_index_ + 1],
+		    //(i & 4) ? 1.0f : 0.0f,
+		    1.0f);
 
-			glm::vec4 world_corner = inverse_view_projection * homogenous_corner;
-			corners[i]             = glm::vec3(world_corner) / world_corner.w;
-		}
-
-		glm::mat4 light_view_mat = cascade_camera_->get_view();
-
-		for (auto &corner : corners)
-		{
-			corner = light_view_mat * glm::vec4(corner, 1.0f);
-		}
-
-		glm::vec3 min_bounds = glm::vec3(FLT_MAX), max_bounds(FLT_MIN);
-
-		for (auto &corner : corners)
-		{
-			// In vulkan, clip space has inverted Y and depth range, so we need to flip the Y and Z axis
-			corner.y   = -corner.y;
-			corner.z   = -corner.z;
-			min_bounds = glm::min(min_bounds, corner);
-			max_bounds = glm::max(max_bounds, corner);
-		}
-
-		cascade_camera_->set_bounds(min_bounds, max_bounds);
+		glm::vec4 world_corner = inverse_view_projection * homogenous_corner;
+		corners[i]             = glm::vec3(world_corner) / world_corner.w;
 	}
+
+	glm::mat4 light_view_mat = cascade_camera_->get_view();
+
+	for (auto &corner : corners)
+	{
+		corner = light_view_mat * glm::vec4(corner, 1.0f);
+	}
+
+	glm::vec3 min_bounds = glm::vec3(FLT_MAX), max_bounds(FLT_MIN);
+
+	for (auto &corner : corners)
+	{
+		// In vulkan, clip space has inverted Y and depth range, so we need to flip the Y and Z axis
+		corner.y   = -corner.y;
+		corner.z   = -corner.z;
+		min_bounds = glm::min(min_bounds, corner);
+		max_bounds = glm::max(max_bounds, corner);
+	}
+
+	cascade_camera_->set_bounds(min_bounds, max_bounds);
 
 	GlobalUniform global_uniform{};
 
 	global_uniform.camera_view_proj = cascade_camera_->get_pre_rotation() * xihe::vulkan_style_projection(cascade_camera_->get_projection()) * cascade_camera_->get_view();
+
+	shadow_uniform_.shadowmap_projection_matrix[cascade_index_] = vulkan_style_projection(cascade_camera_->get_projection()) * cascade_camera_->get_view();
 
 	auto &render_frame = render_context_.get_active_frame();
 
@@ -156,6 +161,8 @@ void ShadowSubpass::update_uniforms(backend::CommandBuffer &command_buffer, sg::
 
 void ShadowSubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh, const std::vector<backend::ShaderResource> &vertex_input_resources)
 {
+	prepare_pipeline_state(command_buffer, vk::FrontFace::eClockwise);
+
 	VertexInputState vertex_input_state{};
 
 	for (auto &input_resource : vertex_input_resources)
@@ -209,7 +216,7 @@ void ShadowSubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::Sub
 	}
 }
 
-void ShadowSubpass::prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face)
+void ShadowSubpass::prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face) const
 {
 	RasterizationState rasterization_state;
 	rasterization_state.front_face        = front_face;

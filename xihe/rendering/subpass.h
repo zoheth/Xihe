@@ -96,6 +96,10 @@ class Subpass
 
 	const uint32_t &get_depth_stencil_resolve_attachment() const;
 
+	const uint32_t &get_depth_stencil_attachment() const;
+
+	void set_depth_stencil_attachment(uint32_t depth_attachment);
+
 	void set_depth_stencil_resolve_attachment(uint32_t depth_stencil_resolve);
 
 	vk::ResolveModeFlagBits get_depth_stencil_resolve_mode() const;
@@ -197,6 +201,8 @@ class Subpass
 	std::vector<uint32_t> output_attachments_{0};
 
 	std::vector<uint32_t> color_resolve_attachments_{};
+
+	uint32_t depth_stencil_attachment_{0}; // Used to specify the specific depth attachment number.
 
 	uint32_t depth_stencil_resolve_attachment_{vk::AttachmentUnused};
 };

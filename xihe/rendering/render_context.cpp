@@ -152,6 +152,32 @@ backend::BindlessDescriptorSet *RenderContext::get_bindless_descriptor_set() con
 	return bindless_descriptor_set_.get();
 }
 
+
+
+void RenderContext::update_rdg_bindless_descriptor_set()
+{
+	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
+	{
+		RenderTarget *render_target = rdg_pass->get_render_target();
+		if (!render_target)
+		{
+			render_target = &get_active_frame().get_render_target(rdg_name);
+		}
+
+		auto image_infos = rdg_pass->get_descriptor_image_infos(*render_target);
+
+		for (auto &image_info : image_infos)
+		{
+			bindless_descriptor_set_->update(image_info);
+		}
+	}
+}
+
+void RenderContext::reset_bindless_index() const
+{
+	bindless_descriptor_set_->reset_index();
+}
+
 void RenderContext::begin_frame()
 {
 	if (swapchain_)
@@ -339,11 +365,15 @@ void RenderContext::render(backend::CommandBuffer &command_buffer)
 
 	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
 	{
-		auto &render_target = get_active_frame().get_render_target(rdg_name);
+		RenderTarget *render_target = rdg_pass->get_render_target();
+		if (!render_target)
+		{
+			render_target = &get_active_frame().get_render_target(rdg_name);	
+		}
 
-		set_viewport_and_scissor(command_buffer, render_target.get_extent());
+		set_viewport_and_scissor(command_buffer, render_target->get_extent());
 
-		rdg_pass->execute(command_buffer, render_target);
+		rdg_pass->execute(command_buffer, *render_target);
 	}
 }
 

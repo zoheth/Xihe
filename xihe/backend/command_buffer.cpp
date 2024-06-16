@@ -182,7 +182,6 @@ void CommandBuffer::bind_image(const backend::ImageView &image_view, uint32_t se
 void CommandBuffer::bind_input(const backend::ImageView &image_view, uint32_t set, uint32_t binding, uint32_t array_element)
 {
 	resource_binding_state_.bind_input(image_view, set, binding, array_element);
-
 }
 
 void CommandBuffer::bind_index_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, vk::IndexType index_type)
@@ -199,7 +198,6 @@ void CommandBuffer::bind_lighting(LightingState &lighting_state, uint32_t set, u
 	set_specialization_constant(0, to_u32(lighting_state.directional_lights.size()));
 	set_specialization_constant(1, to_u32(lighting_state.point_lights.size()));
 	set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
-	
 }
 
 vk::Result CommandBuffer::end()
@@ -245,7 +243,6 @@ void CommandBuffer::dispatch_indirect(const backend::Buffer &buffer, vk::DeviceS
 void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data)
 {
 	get_handle().updateBuffer(buffer.get_handle(), offset, data.size(), data.data());
-	
 }
 
 void CommandBuffer::blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions)
@@ -256,13 +253,11 @@ void CommandBuffer::blit_image(const backend::Image &src_img, const backend::Ima
 void CommandBuffer::resolve_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageResolve> &regions)
 {
 	get_handle().resolveImage(src_img.get_handle(), vk::ImageLayout::eTransferSrcOptimal, dst_img.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions);
-
 }
 
 void CommandBuffer::copy_buffer(const backend::Buffer &src_buffer, const backend::Buffer &dst_buffer, vk::DeviceSize size)
 {
 	get_handle().copyBuffer(src_buffer.get_handle(), dst_buffer.get_handle(), vk::BufferCopy(0, 0, size));
-
 }
 
 void CommandBuffer::copy_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageCopy> &regions)
@@ -273,13 +268,11 @@ void CommandBuffer::copy_image(const backend::Image &src_img, const backend::Ima
 void CommandBuffer::copy_buffer_to_image(const backend::Buffer &buffer, const backend::Image &image, const std::vector<vk::BufferImageCopy> &regions)
 {
 	get_handle().copyBufferToImage(buffer.get_handle(), image.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions);
-
 }
 
 void CommandBuffer::copy_image_to_buffer(const backend::Image &image, vk::ImageLayout image_layout, const backend::Buffer &buffer, const std::vector<vk::BufferImageCopy> &regions)
 {
 	get_handle().copyImageToBuffer(image.get_handle(), image_layout, buffer.get_handle(), regions);
-
 }
 
 void CommandBuffer::image_memory_barrier(const backend::ImageView &image_view, const common::ImageMemoryBarrier &memory_barrier) const
@@ -298,14 +291,12 @@ void CommandBuffer::image_memory_barrier(const backend::ImageView &image_view, c
 	}
 
 	common::image_layout_transition(get_handle(), image_view.get_image().get_handle(), memory_barrier, subresource_range);
-
 }
 
 void CommandBuffer::buffer_memory_barrier(const backend::Buffer &buffer, vk::DeviceSize offset, vk::DeviceSize size, const common::BufferMemoryBarrier &memory_barrier)
 {
 	vk::BufferMemoryBarrier buffer_memory_barrier{memory_barrier.src_access_mask, memory_barrier.dst_access_mask, {}, {}, buffer.get_handle(), offset, size};
 	get_handle().pipelineBarrier(memory_barrier.src_stage_mask, memory_barrier.dst_stage_mask, {}, {}, buffer_memory_barrier, {});
-
 }
 
 void CommandBuffer::set_update_after_bind(bool update_after_bind)
@@ -317,8 +308,7 @@ void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vecto
 {
 	std::vector<vk::Buffer> buffer_handles(buffers.size(), nullptr);
 
-	std::ranges::transform(buffers, buffer_handles.begin(), [](const backend::Buffer &buffer) 
-		{ return buffer.get_handle(); });
+	std::ranges::transform(buffers, buffer_handles.begin(), [](const backend::Buffer &buffer) { return buffer.get_handle(); });
 
 	get_handle().bindVertexBuffers(first_binding, buffer_handles, offsets);
 }
@@ -405,14 +395,14 @@ void CommandBuffer::bind_pipeline_layout(PipelineLayout &pipeline_layout)
 	pipeline_state_.set_pipeline_layout(pipeline_layout);
 }
 
-RenderPass & CommandBuffer::get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses)
+RenderPass &CommandBuffer::get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses)
 {
 	assert(!subpasses.empty() && "Cannot create a render pass without any subpass");
 
 	std::vector<SubpassInfo> subpass_infos(subpasses.size());
-	auto subpass_info_it = subpass_infos.begin();
+	auto                     subpass_info_it = subpass_infos.begin();
 
-	for (auto &subpass :subpasses)
+	for (auto &subpass : subpasses)
 	{
 		subpass_info_it->input_attachments                = subpass->get_input_attachments();
 		subpass_info_it->output_attachments               = subpass->get_output_attachments();
@@ -420,6 +410,7 @@ RenderPass & CommandBuffer::get_render_pass(const rendering::RenderTarget &rende
 		subpass_info_it->disable_depth_stencil_attachment = subpass->get_disable_depth_stencil_attachment();
 		subpass_info_it->depth_stencil_resolve_mode       = subpass->get_depth_stencil_resolve_mode();
 		subpass_info_it->depth_stencil_resolve_attachment = subpass->get_depth_stencil_resolve_attachment();
+		subpass_info_it->depth_stencil_attachment         = subpass->get_depth_stencil_attachment();
 		subpass_info_it->debug_name                       = subpass->get_debug_name();
 
 		++subpass_info_it;
@@ -568,7 +559,7 @@ void CommandBuffer::flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_p
 										break;
 									case vk::DescriptorType::eInputAttachment:
 										image_info.imageLayout =
-											common::is_depth_format(image_view->get_format()) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
+										    common::is_depth_format(image_view->get_format()) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal : vk::ImageLayout::eShaderReadOnlyOptimal;
 										break;
 									case vk::DescriptorType::eStorageImage:
 										image_info.imageLayout = vk::ImageLayout::eGeneral;

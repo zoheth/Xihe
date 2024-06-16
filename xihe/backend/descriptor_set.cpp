@@ -280,6 +280,8 @@ vk::DescriptorSetLayout BindlessDescriptorSet::get_layout() const
 
 void BindlessDescriptorSet::update(uint32_t index, vk::DescriptorImageInfo image_info)
 {
+	assert(index == next_index_);
+	next_index_++;
 	vk::WriteDescriptorSet write_descriptor_set{
 	    handle_,
 	    bindless_texture_binding_,
@@ -290,5 +292,18 @@ void BindlessDescriptorSet::update(uint32_t index, vk::DescriptorImageInfo image
 	    nullptr};
 
 	device_.get_handle().updateDescriptorSets({write_descriptor_set}, {});
+}
+
+uint32_t BindlessDescriptorSet::update(vk::DescriptorImageInfo image_info)
+{
+	assert(next_index_ < max_bindless_resources_);
+	const auto index = next_index_;
+	update(index, image_info);
+	return index;
+}
+
+void BindlessDescriptorSet::reset_index()
+{
+	next_index_ = 0;
 }
 }        // namespace xihe::backend

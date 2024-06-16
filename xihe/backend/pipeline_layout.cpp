@@ -130,7 +130,7 @@ DescriptorSetLayout const &PipelineLayout::get_descriptor_set_layout(const uint3
 	return **it;
 }
 
-const std::unordered_map<uint32_t, std::vector<ShaderResource>> &PipelineLayout::get_shader_sets() const
+const std::map<uint32_t, std::vector<ShaderResource>> &PipelineLayout::get_shader_sets() const
 {
 	return shader_sets_;
 }

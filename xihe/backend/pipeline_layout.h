@@ -2,6 +2,7 @@
 
 #include "shader_module.h"
 
+#include <map>
 #include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
@@ -36,7 +37,7 @@ class PipelineLayout
 	vk::ShaderStageFlags get_push_constant_range_stage(uint32_t size, uint32_t offset = 0) const;
 
 	DescriptorSetLayout const                                       &get_descriptor_set_layout(const uint32_t set_index) const;
-	const std::unordered_map<uint32_t, std::vector<ShaderResource>> &get_shader_sets() const;
+	const std::map<uint32_t, std::vector<ShaderResource>> &get_shader_sets() const;
 	bool                                                             has_descriptor_set_layout(const uint32_t set_index) const;
 
 	vk::DescriptorSet get_bindless_descriptor_set() const;
@@ -54,7 +55,7 @@ private:
 
 	std::unordered_map<std::string, ShaderResource> shader_resources_;
 
-	std::unordered_map<uint32_t, std::vector<ShaderResource>> shader_sets_;
+	std::map<uint32_t, std::vector<ShaderResource>> shader_sets_;
 
 	std::vector<DescriptorSetLayout *> descriptor_set_layouts_;
 

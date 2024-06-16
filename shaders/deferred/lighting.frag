@@ -1,4 +1,7 @@
 #version 450
+
+#define SHADOW_MAP_CASCADE_COUNT 3
+
 precision highp float;
 
 layout(input_attachment_index = 0, binding = 0) uniform subpassInput i_depth;
@@ -29,6 +32,22 @@ layout(constant_id = 0) const uint DIRECTIONAL_LIGHT_COUNT = 0U;
 layout(constant_id = 1) const uint POINT_LIGHT_COUNT       = 0U;
 layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;
 
+layout(set = 0, binding = 5) uniform ShadowUniform {
+	vec4 far_d;
+    mat4 light_matrix[SHADOW_MAP_CASCADE_COUNT];
+} shadow_uniform;
+
+#extension GL_EXT_nonuniform_qualifier : require
+layout (set = 1, binding = 10 ) uniform sampler2DShadow global_textures[];
+
+float calculate_shadow(highp vec3 pos, uint i)
+{
+	vec4 projected_coord = shadow_uniform.light_matrix[i] * vec4(pos, 1.0);
+	projected_coord /= projected_coord.w;
+	projected_coord.xy = 0.5 * projected_coord.xy + 0.5;
+	return texture(global_textures[nonuniformEXT(25+i)], vec3(projected_coord.xy, projected_coord.z));
+}
+
 void main()
 {
 	// Retrieve position from depth
@@ -39,11 +58,24 @@ void main()
 	// Transform from [0,1] to [-1,1]
 	vec3 normal = subpassLoad(i_normal).xyz;
 	normal      = normalize(2.0 * normal - 1.0);
+
+	// Calculate shadow
+	uint cascade_i = 0;
+	for(uint i = 0; i < SHADOW_MAP_CASCADE_COUNT; ++i) {
+		if(subpassLoad(i_depth).x < shadow_uniform.far_d[i]) {	
+			cascade_i = i;
+		}
+	}
+
 	// Calculate lighting
 	vec3 L = vec3(0.0);
 	for (uint i = 0U; i < DIRECTIONAL_LIGHT_COUNT; ++i)
 	{
 		L += apply_directional_light(lights_info.directional_lights[i], normal);
+		if(i==0U)
+		{
+			L *= calculate_shadow(pos, cascade_i);
+		}
 	}
 	for (uint i = 0U; i < POINT_LIGHT_COUNT; ++i)
 	{

@@ -53,6 +53,12 @@ class RenderContext
 
 	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
+	RenderTarget &get_render_target(std::string name) const;
+
+	void update_rdg_bindless_descriptor_set();
+
+	void reset_bindless_index() const;
+
 	void begin_frame();
 
 	void end_frame(vk::Semaphore semaphore);
@@ -137,11 +143,11 @@ void RenderContext::add_pass(std::string name, Args &&...args)
 			auto render_target   = rdg_passes_[name]->create_render_target(std::move(swapchain_image));
 			frames_[i]->update_render_target(name, std::move(render_target));
 		}
-		else
+		/*else
 		{
 			auto render_target = rdg_passes_[name]->create_render_target();
 			frames_[i]->update_render_target(name, std::move(render_target));
-		}
+		}*/
 	}
 }
 }        // namespace xihe::rendering

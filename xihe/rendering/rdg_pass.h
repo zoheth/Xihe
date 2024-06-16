@@ -17,6 +17,8 @@ class RdgPass
 
 	RdgPass(RdgPass &&) = default;
 
+	virtual ~RdgPass() = default;
+
 	/// \brief Creates or recreates a render target using a provided swapchain image.
 	/// \param swapchain_image The image from the swapchain used to create the render target.
 	/// This version of the function is called when the swapchain changes and a new image is available.
@@ -24,9 +26,11 @@ class RdgPass
 
 	/// \brief Creates or recreates a render target without a swapchain image.
 	/// This version is used when no swapchain image is available or needed.
-	virtual std::unique_ptr<RenderTarget> create_render_target();
+	virtual RenderTarget *get_render_target() const;
 
 	virtual void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const = 0;
+
+	virtual std::vector<vk::DescriptorImageInfo> get_descriptor_image_infos(RenderTarget &render_target) const;
 
 	/// \brief Checks if the render target should be created using a swapchain image.
 	/// \return True if a swapchain image should be used, otherwise false.

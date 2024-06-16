@@ -79,6 +79,10 @@ class BindlessDescriptorSet
 
 	void update(uint32_t index, vk::DescriptorImageInfo image_info);
 
+	uint32_t update(vk::DescriptorImageInfo image_info);
+
+	void reset_index();
+
 	static constexpr uint32_t bindless_texture_binding_ = 10;
 	static constexpr uint32_t max_bindless_resources_   = 1024;
 
@@ -87,6 +91,8 @@ class BindlessDescriptorSet
 	vk::DescriptorSet       handle_{VK_NULL_HANDLE};
 	vk::DescriptorPool      descriptor_pool_;
 	vk::DescriptorSetLayout bindless_descriptor_set_layout_;
+
+	uint32_t next_index_ = 0;
 };
 
 }        // namespace xihe::backend
