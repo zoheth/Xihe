@@ -31,6 +31,8 @@ void Subpass::update_render_target_attachments(RenderTarget &render_target)
 {
 	render_target.set_input_attachments(input_attachments_);
 	render_target.set_output_attachments(output_attachments_);
+
+	render_target_ = &render_target;
 }
 
 void Subpass::draw(backend::CommandBuffer &command_buffer)

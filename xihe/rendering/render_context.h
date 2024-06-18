@@ -53,10 +53,6 @@ class RenderContext
 
 	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
-	RenderTarget &get_render_target(std::string name) const;
-
-	void update_rdg_bindless_descriptor_set();
-
 	void reset_bindless_index() const;
 
 	void begin_frame();
@@ -76,12 +72,7 @@ class RenderContext
 
 	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
 
-	template <typename T, typename... Args>
-	void add_pass(std::string name, Args &&...args);
-
-	void render(backend::CommandBuffer &command_buffer);
-
-	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
+	void register_rdg_render_target(const std::string &name, const RenderTarget::CreateFunc &create_render_target_func);
 
   private:
 	backend::Device &device_;
@@ -107,47 +98,7 @@ class RenderContext
 
 	std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
 
-	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
+	std::unordered_map<std::string, RenderTarget::CreateFunc> create_render_target_functions_{};
 };
 
-/**
- * \brief 
- * \tparam T Subclass of RdgPass.
- * \tparam Args 
- * \param name 
- * \param args Construction parameters for T, excluding render context.
- */
-template <typename T, typename... Args>
-void RenderContext::add_pass(std::string name, Args &&...args)
-{
-	static_assert(std::is_base_of_v<rendering::RdgPass, T>, "T must be a derivative of RenderPass");
-
-	if (rdg_passes_.contains(name))
-	{
-		throw std::runtime_error{"Pass with name " + name + " already exists"};
-	}
-
-
-	rdg_passes_.emplace(name, std::make_unique<T>(*this, std::forward<Args>(args)...));
-
-	surface_extent_ = swapchain_->get_extent();
-	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
-
-	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
-
-	for (size_t i = 0 ; i<swapchain_->get_images().size(); ++i)
-	{
-		if (rdg_passes_[name]->use_swapchain_image())
-		{
-			auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-			auto render_target   = rdg_passes_[name]->create_render_target(std::move(swapchain_image));
-			frames_[i]->update_render_target(name, std::move(render_target));
-		}
-		/*else
-		{
-			auto render_target = rdg_passes_[name]->create_render_target();
-			frames_[i]->update_render_target(name, std::move(render_target));
-		}*/
-	}
-}
 }        // namespace xihe::rendering

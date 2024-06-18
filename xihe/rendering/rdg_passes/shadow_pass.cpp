@@ -6,35 +6,27 @@
 
 namespace xihe::rendering
 {
-ShadowPass::ShadowPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera) :
-    render_context_{render_context}
+ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera) :
+    RdgPass{name, render_context}
 {
 	use_swapchain_image_ = false;
 
-	auto vertex_shader   = backend::ShaderSource{"shadow/csm.vert"};
-	auto fragment_shader = backend::ShaderSource{"shadow/csm.frag"};
-
-	auto shadow_subpass_0 = std::make_unique<rendering::ShadowSubpass>(render_context, std::move(backend::ShaderSource{"shadow/csm.vert"}), std::move(backend::ShaderSource{"shadow/csm.frag"}), scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), 0);
-	shadow_subpass_0->set_depth_stencil_attachment(0);
-	auto shadow_subpass_1 = std::make_unique<rendering::ShadowSubpass>(render_context, std::move(backend::ShaderSource{"shadow/csm.vert"}), std::move(backend::ShaderSource{"shadow/csm.frag"}), scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), 1);
-	shadow_subpass_1->set_depth_stencil_attachment(1);
-	auto shadow_subpass_2 = std::make_unique<rendering::ShadowSubpass>(render_context, std::move(backend::ShaderSource{"shadow/csm.vert"}), std::move(backend::ShaderSource{"shadow/csm.frag"}), scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), 2);
-	shadow_subpass_2->set_depth_stencil_attachment(2);
-
 	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
-	subpasses.push_back(std::move(shadow_subpass_0));
-	subpasses.push_back(std::move(shadow_subpass_1));
-	subpasses.push_back(std::move(shadow_subpass_2));
+
+	for (uint32_t i = 0; i < kCascadeCount; ++i)
+	{
+		subpasses.push_back(std::make_unique<rendering::ShadowSubpass>(render_context, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), i));
+		subpasses.back()->set_depth_stencil_attachment(i);
+	}
 
 	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
 
-	render_pipeline_->set_load_store({{vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare},
-	                                  {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare},
-	                                  {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare}});
+	auto load_store_infos = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
+	auto clear_values     = std::vector<vk::ClearValue>(kCascadeCount, vk::ClearDepthStencilValue{0.0f, 0});
 
-	render_pipeline_->set_clear_value({vk::ClearDepthStencilValue{0.0f, 0},
-	                                   vk::ClearDepthStencilValue{0.0f, 0},
-	                                   vk::ClearDepthStencilValue{0.0f, 0}});
+	render_pipeline_->set_load_store(load_store_infos);
+
+	render_pipeline_->set_clear_value(clear_values);
 
 	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
 	shadowmap_sampler_create_info.minFilter     = vk::Filter::eLinear;
@@ -48,7 +40,7 @@ ShadowPass::ShadowPass(RenderContext &render_context, sg::Scene &scene, sg::Came
 
 	shadowmap_sampler_ = render_context_.get_device().get_handle().createSampler(shadowmap_sampler_create_info);
 
-	create_render_target();
+	create_owned_render_target();
 }
 
 ShadowPass::~ShadowPass()
@@ -56,12 +48,7 @@ ShadowPass::~ShadowPass()
 	render_context_.get_device().get_handle().destroySampler(shadowmap_sampler_);
 }
 
-RenderTarget * ShadowPass::get_render_target() const
-{
-	return render_target_.get();
-}
-
-void ShadowPass::create_render_target()
+void ShadowPass::create_owned_render_target()
 {
 	auto &device = render_context_.get_device();
 
@@ -70,16 +57,15 @@ void ShadowPass::create_render_target()
 	shadow_image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled);
 	shadow_image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
-	backend::Image shadow_map_0 = shadow_image_builder.build(device);
-	backend::Image shadow_map_1 = shadow_image_builder.build(device);
-	backend::Image shadow_map_2 = shadow_image_builder.build(device);
-
 	std::vector<backend::Image> images;
-	images.push_back(std::move(shadow_map_0));
-	images.push_back(std::move(shadow_map_1));
-	images.push_back(std::move(shadow_map_2));
 
-	render_target_ =  std::make_unique<RenderTarget>(std::move(images));
+	for (uint32_t i = 0; i < kCascadeCount; ++i)
+	{
+		backend::Image shadow_map = shadow_image_builder.build(device);
+		images.push_back(std::move(shadow_map));
+	}
+
+	render_target_ = std::make_unique<RenderTarget>(std::move(images));
 }
 
 void ShadowPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const

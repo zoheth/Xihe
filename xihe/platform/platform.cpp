@@ -71,8 +71,10 @@ ExitCode Platform::main_loop()
 {
 	while (!window_->should_close() && !close_requested_)
 	{
+#ifndef XH_DEBUG
 		try
 		{
+#endif
 			update();
 
 			if (application_ && application_->should_close())
@@ -82,15 +84,17 @@ ExitCode Platform::main_loop()
 			}
 
 			window_->process_events();
+#ifndef XH_DEBUG
 		}
+
 		catch (std::exception &e)
 		{
 			LOGE("Error Message: {}", e.what());
 			LOGE("Failed when running application {}", application_->get_name());
 
-
 			return ExitCode::kFatalError;
 		}
+#endif
 	}
 
 	return ExitCode::kSuccess;
@@ -150,7 +154,7 @@ void Platform::resize(uint32_t width, uint32_t height)
 
 void Platform::input_event(const InputEvent &input_event)
 {
-	application_ -> input_event(input_event);
+	application_->input_event(input_event);
 
 	if (input_event.get_source() == EventSource::Keyboard)
 	{
@@ -179,12 +183,12 @@ void Platform::set_window_properties(const Window::OptionalProperties &propertie
 	window_properties_.extent.height = properties.extent.height.has_value() ? properties.extent.height.value() : window_properties_.extent.height;
 }
 
-const std::string & Platform::get_working_directory()
+const std::string &Platform::get_working_directory()
 {
 	return working_directory_;
 }
 
-const std::string & Platform::get_temp_directory()
+const std::string &Platform::get_temp_directory()
 {
 	return temp_directory_;
 }

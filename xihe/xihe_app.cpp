@@ -53,6 +53,8 @@ XiheApp::~XiheApp()
 
 	scene_.reset();
 
+	rdg_builder_.reset();
+
 	render_context_.reset();
 
 	device_.reset();
@@ -163,6 +165,8 @@ bool XiheApp::prepare(Window *window)
 	create_render_context();
 	render_context_->prepare();
 
+	rdg_builder_ = std::make_unique<rendering::RdgBuilder>(*render_context_);
+
 	return true;
 }
 
@@ -174,13 +178,15 @@ void XiheApp::update(float delta_time)
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-	render_context_->render(command_buffer);
-
 	update_bindless_descriptor_sets();
+
+	rdg_builder_->execute(command_buffer);
 
 	command_buffer.end();
 
 	render_context_->submit(command_buffer);
+
+	render_context_->reset_bindless_index();
 }
 
 void XiheApp::input_event(const InputEvent &input_event)
@@ -312,8 +318,6 @@ void XiheApp::update_bindless_descriptor_sets()
 			}
 		}
 	}
-	render_context_->update_rdg_bindless_descriptor_set();
-	render_context_->reset_bindless_index();
 }
 
 void XiheApp::add_instance_extension(const char *extension, bool optional)

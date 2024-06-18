@@ -38,6 +38,7 @@ namespace xihe::rendering
 	     */
 	    void draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents = vk::SubpassContents::eInline);
 
+
 	    /**
 	     * @return Subpass currently being recorded, or the first one
 	     *         if drawing has not started

@@ -8,7 +8,7 @@ namespace xihe::rendering
 class MainPass : public RdgPass
 {
 public:
-	MainPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
+	MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
 
 	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
 

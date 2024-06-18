@@ -29,9 +29,9 @@ bool xihe::TestApp::prepare(Window *window)
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
-	get_render_context().add_pass<rendering::ShadowPass>("shadow_pass", *scene_, *camera);
+	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", *scene_, *camera);
 
-	get_render_context().add_pass<rendering::MainPass>("main_pass", *scene_, *camera);
+	rdg_builder_->add_pass<rendering::MainPass>("main_pass", *scene_, *camera);
 
 	return true;
 }

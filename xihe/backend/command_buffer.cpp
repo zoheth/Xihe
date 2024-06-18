@@ -39,13 +39,15 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer
 {
 	if (level_ == vk::CommandBufferLevel::eSecondary)
 	{
-		// todo
-		assert(false);
+		assert(primary_cmd_buf && "A primary command buffer pointer must be provided when calling begin from a secondary one");
+		auto render_pass_binding = primary_cmd_buf->get_current_render_pass();
+
+		return begin(flags, render_pass_binding.render_pass, render_pass_binding.framebuffer, primary_cmd_buf->get_current_subpass_index());
 	}
 	return begin(flags, nullptr, nullptr, 0);
 }
 
-vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_info)
+vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_index)
 {
 	pipeline_state_.reset();
 	resource_binding_state_.reset();
@@ -57,8 +59,16 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend
 
 	if (level_ == vk::CommandBufferLevel::eSecondary)
 	{
-		// todo
-		assert(false);
+		assert((render_pass && framebuffer) && "Render pass and framebuffer must be provided when calling begin from a secondary one");
+
+		current_render_pass_.render_pass = render_pass;
+		current_render_pass_.framebuffer = framebuffer;
+
+		inheritance_info.renderPass = current_render_pass_.render_pass->get_handle();
+		inheritance_info.framebuffer = current_render_pass_.framebuffer->get_handle();
+		inheritance_info.subpass     = subpass_index;
+
+		begin_info.pInheritanceInfo = &inheritance_info;
 	}
 
 	get_handle().begin(begin_info);
@@ -643,5 +653,15 @@ void CommandBuffer::flush_push_constants()
 	}
 
 	stored_push_constants_.clear();
+}
+
+const CommandBuffer::RenderPassBinding & CommandBuffer::get_current_render_pass() const
+{
+	return current_render_pass_;
+}
+
+uint32_t CommandBuffer::get_current_subpass_index() const
+{
+	return pipeline_state_.get_subpass_index();
 }
 }        // namespace xihe::backend

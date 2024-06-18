@@ -183,6 +183,8 @@ class Subpass
 
 	LightingState lighting_state_;
 
+	RenderTarget *render_target_{nullptr};
+
   private:
 	std::string debug_name_{};
 

@@ -9,11 +9,9 @@ namespace xihe::rendering
 class ShadowPass : public RdgPass
 {
   public:
-	ShadowPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
+	ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
 
-	~ShadowPass();
-
-	RenderTarget *get_render_target() const override;
+	~ShadowPass() override;
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const override;
 
@@ -25,12 +23,8 @@ class ShadowPass : public RdgPass
 	static void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
 
 private:
-	void create_render_target();
-
-	RenderContext &render_context_;
+	void create_owned_render_target();
 
 	vk::Sampler shadowmap_sampler_;
-
-	std::unique_ptr<RenderTarget> render_target_;
 };
 }        // namespace xihe::rendering

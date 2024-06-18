@@ -52,7 +52,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result begin(vk::CommandBufferUsageFlags flags, CommandBuffer *primary_cmd_buf = nullptr);
 
-	vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_info);
+	vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_index);
 
 	void begin_render_pass(const rendering::RenderTarget                          &render_target,
 	                       const std::vector<common::LoadStoreInfo>               &load_store_infos,
@@ -204,6 +204,10 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	void flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_pipeline_state(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_push_constants();
+
+	const RenderPassBinding &get_current_render_pass() const;
+
+	uint32_t get_current_subpass_index() const;
 
 	const vk::CommandBufferLevel level_{};
 	CommandPool                 &command_pool_;

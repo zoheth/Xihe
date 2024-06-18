@@ -76,6 +76,12 @@ set(CTPL_DIR ${CMAKE_CURRENT_SOURCE_DIR}/CTPL)
 target_sources(ctpl INTERFACE ${CTPL_DIR}/ctpl_stl.h)
 target_include_directories(ctpl SYSTEM INTERFACE ${CTPL_DIR})
 
+# enkiTS
+add_library(enkits INTERFACE)
+set(ENKITS_DIR ${CMAKE_CURRENT_SOURCE_DIR}/enkiTS/src)
+target_sources(enkits INTERFACE ${ENKITS_DIR}/TaskScheduler.cpp ${ENKITS_DIR}/TaskScheduler.h ${ENKITS_DIR}/LockLessMultiReadPipe.h)
+target_include_directories(enkits SYSTEM INTERFACE ${ENKITS_DIR})
+
 # GLFW
 option(GLFW_BUILD_DOCS OFF)
 option(GLFW_BUILD_TESTS OFF)

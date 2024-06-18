@@ -8,9 +8,9 @@
 
 namespace xihe::rendering
 {
-MainPass::MainPass(RenderContext &render_context, sg::Scene &scene, sg::Camera &camera)
+MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera) :
+    RdgPass{name, render_context}
 {
-
 	// Geometry subpass
 	auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
 	auto geometry_fs   = backend::ShaderSource{"deferred/geometry.frag"};
@@ -155,7 +155,7 @@ void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 void MainPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
 	{
-		auto &                     views = render_target.get_views();
+		auto                      &views = render_target.get_views();
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
 		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;

@@ -13,7 +13,7 @@ class RenderTarget;
 class RdgPass
 {
   public:
-	RdgPass() = default;
+	RdgPass(const std::string &name, RenderContext &render_context);
 
 	RdgPass(RdgPass &&) = default;
 
@@ -37,7 +37,14 @@ class RdgPass
 	bool use_swapchain_image() const;
 
   protected:
+
+	std::string name_;
+
+	RenderContext &render_context_;
+
 	std::unique_ptr<RenderPipeline> render_pipeline_{nullptr};
+
+	std::unique_ptr<RenderTarget>   render_target_{nullptr};
 
 	bool use_swapchain_image_{true};
 };

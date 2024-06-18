@@ -54,14 +54,11 @@ void RenderContext::recreate()
 
 	for (uint32_t i = 0; i < frames_.size(); ++i)
 	{
-		for (auto &[rdg_name, rdg_pass] : rdg_passes_)
+		for (auto &[rdg_name, create_func] : create_render_target_functions_)
 		{
-			if (rdg_pass->use_swapchain_image())
-			{
-				backend::Image swapchain_image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-				auto           render_target = rdg_pass->create_render_target(std::move(swapchain_image));
-				frames_[i]->update_render_target(rdg_name, std::move(render_target));
-			}
+			backend::Image swapchain_image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+			auto           render_target = create_func(std::move(swapchain_image));
+			frames_[i]->update_render_target(rdg_name, std::move(render_target));
 		}
 	}
 
@@ -150,27 +147,6 @@ vk::Extent2D const &RenderContext::get_surface_extent() const
 backend::BindlessDescriptorSet *RenderContext::get_bindless_descriptor_set() const
 {
 	return bindless_descriptor_set_.get();
-}
-
-
-
-void RenderContext::update_rdg_bindless_descriptor_set()
-{
-	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
-	{
-		RenderTarget *render_target = rdg_pass->get_render_target();
-		if (!render_target)
-		{
-			render_target = &get_active_frame().get_render_target(rdg_name);
-		}
-
-		auto image_infos = rdg_pass->get_descriptor_image_infos(*render_target);
-
-		for (auto &image_info : image_infos)
-		{
-			bindless_descriptor_set_->update(image_info);
-		}
-	}
 }
 
 void RenderContext::reset_bindless_index() const
@@ -360,26 +336,20 @@ void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &ima
 	recreate();
 }
 
-void RenderContext::render(backend::CommandBuffer &command_buffer)
+void RenderContext::register_rdg_render_target(const std::string &name, const RenderTarget::CreateFunc &create_render_target_func)
 {
+	surface_extent_ = swapchain_->get_extent();
+	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
 
-	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
+	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
+
+	for (size_t i = 0; i < swapchain_->get_images().size(); ++i)
 	{
-		RenderTarget *render_target = rdg_pass->get_render_target();
-		if (!render_target)
-		{
-			render_target = &get_active_frame().get_render_target(rdg_name);	
-		}
-
-		set_viewport_and_scissor(command_buffer, render_target->get_extent());
-
-		rdg_pass->execute(command_buffer, *render_target);
+		auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+		auto render_target   = create_render_target_func(std::move(swapchain_image));
+		frames_[i]->update_render_target(name, std::move(render_target));
 	}
-}
 
-void RenderContext::set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
-{
-	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
-	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
+	create_render_target_functions_[name] = create_render_target_func;
 }
 }        // namespace xihe::rendering
