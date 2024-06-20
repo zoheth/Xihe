@@ -32,40 +32,16 @@ MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::S
 
 	auto test_subpass = std::make_unique<TestSubpass>(*render_context_, std::move(vertex_shader), std::move(fragment_shader));*/
 
-	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
 	// subpasses.push_back(std::move(test_subpass));
-	subpasses.push_back(std::move(scene_subpass));
-	subpasses.push_back(std::move(lighting_subpass));
+	add_subpass(std::move(scene_subpass));
+	add_subpass(std::move(lighting_subpass));
 
-	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
-
-	std::vector<common::LoadStoreInfo> load_store{4};
-
+	load_store_ = std::vector<common::LoadStoreInfo>(4, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
 	// Swapchain image
-	load_store[0].load_op  = vk::AttachmentLoadOp::eClear;
-	load_store[0].store_op = vk::AttachmentStoreOp::eStore;
+	load_store_[0].store_op = vk::AttachmentStoreOp::eStore;
 
-	// Depth image
-	load_store[1].load_op  = vk::AttachmentLoadOp::eClear;
-	load_store[1].store_op = vk::AttachmentStoreOp::eDontCare;
-
-	// Albedo image
-	load_store[2].load_op  = vk::AttachmentLoadOp::eClear;
-	load_store[2].store_op = vk::AttachmentStoreOp::eDontCare;
-
-	// Normal
-	load_store[3].load_op  = vk::AttachmentLoadOp::eClear;
-	load_store[3].store_op = vk::AttachmentStoreOp::eDontCare;
-
-	render_pipeline_->set_load_store(load_store);
-
-	std::vector<vk::ClearValue> clear_value{4};
-	clear_value[0].color        = vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}};
-	clear_value[1].depthStencil = vk::ClearDepthStencilValue{0.0f, 0};
-	clear_value[2].color        = vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}};
-	clear_value[3].color        = vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}};
-
-	render_pipeline_->set_clear_value(clear_value);
+	clear_value_    = std::vector<vk::ClearValue>(4, vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}});
+	clear_value_[1] = vk::ClearDepthStencilValue{0.0f, 0};
 }
 
 std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&swapchain_image)
@@ -109,16 +85,7 @@ std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&sw
 	return std::make_unique<RenderTarget>(std::move(images));
 }
 
-void MainPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const
-{
-	begin_draw(command_buffer, render_target);
-
-	render_pipeline_->draw(command_buffer, render_target);
-
-	end_draw(command_buffer, render_target);
-}
-
-void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
+void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
 	auto &views = render_target.get_views();
 
@@ -150,10 +117,13 @@ void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 		command_buffer.image_memory_barrier(views[1], memory_barrier);
 		render_target.set_layout(1, memory_barrier.new_layout);
 	}
+	RdgPass::begin_draw(command_buffer, render_target, contents);
 }
 
 void MainPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
+	RdgPass::end_draw(command_buffer, render_target);
+
 	{
 		auto                      &views = render_target.get_views();
 		common::ImageMemoryBarrier memory_barrier{};

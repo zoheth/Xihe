@@ -13,14 +13,12 @@ class ShadowPass : public RdgPass
 
 	~ShadowPass() override;
 
-	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const override;
-
 	std::vector<vk::DescriptorImageInfo> get_descriptor_image_infos(RenderTarget &render_target) const override;
 
   protected:
-	static void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
+	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
 
-	static void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
+	void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target) override;
 
 private:
 	void create_owned_render_target();

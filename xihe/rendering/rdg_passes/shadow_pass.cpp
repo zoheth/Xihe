@@ -15,18 +15,11 @@ ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, s
 
 	for (uint32_t i = 0; i < kCascadeCount; ++i)
 	{
-		subpasses.push_back(std::make_unique<rendering::ShadowSubpass>(render_context, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), i));
-		subpasses.back()->set_depth_stencil_attachment(i);
+		auto subpass = std::make_unique<rendering::ShadowSubpass>(render_context, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), i);
+		subpass->set_depth_stencil_attachment(i);
+
+		add_subpass(std::move(subpass));
 	}
-
-	render_pipeline_ = std::make_unique<rendering::RenderPipeline>(std::move(subpasses));
-
-	auto load_store_infos = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
-	auto clear_values     = std::vector<vk::ClearValue>(kCascadeCount, vk::ClearDepthStencilValue{0.0f, 0});
-
-	render_pipeline_->set_load_store(load_store_infos);
-
-	render_pipeline_->set_clear_value(clear_values);
 
 	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
 	shadowmap_sampler_create_info.minFilter     = vk::Filter::eLinear;
@@ -66,13 +59,9 @@ void ShadowPass::create_owned_render_target()
 	}
 
 	render_target_ = std::make_unique<RenderTarget>(std::move(images));
-}
 
-void ShadowPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const
-{
-	begin_draw(command_buffer, render_target);
-	render_pipeline_->draw(command_buffer, render_target);
-	end_draw(command_buffer, render_target);
+	load_store_ = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
+	clear_value_ = std::vector<vk::ClearValue>(kCascadeCount, vk::ClearDepthStencilValue{0.0f, 0});
 }
 
 std::vector<vk::DescriptorImageInfo> ShadowPass::get_descriptor_image_infos(RenderTarget &render_target) const
@@ -93,7 +82,7 @@ std::vector<vk::DescriptorImageInfo> ShadowPass::get_descriptor_image_infos(Rend
 	return descriptor_image_infos;
 }
 
-void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
+void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
 	auto &shadowmap_views = render_target.get_views();
 
@@ -110,10 +99,14 @@ void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget
 	{
 		command_buffer.image_memory_barrier(shadowmap, memory_barrier);
 	}
+
+	RdgPass::begin_draw(command_buffer, render_target, contents);
 }
 
 void ShadowPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
+	RdgPass::end_draw(command_buffer, render_target);
+
 	auto &shadowmap_views = render_target.get_views();
 
 	common::ImageMemoryBarrier memory_barrier{};

@@ -31,6 +31,7 @@ target_link_libraries(xihe PUBLIC
     stb
      ${ASTC_TARGET}
     ctpl
+    enkits
     glfw
     tinygltf
     vma

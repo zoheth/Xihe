@@ -92,6 +92,8 @@ void RenderPipeline::draw(backend::CommandBuffer &command_buffer, RenderTarget &
 	command_buffer.end_render_pass();
 }
 
+
+
 std::unique_ptr<Subpass> &RenderPipeline::get_active_subpass()
 {
 	return subpasses_[active_subpass_index_];

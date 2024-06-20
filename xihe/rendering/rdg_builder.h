@@ -1,10 +1,31 @@
 #pragma once
 
+#include <TaskScheduler.h>
+
 #include "rdg_pass.h"
 #include "render_context.h"
 
 namespace xihe::rendering
 {
+
+struct SecondaryDrawTask : public enki::ITaskSet
+{
+	SecondaryDrawTask(backend::CommandBuffer &command_buffer, backend::CommandBuffer &primary_command_buffer, RdgPass &pass) :
+	    command_buffer{command_buffer}, primary_command_buffer{primary_command_buffer}, pass{pass}
+	{}
+
+	void ExecuteRange(enki::TaskSetPartition range, uint32_t threadnum) override
+	{
+		command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue, &primary_command_buffer);
+		pass.draw_subpasses(command_buffer, *pass.get_render_target());
+		command_buffer.end();
+	}
+
+	backend::CommandBuffer &command_buffer;
+	backend::CommandBuffer &primary_command_buffer;
+	RdgPass                &pass;
+};
+
 class RdgBuilder
 {
   public:
