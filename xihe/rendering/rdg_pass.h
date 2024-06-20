@@ -28,15 +28,35 @@ class RdgPass
 	/// This version is used when no swapchain image is available or needed.
 	virtual RenderTarget *get_render_target() const;
 
-	virtual void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, backend::CommandBuffer *p_secondary_command_buffer=nullptr);
-
-	void draw_subpasses(backend::CommandBuffer &command_buffer, RenderTarget &render_target) const;
+	virtual void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers);
 
 	virtual std::vector<vk::DescriptorImageInfo> get_descriptor_image_infos(RenderTarget &render_target) const;
+
+	// before pall
+	virtual void prepare(backend::CommandBuffer &command_buffer);
+
+	virtual  void draw_subpass(backend::CommandBuffer &command_buffer, RenderTarget &render_target, uint32_t i) const;
+
+	backend::Device &get_device() const;
+
+	std::vector<std::unique_ptr<Subpass>> &get_subpasses();
+
+	uint32_t get_subpass_count() const;
+
+	const std::vector<common::LoadStoreInfo> &get_load_store() const;
+
+	backend::RenderPass &get_render_pass() const;
+	backend::Framebuffer &get_framebuffer() const;
+
+	/**
+	 * @brief Thread index to use for allocating resources
+	 */
+	void set_thread_index(uint32_t subpass_index, uint32_t thread_index);
 
 	/// \brief Checks if the render target should be created using a swapchain image.
 	/// \return True if a swapchain image should be used, otherwise false.
 	bool use_swapchain_image() const;
+
 
   protected:
 	virtual void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents = vk::SubpassContents::eInline);
@@ -59,6 +79,9 @@ class RdgPass
 	std::unique_ptr<RenderTarget>   render_target_{nullptr};
 
 	bool use_swapchain_image_{true};
+
+	backend::RenderPass *render_pass_{nullptr};
+	backend::Framebuffer *framebuffer_{nullptr};
 };
 }        // namespace rendering
 }        // namespace xihe

@@ -112,6 +112,11 @@ class Subpass
 
 	void set_debug_name(const std::string &name);
 
+	/**
+	 * @brief Thread index to use for allocating resources
+	 */
+	void set_thread_index(uint32_t index);
+
 	template <typename T>
 	void allocate_lights(const std::vector<sg::Light *> &scene_lights,
 	                     size_t                          light_count)
@@ -185,6 +190,8 @@ class Subpass
 
 	RenderTarget *render_target_{nullptr};
 
+	uint32_t thread_index_{0};
+
   private:
 	std::string debug_name_{};
 
@@ -207,6 +214,7 @@ class Subpass
 	uint32_t depth_stencil_attachment_{0}; // Used to specify the specific depth attachment number.
 
 	uint32_t depth_stencil_resolve_attachment_{vk::AttachmentUnused};
+
 };
 }        // namespace rendering
 

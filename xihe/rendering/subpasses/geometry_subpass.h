@@ -57,11 +57,6 @@ class GeometrySubpass : public Subpass
 	 */
 	virtual void draw(backend::CommandBuffer &command_buffer) override;
 
-	/**
-	 * @brief Thread index to use for allocating resources
-	 */
-	void set_thread_index(uint32_t index);
-
   protected:
 	virtual void update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index);
 
@@ -87,8 +82,6 @@ class GeometrySubpass : public Subpass
 	std::vector<sg::Mesh *> meshes_;
 
 	sg::Scene &scene_;
-
-	uint32_t thread_index_{0};
 
 	RasterizationState base_rasterization_state_{};
 };

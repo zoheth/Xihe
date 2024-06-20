@@ -163,7 +163,8 @@ bool XiheApp::prepare(Window *window)
 	VULKAN_HPP_DEFAULT_DISPATCHER.init(get_device()->get_handle());
 
 	create_render_context();
-	render_context_->prepare();
+	// todo
+	render_context_->prepare(8);
 
 	rdg_builder_ = std::make_unique<rendering::RdgBuilder>(*render_context_);
 

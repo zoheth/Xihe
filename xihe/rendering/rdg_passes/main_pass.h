@@ -12,6 +12,8 @@ public:
 
 	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
 
+	void prepare(backend::CommandBuffer &command_buffer) override;
+
   protected:
 	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
 	void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target) override;

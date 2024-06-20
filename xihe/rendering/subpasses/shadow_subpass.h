@@ -51,8 +51,6 @@ class ShadowSubpass : public Subpass
 
 	sg::Scene &scene_;
 
-	uint32_t thread_index_{0};
-
 	RasterizationState base_rasterization_state_{};
 
 	inline static uint32_t cascade_count_{kCascadeCount};

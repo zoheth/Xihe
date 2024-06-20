@@ -85,6 +85,16 @@ std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&sw
 	return std::make_unique<RenderTarget>(std::move(images));
 }
 
+void MainPass::prepare(backend::CommandBuffer &command_buffer)
+{
+	get_render_target()->set_layout(0, vk::ImageLayout::eColorAttachmentOptimal);
+	for (size_t i = 2; i < get_render_target()->get_views().size(); ++i)
+	{
+		get_render_target()->set_layout(static_cast<uint32_t>(i), vk::ImageLayout::eColorAttachmentOptimal);
+	}
+	RdgPass::prepare(command_buffer);
+}
+
 void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
 	auto &views = render_target.get_views();

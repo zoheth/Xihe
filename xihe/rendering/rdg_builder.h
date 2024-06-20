@@ -7,23 +7,18 @@
 
 namespace xihe::rendering
 {
+static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
-struct SecondaryDrawTask : public enki::ITaskSet
+struct SecondaryDrawTask : enki::ITaskSet
 {
-	SecondaryDrawTask(backend::CommandBuffer &command_buffer, backend::CommandBuffer &primary_command_buffer, RdgPass &pass) :
-	    command_buffer{command_buffer}, primary_command_buffer{primary_command_buffer}, pass{pass}
-	{}
+	void init(backend::CommandBuffer *command_buffer, backend::CommandBuffer *primary_command_buffer, RdgPass const *pass, uint32_t subpass_index);
 
-	void ExecuteRange(enki::TaskSetPartition range, uint32_t threadnum) override
-	{
-		command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue, &primary_command_buffer);
-		pass.draw_subpasses(command_buffer, *pass.get_render_target());
-		command_buffer.end();
-	}
+	void ExecuteRange(enki::TaskSetPartition range, uint32_t threadnum) override;
 
-	backend::CommandBuffer &command_buffer;
-	backend::CommandBuffer &primary_command_buffer;
-	RdgPass                &pass;
+	backend::CommandBuffer *command_buffer;
+	backend::CommandBuffer *primary_command_buffer;
+	RdgPass const          *pass;
+	uint32_t                subpass_index;
 };
 
 class RdgBuilder
@@ -37,15 +32,12 @@ class RdgBuilder
 	void execute(backend::CommandBuffer &command_buffer) const;
 
   private:
-
-	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
-
-	RenderContext &render_context_;
+	RenderContext                                            &render_context_;
 	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
 };
 
-template <typename T, typename ... Args>
-void RdgBuilder::add_pass(std::string name, Args &&... args)
+template <typename T, typename... Args>
+void RdgBuilder::add_pass(std::string name, Args &&...args)
 {
 	static_assert(std::is_base_of_v<rendering::RdgPass, T>, "T must be a derivative of RenderPass");
 
@@ -58,12 +50,10 @@ void RdgBuilder::add_pass(std::string name, Args &&... args)
 
 	if (rdg_passes_[name]->use_swapchain_image())
 	{
-		render_context_.register_rdg_render_target(name, 
-			[name, this](backend::Image &&swapchain_image) {
-				return rdg_passes_[name]->create_render_target(std::move(swapchain_image));
-			});
+		render_context_.register_rdg_render_target(name,
+		                                           [name, this](backend::Image &&swapchain_image) {
+			                                           return rdg_passes_[name]->create_render_target(std::move(swapchain_image));
+		                                           });
 	}
-
-
 }
 }        // namespace xihe::rendering

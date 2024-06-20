@@ -301,9 +301,15 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 	{
 		auto &subpass = subpasses[i];
 
-		vk::SubpassDescription subpass_description{};
+		vk::SubpassDescription subpass_description{
+			{},
+			vk::PipelineBindPoint::eGraphics,
+		    input_attachments[i],
+		    color_attachments[i],
+		    color_resolve_attachments[i]
+		};
 
-		subpass_description.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+		/*subpass_description.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
 
 		subpass_description.pInputAttachments    = input_attachments[i].empty() ? nullptr : input_attachments[i].data();
 		subpass_description.inputAttachmentCount = to_u32(input_attachments[i].size());
@@ -311,7 +317,7 @@ void RenderPass::create_renderpass(const std::vector<rendering::Attachment> &att
 		subpass_description.pColorAttachments    = color_attachments[i].empty() ? nullptr : color_attachments[i].data();
 		subpass_description.colorAttachmentCount = to_u32(color_attachments[i].size());
 
-		subpass_description.pResolveAttachments = color_resolve_attachments[i].empty() ? nullptr : color_resolve_attachments[i].data();
+		subpass_description.pResolveAttachments = color_resolve_attachments[i].empty() ? nullptr : color_resolve_attachments[i].data();*/
 
 		subpass_description.pDepthStencilAttachment = nullptr;
 		if (!depth_stencil_attachments[i].empty())

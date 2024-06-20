@@ -147,5 +147,10 @@ void Subpass::set_debug_name(const std::string &name)
 {
 	debug_name_ = name;
 }
+
+void Subpass::set_thread_index(uint32_t index)
+{
+	thread_index_ = index;
+}
 }        // namespace rendering
 }        // namespace xihe

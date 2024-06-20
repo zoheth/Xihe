@@ -84,11 +84,6 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 	}
 }
 
-void GeometrySubpass::set_thread_index(uint32_t index)
-{
-	thread_index_ = index;
-}
-
 void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index)
 {
 	GlobalUniform global_uniform{};
