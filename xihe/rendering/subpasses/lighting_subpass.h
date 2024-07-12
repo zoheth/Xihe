@@ -47,6 +47,8 @@ class LightingSubpass : public Subpass
 	sg::Scene &scene_;
 
 	backend::ShaderVariant shader_variant_;
+
+	std::unique_ptr<backend::Sampler> shadowmap_sampler_{};
 };
 
 }        // namespace rendering

@@ -43,7 +43,7 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 		set_viewport_and_scissor(command_buffer, render_target->get_extent());
 
 		auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
-		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
+		/*uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
 		for (auto &image_info : image_infos)
 		{
 			auto index = render_context_.get_bindless_descriptor_set()->update(image_info);
@@ -52,11 +52,11 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 			{
 				first_bindless_descriptor_set_index = index;
 			}
-		}
+		}*/
 
-		rdg_pass->execute(command_buffer, *render_target);
+		rdg_pass->execute(command_buffer, *render_target, {});
 	}
-#endif
+#else
 	enki::TaskScheduler scheduler;
 	scheduler.Initialize();
 
@@ -73,7 +73,7 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 	{
 		RenderTarget *render_target = rdg_pass->get_render_target();
 
-		auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
+		/*auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
 		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
 		for (auto &image_info : image_infos)
 		{
@@ -83,7 +83,7 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 			{
 				first_bindless_descriptor_set_index = index;
 			}
-		}
+		}*/
 
 		rdg_pass_tasks[rdg_name] = std::vector<SecondaryDrawTask>(rdg_pass->get_subpass_count());
 
@@ -119,8 +119,11 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 		}
 
 		rdg_pass->execute(command_buffer, *rdg_pass->get_render_target(), secondary_command_buffers);
+
 		pass_index++;
 	}
+
+#endif
 }
 
 }        // namespace xihe::rendering

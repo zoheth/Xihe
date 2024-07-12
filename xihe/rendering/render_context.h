@@ -72,7 +72,7 @@ class RenderContext
 
 	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
 
-	void register_rdg_render_target(const std::string &name, const RenderTarget::CreateFunc &create_render_target_func);
+	void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
 
   private:
 	backend::Device &device_;

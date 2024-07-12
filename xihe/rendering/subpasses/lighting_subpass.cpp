@@ -1,16 +1,30 @@
 #include "lighting_subpass.h"
 
+#include "rendering/rdg_passes/shadow_pass.h"
 #include "rendering/render_context.h"
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/scene.h"
 
+#include <iostream>
+
 namespace xihe::rendering
 {
 LightingSubpass::LightingSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Camera &camera, sg::Scene &scene) :
     Subpass{render_context, std::move(vertex_shader), std::move(fragment_shader)}, camera_{camera}, scene_{scene}
+{
+	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
+	shadowmap_sampler_create_info.minFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.magFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.addressModeU  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeV  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeW  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.borderColor   = vk::BorderColor::eFloatOpaqueWhite;
+	shadowmap_sampler_create_info.compareEnable = VK_TRUE;
+	shadowmap_sampler_create_info.compareOp     = vk::CompareOp::eGreaterOrEqual;
 
-{}
+	shadowmap_sampler_ = std::make_unique<backend::Sampler>(render_context_.get_device(), shadowmap_sampler_create_info);
+}
 
 void LightingSubpass::prepare()
 {
@@ -73,10 +87,15 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
 
 	// shadow
-	ShadowUniform &shadow_uniform = ShadowSubpass::get_shadow_uniform();
-	allocation                    = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform));
+	ShadowUniform &shadow_uniform        = ShadowSubpass::get_shadow_uniform();
+	shadow_uniform.shadowmap_first_index = render_frame.get_render_target("shadow_pass").get_first_bindless_descriptor_set_index();
+	allocation                           = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform));
 	allocation.update(shadow_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
+
+	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[0], *shadowmap_sampler_, 0, 6, 0);
+	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[1], *shadowmap_sampler_, 0, 7, 0);
+	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[2], *shadowmap_sampler_, 0, 8, 0);
 
 	command_buffer.draw(3, 1, 0, 0);
 }

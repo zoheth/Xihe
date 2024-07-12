@@ -13,9 +13,8 @@ struct alignas(16) ShadowUniform
 {
 	float                                cascade_split_depth[4];             // Split depths in view space
 	std::array<glm::mat4, kCascadeCount> shadowmap_projection_matrix;        // Projection matrix used to render shadowmap
+	uint32_t                             shadowmap_first_index;              // Index of the first shadowmap in the bindless texture array
 };
-
-
 
 class ShadowSubpass : public Subpass
 {
@@ -33,7 +32,10 @@ class ShadowSubpass : public Subpass
 
 	void calculate_cascade_split_depth(float lambda = 0.5);
 
-	static ShadowUniform &get_shadow_uniform() { return shadow_uniform_; }
+	static ShadowUniform &get_shadow_uniform()
+	{
+		return shadow_uniform_;
+	}
 
   protected:
 	void update_uniforms(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index);

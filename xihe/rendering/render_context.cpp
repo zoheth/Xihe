@@ -52,11 +52,13 @@ void RenderContext::recreate()
 
 	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
 
+
 	for (uint32_t i = 0; i < frames_.size(); ++i)
 	{
 		for (auto &[rdg_name, create_func] : create_render_target_functions_)
 		{
 			backend::Image swapchain_image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
+
 			auto           render_target = create_func(std::move(swapchain_image));
 			frames_[i]->update_render_target(rdg_name, std::move(render_target));
 		}
@@ -336,7 +338,7 @@ void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &ima
 	recreate();
 }
 
-void RenderContext::register_rdg_render_target(const std::string &name, const RenderTarget::CreateFunc &create_render_target_func)
+void RenderContext::register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass)
 {
 	surface_extent_ = swapchain_->get_extent();
 	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
@@ -346,10 +348,29 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Re
 	for (size_t i = 0; i < swapchain_->get_images().size(); ++i)
 	{
 		auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
-		auto render_target   = create_render_target_func(std::move(swapchain_image));
+		auto render_target   = rdg_pass->create_render_target(std::move(swapchain_image));
+
+		auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
+		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
+		for (auto &image_info : image_infos)
+		{
+			auto index = get_bindless_descriptor_set()->update(image_info);
+
+			if (index < first_bindless_descriptor_set_index)
+			{
+				first_bindless_descriptor_set_index = index;
+			}
+		}
+		render_target->set_first_bindless_descriptor_set_index(first_bindless_descriptor_set_index);
+
 		frames_[i]->update_render_target(name, std::move(render_target));
 	}
-
-	create_render_target_functions_[name] = create_render_target_func;
+	if (rdg_pass->use_swapchain_image())
+	{
+		create_render_target_functions_[name] =
+		    [name, rdg_pass](backend::Image &&swapchain_image) {
+			    return rdg_pass->create_render_target(std::move(swapchain_image));
+		    };	
+	}
 }
 }        // namespace xihe::rendering

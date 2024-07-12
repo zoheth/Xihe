@@ -10,7 +10,7 @@ class MainPass : public RdgPass
 public:
 	MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
 
-	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) override;
+	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) const override;
 
 	void prepare(backend::CommandBuffer &command_buffer) override;
 

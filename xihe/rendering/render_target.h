@@ -56,6 +56,9 @@ class RenderTarget
 	void                         set_layout(uint32_t attachment, vk::ImageLayout layout);
 	vk::ImageLayout              get_layout(uint32_t attachment) const;
 
+	void set_first_bindless_descriptor_set_index(uint32_t index);
+	uint32_t get_first_bindless_descriptor_set_index() const;
+
 
   private:
 	backend::Device                &device_;
@@ -66,6 +69,8 @@ class RenderTarget
 
 	std::vector<uint32_t> input_attachments_  = {};
 	std::vector<uint32_t> output_attachments_ = {0};
+
+	uint32_t first_bindless_descriptor_set_index_ = 0;
 };
 }        // namespace rendering
 }        // namespace xihe

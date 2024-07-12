@@ -44,7 +44,7 @@ MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::S
 	clear_value_[1] = vk::ClearDepthStencilValue{0.0f, 0};
 }
 
-std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&swapchain_image)
+std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&swapchain_image) const
 {
 	auto &device = swapchain_image.get_device();
 	auto &extent = swapchain_image.get_extent();
@@ -127,6 +127,22 @@ void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 		command_buffer.image_memory_barrier(views[1], memory_barrier);
 		render_target.set_layout(1, memory_barrier.new_layout);
 	}
+
+	/*auto &shadowmap_views = render_context_.get_active_frame().get_render_target("shadow_pass").get_views();
+	common::ImageMemoryBarrier memory_barrier{};
+
+	memory_barrier.old_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+	memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
+	memory_barrier.src_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	memory_barrier.dst_access_mask = vk::AccessFlagBits::eShaderRead;
+	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eFragmentShader;
+
+	for (const auto &shadowmap : shadowmap_views)
+	{
+		command_buffer.image_memory_barrier(shadowmap, memory_barrier);
+	}*/
+
 	RdgPass::begin_draw(command_buffer, render_target, contents);
 }
 

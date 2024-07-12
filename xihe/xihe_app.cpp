@@ -179,7 +179,7 @@ void XiheApp::update(float delta_time)
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-	update_bindless_descriptor_sets();
+	// update_bindless_descriptor_sets();
 
 	rdg_builder_->execute(command_buffer);
 
@@ -187,7 +187,7 @@ void XiheApp::update(float delta_time)
 
 	render_context_->submit(command_buffer);
 
-	render_context_->reset_bindless_index();
+	// render_context_->reset_bindless_index();
 }
 
 void XiheApp::input_event(const InputEvent &input_event)

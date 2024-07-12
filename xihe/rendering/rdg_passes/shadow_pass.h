@@ -13,7 +13,11 @@ class ShadowPass : public RdgPass
 
 	~ShadowPass() override;
 
+	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) const override;
+
 	std::vector<vk::DescriptorImageInfo> get_descriptor_image_infos(RenderTarget &render_target) const override;
+
+	vk::Sampler get_shadowmap_sampler() const;
 
   protected:
 	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
@@ -24,5 +28,7 @@ private:
 	void create_owned_render_target();
 
 	vk::Sampler shadowmap_sampler_;
+
+	bool is_first_frame_ = true;
 };
 }        // namespace xihe::rendering

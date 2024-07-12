@@ -22,7 +22,7 @@ class RdgPass
 	/// \brief Creates or recreates a render target using a provided swapchain image.
 	/// \param swapchain_image The image from the swapchain used to create the render target.
 	/// This version of the function is called when the swapchain changes and a new image is available.
-	virtual std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image);
+	virtual std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) const;
 
 	/// \brief Creates or recreates a render target without a swapchain image.
 	/// This version is used when no swapchain image is available or needed.

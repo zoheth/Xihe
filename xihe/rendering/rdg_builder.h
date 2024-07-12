@@ -48,12 +48,10 @@ void RdgBuilder::add_pass(std::string name, Args &&...args)
 
 	rdg_passes_.emplace(name, std::make_unique<T>(name, render_context_, std::forward<Args>(args)...));
 
-	if (rdg_passes_[name]->use_swapchain_image())
+	/*if (rdg_passes_[name]->use_swapchain_image())
 	{
-		render_context_.register_rdg_render_target(name,
-		                                           [name, this](backend::Image &&swapchain_image) {
-			                                           return rdg_passes_[name]->create_render_target(std::move(swapchain_image));
-		                                           });
-	}
+		render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
+	}*/
+	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
 }
 }        // namespace xihe::rendering

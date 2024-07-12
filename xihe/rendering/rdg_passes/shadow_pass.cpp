@@ -33,12 +33,35 @@ ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, s
 
 	shadowmap_sampler_ = render_context_.get_device().get_handle().createSampler(shadowmap_sampler_create_info);
 
-	create_owned_render_target();
+	load_store_  = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore});
+	clear_value_ = std::vector<vk::ClearValue>(kCascadeCount, vk::ClearDepthStencilValue{0.0f, 0});
+
+	// create_owned_render_target();
 }
 
 ShadowPass::~ShadowPass()
 {
 	render_context_.get_device().get_handle().destroySampler(shadowmap_sampler_);
+}
+
+std::unique_ptr<RenderTarget> ShadowPass::create_render_target(backend::Image &&swapchain_image) const
+{
+	auto &device = render_context_.get_device();
+
+	backend::ImageBuilder shadow_image_builder{2048, 2048, 1};
+	shadow_image_builder.with_format(common::get_suitable_depth_format(device.get_gpu().get_handle()));
+	shadow_image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled);
+	shadow_image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
+
+	std::vector<backend::Image> images;
+
+	for (uint32_t i = 0; i < kCascadeCount; ++i)
+	{
+		backend::Image shadow_map = shadow_image_builder.build(device);
+		images.push_back(std::move(shadow_map));
+	}
+
+	return std::make_unique<RenderTarget>(std::move(images));
 }
 
 void ShadowPass::create_owned_render_target()
@@ -60,7 +83,7 @@ void ShadowPass::create_owned_render_target()
 
 	render_target_ = std::make_unique<RenderTarget>(std::move(images));
 
-	load_store_ = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
+	load_store_  = std::vector<common::LoadStoreInfo>(kCascadeCount, {vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare});
 	clear_value_ = std::vector<vk::ClearValue>(kCascadeCount, vk::ClearDepthStencilValue{0.0f, 0});
 }
 
@@ -73,13 +96,18 @@ std::vector<vk::DescriptorImageInfo> ShadowPass::get_descriptor_image_infos(Rend
 	for (const auto &shadowmap : shadowmap_views)
 	{
 		vk::DescriptorImageInfo descriptor_image_info{};
-		descriptor_image_info.imageLayout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+		descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 		descriptor_image_info.imageView   = shadowmap.get_handle();
 		descriptor_image_info.sampler     = shadowmap_sampler_;
 
 		descriptor_image_infos.push_back(descriptor_image_info);
 	}
 	return descriptor_image_infos;
+}
+
+vk::Sampler ShadowPass::get_shadowmap_sampler() const
+{
+	return shadowmap_sampler_;
 }
 
 void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
@@ -95,6 +123,7 @@ void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget
 	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
 	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
 
+
 	for (const auto &shadowmap : shadowmap_views)
 	{
 		command_buffer.image_memory_barrier(shadowmap, memory_barrier);
@@ -105,6 +134,7 @@ void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget
 
 void ShadowPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
+
 	RdgPass::end_draw(command_buffer, render_target);
 
 	auto &shadowmap_views = render_target.get_views();
@@ -113,12 +143,12 @@ void ShadowPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 
 	memory_barrier.old_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 	memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-	memory_barrier.src_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+	memory_barrier.src_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
 	memory_barrier.dst_access_mask = vk::AccessFlagBits::eShaderRead;
 	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
 	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eFragmentShader;
 
-	for (const auto &shadowmap : shadowmap_views)
+	for (auto &shadowmap : shadowmap_views)
 	{
 		command_buffer.image_memory_barrier(shadowmap, memory_barrier);
 	}

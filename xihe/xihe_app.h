@@ -53,8 +53,8 @@ class XiheApp : public Application
 
 	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
-  private:
 	void update_bindless_descriptor_sets();
+  private:
 
 	void add_instance_extension(const char *extension, bool optional = false);
 	void add_device_extension(const char *extension, bool optional = false);

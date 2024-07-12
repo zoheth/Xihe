@@ -26,6 +26,8 @@ bool xihe::TestApp::prepare(Window *window)
 	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
 
+	update_bindless_descriptor_sets();
+
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 

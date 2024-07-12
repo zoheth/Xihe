@@ -96,4 +96,14 @@ vk::ImageLayout RenderTarget::get_layout(uint32_t attachment) const
 {
 	return attachments_[attachment].initial_layout;
 }
+
+void RenderTarget::set_first_bindless_descriptor_set_index(uint32_t index)
+{
+	first_bindless_descriptor_set_index_ = index;
+}
+
+uint32_t RenderTarget::get_first_bindless_descriptor_set_index() const
+{
+	return first_bindless_descriptor_set_index_;
+}
 }        // namespace xihe::rendering

@@ -9,19 +9,20 @@ RdgPass::RdgPass(const std::string &name, RenderContext &render_context) :
     name_{name}, render_context_{render_context}
 {}
 
-std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image)
+std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image) const
 {
 	throw std::runtime_error("Not implemented");
 }
 
 RenderTarget *RdgPass::get_render_target() const
 {
-	if (use_swapchain_image())
+	return &render_context_.get_active_frame().get_render_target(name_);
+	/*if (use_swapchain_image())
 	{
 		return &render_context_.get_active_frame().get_render_target(name_);
 	}
 	assert(render_target_ && "If use_swapchain_image returns false, the render_target_ must be created during initialization.");
-	return render_target_.get();
+	return render_target_.get();*/
 }
 
 void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
