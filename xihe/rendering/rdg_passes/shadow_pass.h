@@ -2,6 +2,7 @@
 
 #include "rendering/rdg_pass.h"
 #include "scene_graph/components/camera.h"
+#include "scene_graph/scripts/cascade_script.h"
 
 
 namespace xihe::rendering
@@ -9,7 +10,7 @@ namespace xihe::rendering
 class ShadowPass : public RdgPass
 {
   public:
-	ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
+	ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::CascadeScript &cascade_script);
 
 	~ShadowPass() override;
 

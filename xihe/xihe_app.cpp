@@ -175,6 +175,11 @@ void XiheApp::update(float delta_time)
 {
 	update_scene(delta_time);
 
+	for (const auto &callback : post_scene_update_callbacks_)
+	{
+		callback(delta_time);
+	}
+
 	auto &command_buffer = render_context_->begin();
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -272,6 +277,11 @@ rendering::RenderContext const & XiheApp::get_render_context() const
 bool XiheApp::has_render_context() const
 {
 	return render_context_ != nullptr;
+}
+
+void XiheApp::add_post_scene_update_callback(const PostSceneUpdateCallback &callback)
+{
+	post_scene_update_callbacks_.push_back(callback);
 }
 
 void XiheApp::load_scene(const std::string &path)

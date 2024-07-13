@@ -43,6 +43,10 @@ class XiheApp : public Application
 	rendering::RenderContext const &get_render_context() const;
 	bool                            has_render_context() const;
 
+	using PostSceneUpdateCallback = std::function<void(float)>;
+
+	void add_post_scene_update_callback(const PostSceneUpdateCallback &callback);
+
   protected:
 
 	void load_scene(const std::string &path);
@@ -89,5 +93,7 @@ class XiheApp : public Application
 	std::unordered_map<const char *, bool> device_extensions_;
 
 	vk::PhysicalDeviceDescriptorIndexingPropertiesEXT descriptor_indexing_properties_{};
+
+	std::vector<PostSceneUpdateCallback> post_scene_update_callbacks_{};
 };
 }        // namespace xihe

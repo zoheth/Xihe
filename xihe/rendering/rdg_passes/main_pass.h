@@ -2,13 +2,14 @@
 
 #include "rendering/rdg_pass.h"
 #include "scene_graph/components/camera.h"
+#include "scene_graph/scripts/cascade_script.h"
 
 namespace xihe::rendering
 {
 class MainPass : public RdgPass
 {
 public:
-	MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera);
+	MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr);
 
 	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) const override;
 

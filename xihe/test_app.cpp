@@ -31,9 +31,13 @@ bool xihe::TestApp::prepare(Window *window)
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
-	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", *scene_, *camera);
+	auto cascade_script = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
+	auto *p_cascade_script = cascade_script.get();
+	scene_->add_component(std::move(cascade_script));
 
-	rdg_builder_->add_pass<rendering::MainPass>("main_pass", *scene_, *camera);
+	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", *scene_, *p_cascade_script);
+
+	rdg_builder_->add_pass<rendering::MainPass>("main_pass", *scene_, *camera, p_cascade_script);
 
 	return true;
 }

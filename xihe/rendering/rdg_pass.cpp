@@ -32,6 +32,7 @@ void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &rend
 		begin_draw(command_buffer, render_target, vk::SubpassContents::eSecondaryCommandBuffers);
 		for (size_t i = 0; i < subpasses_.size(); ++i)
 		{
+			subpasses_[i]->update_render_target_attachments(render_target);
 			if (i != 0)
 			{
 				command_buffer.get_handle().nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
@@ -45,6 +46,7 @@ void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &rend
 		begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
 		for (size_t i = 0; i < subpasses_.size(); ++i)
 		{
+			subpasses_[i]->update_render_target_attachments(render_target);
 			if (i != 0)
 			{
 				command_buffer.next_subpass();
@@ -140,11 +142,11 @@ void RdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)
 	subpasses_.emplace_back(std::move(subpass));
 }
 
-void RdgPass::draw_subpass(backend::CommandBuffer &command_buffer, RenderTarget &render_target, uint32_t i) const
+void RdgPass::draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const
 {
 	auto &subpass = subpasses_[i];
 
-	subpass->update_render_target_attachments(render_target);
+	subpass->set_render_target(&render_target);
 
 	if (subpass->get_debug_name().empty())
 	{

@@ -119,6 +119,7 @@ struct hash<xihe::backend::DescriptorSet>
 		std::size_t result = 0;
 
 		hash_combine(result, descriptor_set.get_layout());
+		hash_combine(result, descriptor_set.get_descriptor_pool());
 		// descriptor_pool ?
 		hash_combine(result, descriptor_set.get_buffer_infos());
 		hash_combine(result, descriptor_set.get_image_infos());

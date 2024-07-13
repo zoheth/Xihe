@@ -5,12 +5,11 @@
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/scene.h"
-
-#include <iostream>
+#include "scene_graph/scripts/cascade_script.h"
 
 namespace xihe::rendering
 {
-LightingSubpass::LightingSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Camera &camera, sg::Scene &scene) :
+LightingSubpass::LightingSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Camera &camera, sg::Scene &scene, sg::CascadeScript *cascade_script_ptr) :
     Subpass{render_context, std::move(vertex_shader), std::move(fragment_shader)}, camera_{camera}, scene_{scene}
 {
 	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
@@ -24,6 +23,8 @@ LightingSubpass::LightingSubpass(RenderContext &render_context, backend::ShaderS
 	shadowmap_sampler_create_info.compareOp     = vk::CompareOp::eGreaterOrEqual;
 
 	shadowmap_sampler_ = std::make_unique<backend::Sampler>(render_context_.get_device(), shadowmap_sampler_create_info);
+
+	cascade_script_ = cascade_script_ptr;
 }
 
 void LightingSubpass::prepare()
@@ -82,20 +83,28 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 	light_uniform.inv_view_proj = glm::inverse(vulkan_style_projection(camera_.get_projection()) * camera_.get_view());
 
 	auto &render_frame = get_render_context().get_active_frame();
-	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform));
+	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), thread_index_);
 	allocation.update(light_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
 
 	// shadow
-	ShadowUniform &shadow_uniform        = ShadowSubpass::get_shadow_uniform();
-	shadow_uniform.shadowmap_first_index = render_frame.get_render_target("shadow_pass").get_first_bindless_descriptor_set_index();
-	allocation                           = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform));
+	ShadowUniform shadow_uniform{};
+
+	for (uint32_t i = 0; i < kCascadeCount; ++i)
+	{
+		auto &cascade_camera                          = cascade_script_->get_cascade_camera(i);
+		shadow_uniform.cascade_split_depth[i]         = cascade_script_->get_cascade_splits()[i];
+		shadow_uniform.shadowmap_projection_matrix[i] = vulkan_style_projection(cascade_camera.get_projection()) * cascade_camera.get_view();
+	}
+	const RenderTarget &shadow_render_target = render_frame.get_render_target("shadow_pass");
+	shadow_uniform.shadowmap_first_index     = shadow_render_target.get_first_bindless_descriptor_set_index();
+	allocation                               = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform), thread_index_);
 	allocation.update(shadow_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
 
-	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[0], *shadowmap_sampler_, 0, 6, 0);
-	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[1], *shadowmap_sampler_, 0, 7, 0);
-	command_buffer.bind_image(render_frame.get_render_target("shadow_pass").get_views()[2], *shadowmap_sampler_, 0, 8, 0);
+	/*command_buffer.bind_image(shadow_render_target.get_views()[0], *shadowmap_sampler_, 0, 6, 0);
+	command_buffer.bind_image(shadow_render_target.get_views()[1], *shadowmap_sampler_, 0, 7, 0);
+	command_buffer.bind_image(shadow_render_target.get_views()[2], *shadowmap_sampler_, 0, 8, 0);*/
 
 	command_buffer.draw(3, 1, 0, 0);
 }

@@ -39,9 +39,9 @@ layout(set = 0, binding = 5) uniform ShadowUniform {
 	uint shadowmap_first_index;
 } shadow_uniform;
 
-layout (set = 0, binding = 6 ) uniform sampler2DShadow t1;
-layout (set = 0, binding = 7 ) uniform sampler2DShadow t2;
-layout (set = 0, binding = 8 ) uniform sampler2DShadow t3;
+//layout (set = 0, binding = 6 ) uniform sampler2DShadow t1;
+//layout (set = 0, binding = 7 ) uniform sampler2DShadow t2;
+//layout (set = 0, binding = 8 ) uniform sampler2DShadow t3;
 
 #extension GL_EXT_nonuniform_qualifier : require
 layout (set = 1, binding = 10 ) uniform sampler2DShadow global_textures[];
@@ -52,20 +52,20 @@ float calculate_shadow(highp vec3 pos, uint i)
 	projected_coord /= projected_coord.w;
 	projected_coord.xy = 0.5 * projected_coord.xy + 0.5;
 
-	if(i==0)
-	{
-		return texture(t1, vec3(projected_coord.xy, projected_coord.z));
-	}
-	else if(i==1)
-	{
-		return texture(t2, vec3(projected_coord.xy, projected_coord.z));
-	}
-	else
-	{
-		return texture(t3, vec3(projected_coord.xy, projected_coord.z));
-	
-	}
-	// return texture(global_textures[nonuniformEXT(shadow_uniform.shadowmap_first_index+i)], vec3(projected_coord.xy, projected_coord.z));
+//	if(i==0)
+//	{
+//		return texture(t1, vec3(projected_coord.xy, projected_coord.z));
+//	}
+//	else if(i==1)
+//	{
+//		return texture(t2, vec3(projected_coord.xy, projected_coord.z));
+//	}
+//	else
+//	{
+//		return texture(t3, vec3(projected_coord.xy, projected_coord.z));
+//	
+//	}
+	return texture(global_textures[nonuniformEXT(shadow_uniform.shadowmap_first_index+i)], vec3(projected_coord.xy, projected_coord.z));
 }
 
 void main()

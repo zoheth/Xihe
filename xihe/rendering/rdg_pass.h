@@ -35,7 +35,7 @@ class RdgPass
 	// before pall
 	virtual void prepare(backend::CommandBuffer &command_buffer);
 
-	virtual  void draw_subpass(backend::CommandBuffer &command_buffer, RenderTarget &render_target, uint32_t i) const;
+	virtual  void draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const;
 
 	backend::Device &get_device() const;
 

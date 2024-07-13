@@ -60,7 +60,9 @@ class Subpass
 	 *        This function is called by the RenderPipeline before beginning the render
 	 *        pass and before proceeding with a new subpass.
 	 */
-	void update_render_target_attachments(RenderTarget &render_target);
+	void update_render_target_attachments(RenderTarget &render_target) const;
+
+	void set_render_target(const RenderTarget *render_target);
 
 	/**
 	 * @brief Draw virtual function
@@ -175,7 +177,7 @@ class Subpass
 		std::copy(lighting_state_.spot_lights.begin(), lighting_state_.spot_lights.end(), light_info.spot_lights);
 
 		RenderFrame &render_frame    = get_render_context().get_active_frame();
-		lighting_state_.light_buffer = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(T));
+		lighting_state_.light_buffer = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(T), thread_index_);
 		lighting_state_.light_buffer.update(light_info);
 	}
 
@@ -188,7 +190,7 @@ class Subpass
 
 	LightingState lighting_state_;
 
-	RenderTarget *render_target_{nullptr};
+	const RenderTarget *render_target_{nullptr};
 
 	uint32_t thread_index_{0};
 

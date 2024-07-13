@@ -54,7 +54,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_index);
 
-	void init_state(const RenderPass &render_pass, const Framebuffer &framebuffer, uint32_t subpass_index);
+	void init_state(uint32_t subpass_index);
 
 	void begin_render_pass(const rendering::RenderTarget                          &render_target,
 	                       const std::vector<common::LoadStoreInfo>               &load_store_infos,

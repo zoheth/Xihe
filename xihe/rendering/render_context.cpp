@@ -103,7 +103,7 @@ backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode r
 	}
 
 	const auto &queue = device_.get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
-	return get_active_frame().request_command_buffer(queue, reset_mode);
+	return get_active_frame().request_command_buffer(queue, reset_mode, vk::CommandBufferLevel::ePrimary, 0);
 }
 
 RenderFrame &RenderContext::get_active_frame() const

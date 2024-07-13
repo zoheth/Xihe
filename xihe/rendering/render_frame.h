@@ -33,9 +33,9 @@ class RenderFrame
 	RenderFrame &operator=(const RenderFrame &) = delete;
 	RenderFrame &operator=(RenderFrame &&)      = delete;
 
-	backend::CommandBuffer &request_command_buffer(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool,
-		vk::CommandBufferLevel level = vk::CommandBufferLevel::ePrimary,
-		size_t thread_index = 0);
+	backend::CommandBuffer &request_command_buffer(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode,
+		vk::CommandBufferLevel level,
+		size_t thread_index);
 
 	RenderTarget &      get_render_target(const std::string &rdg_name);
 	RenderTarget const &get_render_target(const std::string &rdg_name) const;
@@ -44,7 +44,7 @@ class RenderFrame
 	                                         const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
 	                                         const BindingMap<vk::DescriptorImageInfo>  &image_infos,
 	                                         bool                                        update_after_bind,
-	                                         size_t                                      thread_index = 0);
+	                                         size_t                                      thread_index);
 
 	vk::Fence     request_fence();
 	vk::Semaphore request_semaphore();
@@ -57,7 +57,7 @@ class RenderFrame
 
 	void release_owned_semaphore(vk::Semaphore semaphore);
 
-	backend::BufferAllocation allocate_buffer(vk::BufferUsageFlags usage, vk::DeviceSize size, size_t thread_index = 0);
+	backend::BufferAllocation allocate_buffer(vk::BufferUsageFlags usage, vk::DeviceSize size, size_t thread_index);
 
 private:
 	std::vector<std::unique_ptr<backend::CommandPool>> &get_command_pools(const backend::Queue &queue, backend::CommandBuffer::ResetMode reset_mode);

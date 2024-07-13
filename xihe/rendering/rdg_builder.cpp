@@ -9,20 +9,19 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-void SecondaryDrawTask::init(backend::CommandBuffer *command_buffer, backend::CommandBuffer *primary_command_buffer, RdgPass const *pass, uint32_t subpass_index)
+void SecondaryDrawTask::init(backend::CommandBuffer *command_buffer, RdgPass const *pass, uint32_t subpass_index)
 {
 	this->command_buffer         = command_buffer;
-	this->primary_command_buffer = primary_command_buffer;
 	this->pass                   = pass;
 	this->subpass_index          = subpass_index;
 }
 
 void SecondaryDrawTask::ExecuteRange(enki::TaskSetPartition range, uint32_t threadnum)
 {
-	RenderTarget *render_target = pass->get_render_target();
+	const RenderTarget *render_target = pass->get_render_target();
 
 	command_buffer->begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue, &pass->get_render_pass(), &pass->get_framebuffer(), subpass_index);
-	command_buffer->init_state(pass->get_render_pass(), pass->get_framebuffer(), subpass_index);
+	command_buffer->init_state(subpass_index);
 	set_viewport_and_scissor(*command_buffer, render_target->get_extent());
 	pass->draw_subpass(*command_buffer, *render_target, subpass_index);
 	command_buffer->end();
@@ -56,7 +55,8 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 
 		rdg_pass->execute(command_buffer, *render_target, {});
 	}
-#else
+#elif 1
+
 	enki::TaskScheduler scheduler;
 	scheduler.Initialize();
 
@@ -71,7 +71,7 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 
 	for (auto &[rdg_name, rdg_pass] : rdg_passes_)
 	{
-		RenderTarget *render_target = rdg_pass->get_render_target();
+		//RenderTarget *render_target = rdg_pass->get_render_target();
 
 		/*auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
 		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
@@ -98,12 +98,19 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 
 			rdg_pass->set_thread_index(i, thread_index);
 
-			rdg_pass_tasks[rdg_name][i].init(&secondary_command_buffer, &command_buffer, rdg_pass.get(), i);
+			rdg_pass_tasks[rdg_name][i].init(&secondary_command_buffer, rdg_pass.get(), i);
 
 			scheduler.AddTaskSetToPipe(&rdg_pass_tasks[rdg_name][i]);
 			thread_index++;
 		}
+
+		for (uint32_t i = 0; i < rdg_pass->get_subpass_count(); ++i)
+		{
+			//scheduler.WaitforTask(&rdg_pass_tasks[rdg_name][rdg_pass->get_subpass_count() - i - 1]);
+		}
 	}
+
+
 
 	uint32_t pass_index = 0;
 

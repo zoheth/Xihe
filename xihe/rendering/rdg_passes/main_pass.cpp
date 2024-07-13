@@ -8,7 +8,7 @@
 
 namespace xihe::rendering
 {
-MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera) :
+MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr) :
     RdgPass{name, render_context}
 {
 	// Geometry subpass
@@ -22,7 +22,7 @@ MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::S
 	// Lighting subpass
 	auto lighting_vs      = backend::ShaderSource{"deferred/lighting.vert"};
 	auto lighting_fs      = backend::ShaderSource{"deferred/lighting.frag"};
-	auto lighting_subpass = std::make_unique<rendering::LightingSubpass>(render_context, std::move(lighting_vs), std::move(lighting_fs), camera, scene);
+	auto lighting_subpass = std::make_unique<rendering::LightingSubpass>(render_context, std::move(lighting_vs), std::move(lighting_fs), camera, scene, cascade_script_ptr);
 
 	// Inputs are depth, albedo, and normal from the geometry subpass
 	lighting_subpass->set_input_attachments({1, 2, 3});

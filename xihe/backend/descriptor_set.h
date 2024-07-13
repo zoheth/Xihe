@@ -38,6 +38,11 @@ class DescriptorSet
 		return image_infos_;
 	}
 
+	DescriptorPool &get_descriptor_pool()
+	{
+		return descriptor_pool_;
+	}
+
   private:
 	/**
 	 * \brief Prepares the descriptor set to have its contents updated by loading a vector of write operations

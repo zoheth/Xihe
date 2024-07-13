@@ -6,7 +6,7 @@
 
 namespace xihe::rendering
 {
-ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera) :
+ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::CascadeScript &cascade_script) :
     RdgPass{name, render_context}
 {
 	use_swapchain_image_ = false;
@@ -15,7 +15,7 @@ ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, s
 
 	for (uint32_t i = 0; i < kCascadeCount; ++i)
 	{
-		auto subpass = std::make_unique<rendering::ShadowSubpass>(render_context, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, scene, *dynamic_cast<sg::PerspectiveCamera *>(&camera), i);
+		auto subpass = std::make_unique<rendering::ShadowSubpass>(render_context, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, scene, cascade_script, i);
 		subpass->set_depth_stencil_attachment(i);
 
 		add_subpass(std::move(subpass));

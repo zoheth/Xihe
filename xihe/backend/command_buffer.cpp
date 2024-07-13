@@ -75,21 +75,22 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend
 	return vk::Result::eSuccess;
 }
 
-void CommandBuffer::init_state(const RenderPass &render_pass, const Framebuffer &framebuffer, uint32_t subpass_index)
+void CommandBuffer::init_state(uint32_t subpass_index)
 {
-	current_render_pass_ = {&render_pass, &framebuffer};
+	//current_render_pass_ = {&render_pass, &framebuffer};
 	pipeline_state_.set_subpass_index(subpass_index);
+
 	// Update blend state attachments for first subpass
 	auto blend_state = pipeline_state_.get_color_blend_state();
 	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(subpass_index));
 	pipeline_state_.set_color_blend_state(blend_state);
 
-	// Reset descriptor sets
-	resource_binding_state_.reset();
-	descriptor_set_layout_binding_state_.clear();
+	//// Reset descriptor sets
+	//resource_binding_state_.reset();
+	//descriptor_set_layout_binding_state_.clear();
 
-	// Clear stored push constants
-	stored_push_constants_.clear();
+	//// Clear stored push constants
+	//stored_push_constants_.clear();
 }
 
 void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<vk::ClearValue> &clear_values, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses, vk::SubpassContents contents)
