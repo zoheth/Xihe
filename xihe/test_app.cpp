@@ -35,9 +35,9 @@ bool xihe::TestApp::prepare(Window *window)
 	auto *p_cascade_script = cascade_script.get();
 	scene_->add_component(std::move(cascade_script));
 
-	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", *scene_, *p_cascade_script);
+	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", rendering::RdgPassType::kRaster, *scene_, *p_cascade_script);
 
-	rdg_builder_->add_pass<rendering::MainPass>("main_pass", *scene_, *camera, p_cascade_script);
+	rdg_builder_->add_pass<rendering::MainPass>("main_pass", rendering::RdgPassType::kRaster, *scene_, *camera, p_cascade_script);
 
 	return true;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "rendering/rdg.h"
 #include "rendering/render_pipeline.h"
 #include "rendering/render_target.h"
 
@@ -13,7 +14,7 @@ class RenderTarget;
 class RdgPass
 {
   public:
-	RdgPass(const std::string &name, RenderContext &render_context);
+	RdgPass(std::string name, const RdgPassType pass_type, RenderContext &render_context);
 
 	RdgPass(RdgPass &&) = default;
 
@@ -65,7 +66,9 @@ class RdgPass
 
 	void add_subpass(std::unique_ptr<Subpass> &&subpass);
 
-	std::string name_;
+	std::string name_{};
+
+	RdgPassType pass_type_{};
 
 	RenderContext &render_context_;
 

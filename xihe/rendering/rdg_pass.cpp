@@ -5,8 +5,8 @@
 
 namespace xihe::rendering
 {
-RdgPass::RdgPass(const std::string &name, RenderContext &render_context) :
-    name_{name}, render_context_{render_context}
+RdgPass::RdgPass(std::string name, const RdgPassType pass_type, RenderContext &render_context) :
+    name_{std::move(name)}, pass_type_(pass_type), render_context_{render_context}
 {}
 
 std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image) const
@@ -27,36 +27,39 @@ RenderTarget *RdgPass::get_render_target() const
 
 void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
 {
-	if (!secondary_command_buffers.empty())
+	if (pass_type_ == RdgPassType::kRaster)
 	{
-		begin_draw(command_buffer, render_target, vk::SubpassContents::eSecondaryCommandBuffers);
-		for (size_t i = 0; i < subpasses_.size(); ++i)
+		if (!secondary_command_buffers.empty())
 		{
-			subpasses_[i]->update_render_target_attachments(render_target);
-			if (i != 0)
+			begin_draw(command_buffer, render_target, vk::SubpassContents::eSecondaryCommandBuffers);
+			for (size_t i = 0; i < subpasses_.size(); ++i)
 			{
-				command_buffer.get_handle().nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
-			}
+				subpasses_[i]->update_render_target_attachments(render_target);
+				if (i != 0)
+				{
+					command_buffer.get_handle().nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
+				}
 
-			command_buffer.execute_commands({*secondary_command_buffers[i]});
+				command_buffer.execute_commands({*secondary_command_buffers[i]});
+			}
 		}
-	}
-	else
-	{
-		begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
-		for (size_t i = 0; i < subpasses_.size(); ++i)
+		else
 		{
-			subpasses_[i]->update_render_target_attachments(render_target);
-			if (i != 0)
+			begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
+			for (size_t i = 0; i < subpasses_.size(); ++i)
 			{
-				command_buffer.next_subpass();
+				subpasses_[i]->update_render_target_attachments(render_target);
+				if (i != 0)
+				{
+					command_buffer.next_subpass();
+				}
+
+				draw_subpass(command_buffer, render_target, i);
 			}
-
-			draw_subpass(command_buffer, render_target, i);
 		}
-	}
 
-	end_draw(command_buffer, render_target);
+		end_draw(command_buffer, render_target);	
+	}
 }
 
 std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderTarget &render_target) const
@@ -66,8 +69,11 @@ std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderT
 
 void RdgPass::prepare(backend::CommandBuffer &command_buffer)
 {
-	render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
-	framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);
+	if (pass_type_ == RdgPassType::kRaster)
+	{
+		render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
+		framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);
+	}
 }
 
 backend::Device &RdgPass::get_device() const

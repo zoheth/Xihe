@@ -8,8 +8,8 @@
 
 namespace xihe::rendering
 {
-MainPass::MainPass(const std::string &name, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr) :
-    RdgPass{name, render_context}
+MainPass::MainPass(const std::string &name, RdgPassType pass_type, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr) :
+    RdgPass{name, pass_type, render_context}
 {
 	// Geometry subpass
 	auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
