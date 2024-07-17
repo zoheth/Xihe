@@ -64,7 +64,7 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend
 		current_render_pass_.render_pass = render_pass;
 		current_render_pass_.framebuffer = framebuffer;
 
-		inheritance_info.renderPass = current_render_pass_.render_pass->get_handle();
+		inheritance_info.renderPass  = current_render_pass_.render_pass->get_handle();
 		inheritance_info.framebuffer = current_render_pass_.framebuffer->get_handle();
 		inheritance_info.subpass     = subpass_index;
 
@@ -77,7 +77,7 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend
 
 void CommandBuffer::init_state(uint32_t subpass_index)
 {
-	//current_render_pass_ = {&render_pass, &framebuffer};
+	// current_render_pass_ = {&render_pass, &framebuffer};
 	pipeline_state_.set_subpass_index(subpass_index);
 
 	// Update blend state attachments for first subpass
@@ -86,11 +86,11 @@ void CommandBuffer::init_state(uint32_t subpass_index)
 	pipeline_state_.set_color_blend_state(blend_state);
 
 	//// Reset descriptor sets
-	//resource_binding_state_.reset();
-	//descriptor_set_layout_binding_state_.clear();
+	// resource_binding_state_.reset();
+	// descriptor_set_layout_binding_state_.clear();
 
 	//// Clear stored push constants
-	//stored_push_constants_.clear();
+	// stored_push_constants_.clear();
 }
 
 void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<vk::ClearValue> &clear_values, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses, vk::SubpassContents contents)
@@ -323,8 +323,19 @@ void CommandBuffer::image_memory_barrier(const backend::ImageView &image_view, c
 
 void CommandBuffer::buffer_memory_barrier(const backend::Buffer &buffer, vk::DeviceSize offset, vk::DeviceSize size, const common::BufferMemoryBarrier &memory_barrier)
 {
-	vk::BufferMemoryBarrier buffer_memory_barrier{memory_barrier.src_access_mask, memory_barrier.dst_access_mask, {}, {}, buffer.get_handle(), offset, size};
-	get_handle().pipelineBarrier(memory_barrier.src_stage_mask, memory_barrier.dst_stage_mask, {}, {}, buffer_memory_barrier, {});
+	vk::BufferMemoryBarrier2 buffer_memory_barrier{
+	    {},
+	    memory_barrier.src_access_mask,
+	    {},
+	    memory_barrier.dst_access_mask,
+	    {},
+	    {},
+	    buffer.get_handle(),
+	    offset,
+	    size};
+	vk::DependencyInfo dependency_info{};
+	dependency_info.setBufferMemoryBarriers({buffer_memory_barrier});
+	get_handle().pipelineBarrier2(dependency_info);
 }
 
 void CommandBuffer::set_update_after_bind(bool update_after_bind)
@@ -673,7 +684,7 @@ void CommandBuffer::flush_push_constants()
 	stored_push_constants_.clear();
 }
 
-const CommandBuffer::RenderPassBinding & CommandBuffer::get_current_render_pass() const
+const CommandBuffer::RenderPassBinding &CommandBuffer::get_current_render_pass() const
 {
 	return current_render_pass_;
 }

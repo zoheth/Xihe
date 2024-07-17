@@ -24,7 +24,7 @@ class RenderContext
 	RenderContext(const RenderContext &) = delete;
 	RenderContext(RenderContext &&)      = delete;
 
-	virtual ~RenderContext() = default;
+	virtual ~RenderContext();
 
 	RenderContext &operator=(const RenderContext &) = delete;
 	RenderContext &operator=(RenderContext &&)      = delete;
@@ -86,7 +86,10 @@ class RenderContext
 
 	std::vector<std::unique_ptr<RenderFrame>> frames_;
 
+	// Per frame synchronization
 	vk::Semaphore acquired_semaphore_;
+	vk::Semaphore graphics_semaphore_;
+	vk::Semaphore compute_semaphore_;
 
 	bool     prepared_{false};
 	bool     frame_active_{false};

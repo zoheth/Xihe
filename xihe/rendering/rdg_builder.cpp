@@ -103,11 +103,6 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 			scheduler.AddTaskSetToPipe(&rdg_pass_tasks[rdg_name][i]);
 			thread_index++;
 		}
-
-		for (uint32_t i = 0; i < rdg_pass->get_subpass_count(); ++i)
-		{
-			//scheduler.WaitforTask(&rdg_pass_tasks[rdg_name][rdg_pass->get_subpass_count() - i - 1]);
-		}
 	}
 
 

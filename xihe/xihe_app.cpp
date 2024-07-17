@@ -26,22 +26,9 @@ XiheApp::XiheApp()
 	// Works around a validation layer bug with descriptor pool allocation with VARIABLE_COUNT.
 	// See: https://github.com/KhronosGroup/Vulkan-ValidationLayers/issues/2350.
 	add_device_extension(VK_KHR_MAINTENANCE1_EXTENSION_NAME);
-}
 
-std::unique_ptr<rendering::RenderTarget> XiheApp::create_render_target(backend::Image &&swapchain_image)
-{
-	vk::Format depth_format = common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle());
-
-	backend::Image depth_image{swapchain_image.get_device(), swapchain_image.get_extent(),
-	                           depth_format,
-	                           vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eTransientAttachment,
-	                           VMA_MEMORY_USAGE_GPU_ONLY};
-
-	std::vector<backend::Image> images;
-	images.push_back(std::move(swapchain_image));
-	images.push_back(std::move(depth_image));
-
-	return std::make_unique<rendering::RenderTarget>(std::move(images));
+	add_device_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
+	add_device_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
 }
 
 XiheApp::~XiheApp()
@@ -344,6 +331,7 @@ void XiheApp::add_device_extension(const char *extension, bool optional)
 void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	gpu.get_mutable_requested_features().shaderSampledImageArrayDynamicIndexing = VK_TRUE;
+	gpu.get_mutable_requested_features().depthClamp                             = VK_TRUE;
 
 	auto &features = gpu.request_extension_features<vk::PhysicalDeviceDescriptorIndexingFeatures>();
 
@@ -357,12 +345,21 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 	features.runtimeDescriptorArray = VK_TRUE;
 
-	gpu.get_mutable_requested_features().depthClamp = VK_TRUE;
-
 	/*vk::PhysicalDeviceProperties2 device_properties{};
 	device_properties.pNext = &descriptor_indexing_properties_;
 
 	gpu.get_handle().getProperties2(&device_properties);*/
+
+	if (gpu.get_features().samplerAnisotropy)
+	{
+		gpu.get_mutable_requested_features().samplerAnisotropy = VK_TRUE;
+	}
+
+	auto &requested_synchronisation2_features = gpu.request_extension_features<vk::PhysicalDeviceSynchronization2FeaturesKHR>();
+	requested_synchronisation2_features.synchronization2 = VK_TRUE;
+
+	auto &requested_timeline_semaphore_features = gpu.request_extension_features<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
+	requested_timeline_semaphore_features.timelineSemaphore = VK_TRUE;
 }
 
 void XiheApp::create_render_context()

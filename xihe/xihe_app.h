@@ -53,7 +53,7 @@ class XiheApp : public Application
 
 	void update_scene(float delta_time);
 
-	virtual std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image);
+	// virtual std::unique_ptr<rendering::RenderTarget> create_render_target(backend::Image &&swapchain_image);
 
 	static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 

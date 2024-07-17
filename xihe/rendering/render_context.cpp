@@ -22,6 +22,21 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 	}
 
 	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
+
+	// todo: 这部分可能需要封装
+	vk::SemaphoreCreateInfo     semaphore_create_info;
+	vk::SemaphoreTypeCreateInfo semaphore_type_create_info;
+	semaphore_type_create_info.semaphoreType = vk::SemaphoreType::eTimeline;
+	semaphore_create_info.pNext              = &semaphore_type_create_info;
+
+	graphics_semaphore_ = device_.get_handle().createSemaphore(semaphore_create_info);
+	compute_semaphore_  = device_.get_handle().createSemaphore(semaphore_create_info);
+}
+
+RenderContext::~RenderContext()
+{
+	device_.get_handle().destroySemaphore(graphics_semaphore_);
+	device_.get_handle().destroySemaphore(compute_semaphore_);
 }
 
 void RenderContext::prepare(size_t thread_count)
@@ -52,14 +67,13 @@ void RenderContext::recreate()
 
 	assert(frames_.size() == swapchain_->get_images().size() && "Frame count does not match swapchain image count");
 
-
 	for (uint32_t i = 0; i < frames_.size(); ++i)
 	{
 		for (auto &[rdg_name, create_func] : create_render_target_functions_)
 		{
 			backend::Image swapchain_image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
 
-			auto           render_target = create_func(std::move(swapchain_image));
+			auto render_target = create_func(std::move(swapchain_image));
 			frames_[i]->update_render_target(rdg_name, std::move(render_target));
 		}
 	}
@@ -370,7 +384,7 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Rd
 		create_render_target_functions_[name] =
 		    [name, rdg_pass](backend::Image &&swapchain_image) {
 			    return rdg_pass->create_render_target(std::move(swapchain_image));
-		    };	
+		    };
 	}
 }
 }        // namespace xihe::rendering

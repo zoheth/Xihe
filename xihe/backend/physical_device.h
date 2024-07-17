@@ -33,6 +33,7 @@ class PhysicalDevice
 	Instance                                     &get_instance() const;
 	const vk::PhysicalDeviceProperties           &get_properties() const;
 	const std::vector<vk::QueueFamilyProperties> &get_queue_family_properties() const;
+	vk::PhysicalDeviceFeatures                    get_features() const;
 	vk::PhysicalDeviceFeatures                    get_requested_features() const;
 	vk::PhysicalDeviceFeatures                   &get_mutable_requested_features();
 

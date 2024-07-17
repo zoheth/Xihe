@@ -102,9 +102,9 @@ void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 	{
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
 
 		command_buffer.image_memory_barrier(views[0], memory_barrier);
 		render_target.set_layout(0, memory_barrier.new_layout);
@@ -120,9 +120,9 @@ void MainPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 	{
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.new_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
 
 		command_buffer.image_memory_barrier(views[1], memory_barrier);
 		render_target.set_layout(1, memory_barrier.new_layout);
@@ -155,9 +155,9 @@ void MainPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &re
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
 		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-		memory_barrier.src_access_mask = vk::AccessFlagBits::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eBottomOfPipe;
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
 
 		command_buffer.image_memory_barrier(views[0], memory_barrier);
 		render_target.set_layout(0, memory_barrier.new_layout);

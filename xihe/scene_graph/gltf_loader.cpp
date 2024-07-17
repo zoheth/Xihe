@@ -102,9 +102,9 @@ void upload_image_to_gpu(backend::CommandBuffer &command_buffer, backend::Buffer
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.old_layout      = vk::ImageLayout::eUndefined;
 		memory_barrier.new_layout      = vk::ImageLayout::eTransferDstOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eTransferWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eHost;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eTransfer;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eHost;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
 
 		command_buffer.image_memory_barrier(image.get_vk_image_view(), memory_barrier);
 	}
@@ -132,10 +132,10 @@ void upload_image_to_gpu(backend::CommandBuffer &command_buffer, backend::Buffer
 		common::ImageMemoryBarrier memory_barrier{};
 		memory_barrier.old_layout      = vk::ImageLayout::eTransferDstOptimal;
 		memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-		memory_barrier.src_access_mask = vk::AccessFlagBits::eTransferWrite;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits::eShaderRead;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTransfer;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eFragmentShader;
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eTransferWrite;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
 
 		command_buffer.image_memory_barrier(image.get_vk_image_view(), memory_barrier);
 	}

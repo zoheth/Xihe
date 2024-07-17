@@ -118,10 +118,10 @@ void ShadowPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget
 
 	memory_barrier.old_layout      = vk::ImageLayout::eUndefined;
 	memory_barrier.new_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-	memory_barrier.src_access_mask = vk::AccessFlagBits::eNone;
-	memory_barrier.dst_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
-	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
+	memory_barrier.src_access_mask = vk::AccessFlagBits2::eNone;
+	memory_barrier.dst_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
 
 
 	for (const auto &shadowmap : shadowmap_views)
@@ -143,10 +143,10 @@ void ShadowPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &
 
 	memory_barrier.old_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
 	memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-	memory_barrier.src_access_mask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-	memory_barrier.dst_access_mask = vk::AccessFlagBits::eShaderRead;
-	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests;
-	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits::eFragmentShader;
+	memory_barrier.src_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+	memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
+	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
 
 	for (auto &shadowmap : shadowmap_views)
 	{

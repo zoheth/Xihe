@@ -18,18 +18,18 @@ namespace xihe::common
 
 struct BufferMemoryBarrier
 {
-	vk::PipelineStageFlags src_stage_mask  = vk::PipelineStageFlagBits::eBottomOfPipe;
-	vk::PipelineStageFlags dst_stage_mask  = vk::PipelineStageFlagBits::eTopOfPipe;
-	vk::AccessFlags        src_access_mask = {};
-	vk::AccessFlags        dst_access_mask = {};
+	vk::PipelineStageFlags2 src_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+	vk::PipelineStageFlags2 dst_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        src_access_mask = {};
+	vk::AccessFlags2        dst_access_mask = {};
 };
 
 struct ImageMemoryBarrier
 {
-	vk::PipelineStageFlags src_stage_mask = vk::PipelineStageFlagBits::eBottomOfPipe;
-	vk::PipelineStageFlags dst_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
-	vk::AccessFlags        src_access_mask;
-	vk::AccessFlags        dst_access_mask;
+	vk::PipelineStageFlags2 src_stage_mask = vk::PipelineStageFlagBits2::eBottomOfPipe;
+	vk::PipelineStageFlags2 dst_stage_mask = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        src_access_mask;
+	vk::AccessFlags2        dst_access_mask;
 	vk::ImageLayout        old_layout       = vk::ImageLayout::eUndefined;
 	vk::ImageLayout        new_layout       = vk::ImageLayout::eUndefined;
 	uint32_t               old_queue_family = VK_QUEUE_FAMILY_IGNORED;
