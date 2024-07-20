@@ -86,6 +86,8 @@ class BindlessDescriptorSet
 
 	uint32_t update(vk::DescriptorImageInfo image_info);
 
+	uint32_t update(vk::DescriptorBufferInfo buffer_info);
+
 	void reset_index();
 
 	static constexpr uint32_t bindless_texture_binding_ = 10;

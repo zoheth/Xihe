@@ -92,7 +92,7 @@ struct ImageBuilder : public allocated::Builder<ImageBuilder, vk::ImageCreateInf
 	}
 
 	Image    build(Device &device) const;
-	ImagePtr build_unique(Device &device) const;
+	ImagePtr build_unique(Device &device);
 };
 
 class Image : public allocated::Allocated<vk::Image>

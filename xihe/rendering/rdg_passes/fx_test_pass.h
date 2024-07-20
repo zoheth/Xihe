@@ -2,6 +2,8 @@
 
 #include "rendering/rdg_pass.h"
 
+constexpr uint32_t kParticleCount = 4 * 16384;
+
 namespace xihe::rendering
 {
 class FxComputePass : public RdgPass

@@ -55,6 +55,10 @@ std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&sw
 
 	image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
+	image_builder.with_format(vk::Format::eR16G16B16A16Sfloat);
+	image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | rt_usage_flags);
+	backend::Image hdr_image = image_builder.build(device);
+
 	image_builder.with_format(common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle()));
 	image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment)
 	    .with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | rt_usage_flags);
@@ -71,7 +75,7 @@ std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&sw
 	std::vector<backend::Image> images;
 
 	// Attachment 0
-	images.push_back(std::move(swapchain_image));
+	images.push_back(std::move(hdr_image));
 
 	// Attachment 1
 	images.push_back(std::move(depth_image));

@@ -29,7 +29,7 @@ Image ImageBuilder::build(Device &device) const
 	return Image(device, *this);
 }
 
-ImagePtr ImageBuilder::build_unique(Device &device) const
+ImagePtr ImageBuilder::build_unique(Device &device) 
 {
 	return std::make_unique<Image>(device, *this);
 }
