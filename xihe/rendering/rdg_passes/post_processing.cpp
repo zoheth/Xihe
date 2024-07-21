@@ -16,8 +16,8 @@ vk::Extent3D downsample_extent(const vk::Extent3D &extent, uint32_t level)
 
 namespace xihe::rendering
 {
-BlurPass::BlurPass(std::string name, const RdgPassType pass_type, RenderContext &render_context) :
-    RdgPass(name, pass_type, render_context)
+BlurPass::BlurPass(std::string name, RenderContext &render_context, RdgPassType pass_type) :
+    RdgPass(std::move(name), render_context, pass_type)
 {
 	auto &threshold_module     = get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eCompute,
 	                                                                                     backend::ShaderSource("post_processing/threshold.comp"));
@@ -57,7 +57,6 @@ std::unique_ptr<RenderTarget> BlurPass::create_render_target(backend::Image &&sw
 
 void BlurPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
 {
-	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
 	// todo
 	{
@@ -126,8 +125,36 @@ void BlurPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		read_only_blur_view(dst, final);
 	};
 
-
 	auto               &render_frame       = render_context_.get_active_frame();
 	const RenderTarget &main_render_target = render_frame.get_render_target("main_pass");
+
+	auto &views = get_render_target()->get_views();
+
+	command_buffer.bind_pipeline_layout(*threshold_pipeline_layout_);
+	dispatch_pass(views[0], main_render_target.get_views()[0]);
+
+	command_buffer.bind_pipeline_layout(*blur_down_pipeline_layout_);
+	for (uint32_t index = 1; index < views.size(); index++)
+	{
+		dispatch_pass(views[index], views[index - 1]);
+	}
+
+	command_buffer.bind_pipeline_layout(*blur_up_pipeline_layout_);
+	for (uint32_t index = views.size() - 2; index > 0; index--)
+	{
+		dispatch_pass(views[index], views[index + 1], index == 1);
+	}
+
+	// todo
+	{
+		common::ImageMemoryBarrier memory_barrier;
+		memory_barrier.old_layout = vk::ImageLayout::eReadOnlyOptimal;
+		memory_barrier.new_layout      = vk::ImageLayout::eReadOnlyOptimal;
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eNone;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
+
+		memory_barrier.src_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
+		memory_barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eBottomOfPipe;
+	}
 }
 }        // namespace xihe::rendering

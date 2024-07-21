@@ -7,7 +7,7 @@ namespace xihe::rendering
 class BlurPass : public RdgPass
 {
   public:
-	BlurPass(std::string name, const RdgPassType pass_type, RenderContext &render_context);
+	BlurPass(std::string name, RenderContext &render_context, RdgPassType pass_type);
 
 	std::unique_ptr<RenderTarget> create_render_target(backend::Image &&swapchain_image) const override;
 

@@ -8,8 +8,8 @@
 
 namespace xihe::rendering
 {
-MainPass::MainPass(const std::string &name, RdgPassType pass_type, RenderContext &render_context, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr) :
-    RdgPass{name, pass_type, render_context}
+MainPass::MainPass(const std::string &name, RenderContext &render_context, RdgPassType pass_type, sg::Scene &scene, sg::Camera &camera, sg::CascadeScript *cascade_script_ptr) :
+    RdgPass{name, render_context, pass_type}
 {
 	// Geometry subpass
 	auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
@@ -154,17 +154,17 @@ void MainPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &re
 {
 	RdgPass::end_draw(command_buffer, render_target);
 
-	{
-		auto                      &views = render_target.get_views();
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-		memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+	//{
+	//	auto                      &views = render_target.get_views();
+	//	common::ImageMemoryBarrier memory_barrier{};
+	//	memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+	//	memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
+	//	memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+	//	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+	//	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
 
-		command_buffer.image_memory_barrier(views[0], memory_barrier);
-		render_target.set_layout(0, memory_barrier.new_layout);
-	}
+	//	command_buffer.image_memory_barrier(views[0], memory_barrier);
+	//	render_target.set_layout(0, memory_barrier.new_layout);
+	//}
 }
 }        // namespace xihe::rendering

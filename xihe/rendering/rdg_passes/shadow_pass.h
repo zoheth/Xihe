@@ -10,7 +10,7 @@ namespace xihe::rendering
 class ShadowPass : public RdgPass
 {
   public:
-	ShadowPass(const std::string &name, RdgPassType pass_type, RenderContext &render_context, sg::Scene &scene, sg::CascadeScript &cascade_script);
+	ShadowPass(const std::string &name, RenderContext &render_context, RdgPassType pass_type, sg::Scene &scene, sg::CascadeScript &cascade_script);
 
 	~ShadowPass() override;
 

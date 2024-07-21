@@ -14,7 +14,7 @@ class RenderTarget;
 class RdgPass
 {
   public:
-	RdgPass(std::string name, const RdgPassType pass_type, RenderContext &render_context);
+	RdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type);
 
 	RdgPass(RdgPass &&) = default;
 

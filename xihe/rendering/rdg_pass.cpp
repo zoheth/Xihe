@@ -5,7 +5,7 @@
 
 namespace xihe::rendering
 {
-RdgPass::RdgPass(std::string name, const RdgPassType pass_type, RenderContext &render_context) :
+RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassType pass_type) :
     name_{std::move(name)}, pass_type_(pass_type), render_context_{render_context}
 {}
 
@@ -121,25 +121,31 @@ bool RdgPass::use_swapchain_image() const
 
 void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
-	// Pad clear values if they're less than render target attachments
-	while (clear_value_.size() < render_target.get_attachments().size())
+	if (pass_type_ == RdgPassType::kRaster)
 	{
-		clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
-	}
+		// Pad clear values if they're less than render target attachments
+		while (clear_value_.size() < render_target.get_attachments().size())
+		{
+			clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
+		}
 
-	if (render_pass_ && framebuffer_)
-	{
-		command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
-	}
-	else
-	{
-		command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
+		if (render_pass_ && framebuffer_)
+		{
+			command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
+		}
+		else
+		{
+			command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
+		}	
 	}
 }
 
 void RdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
-	command_buffer.end_render_pass();
+	if (pass_type_ == RdgPassType::kRaster)
+	{
+		command_buffer.end_render_pass();
+	}
 }
 
 void RdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)

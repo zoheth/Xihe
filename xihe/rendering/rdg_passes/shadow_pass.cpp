@@ -6,8 +6,8 @@
 
 namespace xihe::rendering
 {
-ShadowPass::ShadowPass(const std::string &name, RdgPassType pass_type, RenderContext &render_context, sg::Scene &scene, sg::CascadeScript &cascade_script) :
-    RdgPass{name, pass_type, render_context}
+ShadowPass::ShadowPass(const std::string &name, RenderContext &render_context, RdgPassType pass_type, sg::Scene &scene, sg::CascadeScript &cascade_script) :
+    RdgPass{name, render_context, pass_type}
 {
 	use_swapchain_image_ = false;
 

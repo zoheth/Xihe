@@ -2,11 +2,11 @@
 
 namespace xihe::rendering
 {
-FxComputePass::FxComputePass(const std::string &name, RdgPassType pass_type, RenderContext &render_context) :
-    RdgPass(name, pass_type, render_context)
+FxComputePass::FxComputePass(const std::string &name, RenderContext &render_context, RdgPassType pass_type) :
+    RdgPass(name, render_context, pass_type),
+    calculate_shader_{"particles/particle_calculate.comp"},
+    integrate_shader_{"particles/particle_integrate.comp"}
 {
-	calculate_shader_ = backend::ShaderSource{"particles/particle_calculate.comp"};
-	integrate_shader_ = backend::ShaderSource{"particles/particle_integrate.comp"};
 
 	std::vector<glm::vec3> attractors = {
 	    glm::vec3(5.0f, 0.0f, 0.0f),

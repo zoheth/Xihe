@@ -9,7 +9,7 @@ namespace xihe::rendering
 class FxComputePass : public RdgPass
 {
   public:
-	FxComputePass(const std::string &name, RdgPassType pass_type, RenderContext &render_context);
+	FxComputePass(const std::string &name, RenderContext &render_context, RdgPassType pass_type);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers) override;
 
