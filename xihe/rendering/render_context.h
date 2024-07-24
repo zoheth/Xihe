@@ -39,7 +39,7 @@ class RenderContext
 
 	void recreate_swapchain();
 
-	backend::CommandBuffer &begin(backend::CommandBuffer::ResetMode reset_mode = backend::CommandBuffer::ResetMode::kResetPool);
+	void begin();
 
 	RenderFrame &get_active_frame() const;
 
@@ -50,6 +50,13 @@ class RenderContext
 	void submit(const std::vector<backend::CommandBuffer *> &command_buffers);
 
 	vk::Extent2D const &get_surface_extent() const;
+
+	backend::CommandBuffer &request_graphics_command_buffer(backend::CommandBuffer::ResetMode reset_mode,
+	                                                        vk::CommandBufferLevel            level,
+	                                                        size_t                            thread_index) const;
+	backend::CommandBuffer &request_compute_command_buffer(backend::CommandBuffer::ResetMode reset_mode,
+	                                                       vk::CommandBufferLevel            level,
+	                                                       size_t                            thread_index) const;
 
 	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
@@ -80,7 +87,8 @@ class RenderContext
 	const Window &window_;
 	vk::Extent2D  surface_extent_;
 
-	const backend::Queue &queue_;
+	const backend::Queue *graphics_queue_{nullptr};
+	const backend::Queue *compute_queue_{nullptr};
 
 	std::unique_ptr<backend::Swapchain> swapchain_;
 
@@ -88,6 +96,7 @@ class RenderContext
 
 	// Per frame synchronization
 	vk::Semaphore acquired_semaphore_;
+
 	vk::Semaphore graphics_semaphore_;
 	vk::Semaphore compute_semaphore_;
 

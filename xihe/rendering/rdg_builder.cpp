@@ -32,9 +32,14 @@ RdgBuilder::RdgBuilder(RenderContext &render_context) :
 {
 }
 
-void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
+void RdgBuilder::execute() const
 {
-#if 0
+	backend::CommandBuffer &command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
+	                                                vk::CommandBufferLevel::ePrimary, 0);
+
+	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+#if 1
 	for (auto &rdg_name : pass_order_)
 	{
 		auto &rdg_pass = rdg_passes_.at(rdg_name);
@@ -124,6 +129,10 @@ void RdgBuilder::execute(backend::CommandBuffer &command_buffer) const
 	}
 
 #endif
+
+	command_buffer.end();
+
+	render_context_.submit(command_buffer);
 }
 
 }        // namespace xihe::rendering

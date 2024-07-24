@@ -5,7 +5,7 @@
 namespace xihe::rendering
 {
 RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, const Window &window, vk::PresentModeKHR present_mode, std::vector<vk::PresentModeKHR> const &present_mode_priority_list, std::vector<vk::SurfaceFormatKHR> const &surface_format_priority_list) :
-    device_{device}, window_{window}, surface_extent_{window.get_extent().width, window.get_extent().height}, queue_{device.get_suitable_graphics_queue()}
+    device_{device}, window_{window}, surface_extent_{window.get_extent().width, window.get_extent().height}
 {
 	vk::SurfaceCapabilitiesKHR surface_capabilities = device_.get_gpu().get_handle().getSurfaceCapabilitiesKHR(surface);
 
@@ -22,6 +22,20 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 	}
 
 	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
+
+	graphics_queue_ = &device.get_suitable_graphics_queue();
+	uint32_t compute_family_index = device.get_queue_family_index(vk::QueueFlagBits::eCompute);
+
+	if (compute_family_index == graphics_queue_->get_family_index())
+	{
+		LOGI("Device has does not have a dedicated compute queue family.");
+		compute_queue_ = graphics_queue_;
+	}
+	else
+	{
+		LOGI("Device has async compute queue.");
+		compute_queue_ = &device.get_queue(compute_family_index, 0);
+	}
 
 	// todo: 这部分可能需要封装
 	vk::SemaphoreCreateInfo     semaphore_create_info;
@@ -102,7 +116,7 @@ void RenderContext::recreate_swapchain()
 	throw std::runtime_error("Not implemented");
 }
 
-backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode reset_mode)
+void RenderContext::begin()
 {
 	assert(prepared_ && "RenderContext is not prepared");
 
@@ -116,8 +130,8 @@ backend::CommandBuffer &RenderContext::begin(backend::CommandBuffer::ResetMode r
 		throw std::runtime_error("Couldn't begin frame");
 	}
 
-	const auto &queue = device_.get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
-	return get_active_frame().request_command_buffer(queue, reset_mode, vk::CommandBufferLevel::ePrimary, 0);
+	/*const auto &queue = device_.get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
+	return get_active_frame().request_command_buffer(queue, reset_mode, vk::CommandBufferLevel::ePrimary, 0);*/
 }
 
 RenderFrame &RenderContext::get_active_frame() const
@@ -145,11 +159,11 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 	if (swapchain_)
 	{
 		assert(acquired_semaphore_ && "We do not have acquired_semaphore, it was probably consumed?\n");
-		render_semaphore = submit(queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		render_semaphore = submit(*graphics_queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 	}
 	else
 	{
-		submit(queue_, command_buffers);
+		submit(*graphics_queue_, command_buffers);
 	}
 
 	end_frame(render_semaphore);
@@ -158,6 +172,16 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 vk::Extent2D const &RenderContext::get_surface_extent() const
 {
 	return surface_extent_;
+}
+
+backend::CommandBuffer & RenderContext::request_graphics_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
+{
+	return get_active_frame().request_command_buffer(*graphics_queue_, reset_mode, level, thread_index);
+}
+
+backend::CommandBuffer & RenderContext::request_compute_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
+{
+	return get_active_frame().request_command_buffer(*compute_queue_, reset_mode, level, thread_index);
 }
 
 backend::BindlessDescriptorSet *RenderContext::get_bindless_descriptor_set() const
@@ -238,7 +262,7 @@ void RenderContext::end_frame(vk::Semaphore semaphore)
 		vk::Result result;
 		try
 		{
-			result = queue_.get_handle().presentKHR(present_info);
+			result = graphics_queue_->get_handle().presentKHR(present_info);
 		}
 		catch (vk::OutOfDateKHRError &e)
 		{

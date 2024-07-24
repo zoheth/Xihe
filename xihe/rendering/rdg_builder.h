@@ -28,7 +28,7 @@ class RdgBuilder
 	template <typename T, typename... Args>
 	void add_pass(std::string name, Args &&...args);
 
-	void execute(backend::CommandBuffer &command_buffer) const;
+	void execute() const;
 
   private:
 	RenderContext                                            &render_context_;
