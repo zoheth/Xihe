@@ -33,6 +33,7 @@ class RdgBuilder
   private:
 	RenderContext                                            &render_context_;
 	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
+	std::vector<std::string> 							   pass_order_{};
 };
 
 template <typename T, typename... Args>
@@ -44,8 +45,9 @@ void RdgBuilder::add_pass(std::string name, Args &&...args)
 	{
 		throw std::runtime_error{"Pass with name " + name + " already exists"};
 	}
-
 	rdg_passes_.emplace(name, std::make_unique<T>(name, render_context_, std::forward<Args>(args)...));
+
+	pass_order_.push_back(name);
 
 	/*if (rdg_passes_[name]->use_swapchain_image())
 	{

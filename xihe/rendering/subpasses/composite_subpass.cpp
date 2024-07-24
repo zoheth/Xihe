@@ -6,19 +6,25 @@ namespace xihe::rendering
 {
 CompositeSubpass::CompositeSubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader) :
     Subpass(render_context, std::move(vertex_shader), std::move(fragment_shader))
-{}
-
-void CompositeSubpass::set_texture(const backend::ImageView *hdr_view, const backend::ImageView *bloom_view, const backend::Sampler *sampler)
 {
-	hdr_view_   = hdr_view;
-	bloom_view_ = bloom_view;
-	sampler_    = sampler;
+	auto sampler_info         = vk::SamplerCreateInfo{};
+	sampler_info.magFilter    = vk::Filter::eLinear;
+	sampler_info.minFilter    = vk::Filter::eLinear;
+	sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.maxLod       = VK_LOD_CLAMP_NONE;
+
+	sampler_ = std::make_unique<backend::Sampler>(render_context.get_device(), sampler_info);
 }
 
 void CompositeSubpass::draw(backend::CommandBuffer &command_buffer)
 {
-	command_buffer.bind_image(*hdr_view_, *sampler_, 0, 0, 0);
-	command_buffer.bind_image(*bloom_view_, *sampler_, 0, 1, 0);
+	auto &main_pass_views       = render_context_.get_active_frame().get_render_target("main_pass").get_views();
+	auto &post_processing_views = render_context_.get_active_frame().get_render_target("blur_pass").get_views();
+
+	command_buffer.bind_image(main_pass_views[0], *sampler_, 0, 0, 0);
+	command_buffer.bind_image(post_processing_views[1], *sampler_, 0, 1, 0);
 	command_buffer.bind_pipeline_layout(*pipeline_layout_);
 
 	// A depth-stencil attachment exists in the default render pass, make sure we ignore it.

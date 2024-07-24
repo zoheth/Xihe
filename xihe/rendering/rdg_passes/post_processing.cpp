@@ -89,9 +89,9 @@ void BlurPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		memory_barrier.old_layout      = vk::ImageLayout::eGeneral;
 		memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
 		memory_barrier.src_access_mask = vk::AccessFlagBits2::eShaderWrite;
-		memory_barrier.dst_access_mask = is_final ? vk::AccessFlagBits2::eNone : vk::AccessFlagBits2::eShaderRead;
+		memory_barrier.dst_access_mask = is_final ? vk::AccessFlagBits2::eShaderRead : vk::AccessFlagBits2::eShaderRead;
 		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eComputeShader;
-		memory_barrier.dst_stage_mask  = is_final ? vk::PipelineStageFlagBits2::eBottomOfPipe : vk::PipelineStageFlagBits2::eComputeShader;
+		memory_barrier.dst_stage_mask  = is_final ? vk::PipelineStageFlagBits2::eFragmentShader : vk::PipelineStageFlagBits2::eComputeShader;
 
 		command_buffer.image_memory_barrier(view, memory_barrier);
 	};

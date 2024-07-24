@@ -8,6 +8,8 @@
 #include "rendering/render_context.h"
 #include "rendering/rdg_passes/main_pass.h"
 #include "rendering/rdg_passes/shadow_pass.h"
+#include "rendering/rdg_passes/post_processing.h"
+#include "rendering/rdg_passes/composite_pass.h"
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
 
@@ -38,6 +40,10 @@ bool xihe::TestApp::prepare(Window *window)
 	rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", rendering::RdgPassType::kRaster, *scene_, *p_cascade_script);
 
 	rdg_builder_->add_pass<rendering::MainPass>("main_pass", rendering::RdgPassType::kRaster, *scene_, *camera, p_cascade_script);
+
+	rdg_builder_->add_pass<rendering::BlurPass>("blur_pass", rendering::RdgPassType::kCompute);
+
+	rdg_builder_->add_pass<rendering::CompositePass>("composite_pass", rendering::RdgPassType::kRaster);
 
 	return true;
 }

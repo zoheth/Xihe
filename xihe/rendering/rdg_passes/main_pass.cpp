@@ -56,7 +56,7 @@ std::unique_ptr<RenderTarget> MainPass::create_render_target(backend::Image &&sw
 	image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
 	image_builder.with_format(vk::Format::eR16G16B16A16Sfloat);
-	image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | rt_usage_flags);
+	image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
 	backend::Image hdr_image = image_builder.build(device);
 
 	image_builder.with_format(common::get_suitable_depth_format(swapchain_image.get_device().get_gpu().get_handle()));
@@ -154,17 +154,18 @@ void MainPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &re
 {
 	RdgPass::end_draw(command_buffer, render_target);
 
-	//{
-	//	auto                      &views = render_target.get_views();
-	//	common::ImageMemoryBarrier memory_barrier{};
-	//	memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-	//	memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-	//	memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
-	//	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-	//	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+	{
+		auto                      &views = render_target.get_views();
+		common::ImageMemoryBarrier memory_barrier{};
+		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+		memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eComputeShader;
 
-	//	command_buffer.image_memory_barrier(views[0], memory_barrier);
-	//	render_target.set_layout(0, memory_barrier.new_layout);
-	//}
+		command_buffer.image_memory_barrier(views[0], memory_barrier);
+		render_target.set_layout(0, memory_barrier.new_layout);
+	}
 }
 }        // namespace xihe::rendering

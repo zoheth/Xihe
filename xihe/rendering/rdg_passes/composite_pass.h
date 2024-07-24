@@ -15,6 +15,7 @@ public:
 
 
 private:
+	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
 	void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target) override;
 	std::unique_ptr<backend::Sampler> sampler_;
 };
