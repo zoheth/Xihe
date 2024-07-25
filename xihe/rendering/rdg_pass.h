@@ -11,10 +11,29 @@ namespace rendering
 class RenderPipeline;
 class RenderTarget;
 
+struct PassInfo
+{
+	struct Input
+	{
+		RdgResourceType type;
+		std::string     name;
+	};
+	struct Output
+	{
+		RdgResourceType      type;
+		std::string          name;
+		vk::Format           format;
+		vk::AttachmentLoadOp load_op{vk::AttachmentLoadOp::eClear};
+		vk::Extent2D         override_resolution{};
+	};
+	std::vector<Input>  inputs;
+	std::vector<Output> outputs;
+};
+
 class RdgPass
 {
   public:
-	RdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type);
+	RdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, const PassInfo &pass_info);
 
 	RdgPass(RdgPass &&) = default;
 
@@ -36,7 +55,9 @@ class RdgPass
 	// before pall
 	virtual void prepare(backend::CommandBuffer &command_buffer);
 
-	virtual  void draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const;
+	virtual void draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const;
+
+	void set_subpasses(std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
 	backend::Device &get_device() const;
 
@@ -46,7 +67,7 @@ class RdgPass
 
 	const std::vector<common::LoadStoreInfo> &get_load_store() const;
 
-	backend::RenderPass &get_render_pass() const;
+	backend::RenderPass  &get_render_pass() const;
 	backend::Framebuffer &get_framebuffer() const;
 
 	/**
@@ -57,7 +78,6 @@ class RdgPass
 	/// \brief Checks if the render target should be created using a swapchain image.
 	/// \return True if a swapchain image should be used, otherwise false.
 	bool use_swapchain_image() const;
-
 
   protected:
 	virtual void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents = vk::SubpassContents::eInline);
@@ -77,13 +97,15 @@ class RdgPass
 	std::vector<std::unique_ptr<Subpass>> subpasses_;
 
 	std::vector<common::LoadStoreInfo> load_store_;
-	std::vector<vk::ClearValue> clear_value_;
+	std::vector<vk::ClearValue>        clear_value_;
 
-	std::unique_ptr<RenderTarget>   render_target_{nullptr};
+	RenderTarget::CreateFunc create_render_target_func_{nullptr};
+
+	std::unique_ptr<RenderTarget> render_target_{nullptr};
 
 	bool use_swapchain_image_{true};
 
-	backend::RenderPass *render_pass_{nullptr};
+	backend::RenderPass  *render_pass_{nullptr};
 	backend::Framebuffer *framebuffer_{nullptr};
 };
 }        // namespace rendering

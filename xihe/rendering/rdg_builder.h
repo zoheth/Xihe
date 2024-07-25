@@ -28,6 +28,10 @@ class RdgBuilder
 	template <typename T, typename... Args>
 	void add_pass(std::string name, Args &&...args);
 
+	void add_raster_pass(const std::string &name, const PassInfo &pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
+
+	void add_compute_pass(const std::string &name, const PassInfo &pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function);
+
 	void execute() const;
 
   private:

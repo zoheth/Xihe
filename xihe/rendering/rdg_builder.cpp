@@ -32,6 +32,21 @@ RdgBuilder::RdgBuilder(RenderContext &render_context) :
 {
 }
 
+void RdgBuilder::add_raster_pass(const std::string &name, const PassInfo &pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses)
+{
+	if (rdg_passes_.contains(name))
+	{
+		throw std::runtime_error{"Pass with name " + name + " already exists"};
+	}
+
+	rdg_passes_.emplace(name, std::make_unique<RdgPass>(name, render_context_,  RdgPassType::kRaster, pass_info));
+	rdg_passes_[name]->set_subpasses(std::move(subpasses));
+
+	pass_order_.push_back(name);
+
+	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
+}
+
 void RdgBuilder::execute() const
 {
 	backend::CommandBuffer &command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,

@@ -1,10 +1,13 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <vector>
 
 namespace xihe::rendering
 {
 typedef uint32_t RdgHandle;
+
+class RdgPass;
 
 enum RdgPassType
 {
@@ -17,7 +20,7 @@ struct RdgResourceHandle
 {
 	RdgHandle handle;
 };
-struct RdgNodeHandle
+struct RdgPassHandle
 {
 	RdgHandle handle;
 };
@@ -41,7 +44,7 @@ struct RdgResource
 	RdgResourceType type;
 	RdgResourceInfo info;
 
-	RdgNodeHandle     producer;
+	RdgPassHandle     producer;
 	RdgResourceHandle output_handle;
 
 	int32_t ref_count = 0;
@@ -51,6 +54,11 @@ struct RdgResource
 
 struct RdgNode
 {
+	RdgPassHandle pass_handle;
+	RdgPass *pass;
+
+	std::vector<RdgResourceHandle> inputs;
+	std::vector<RdgResourceHandle> outputs;
 };
 
 }        // namespace xihe::rendering

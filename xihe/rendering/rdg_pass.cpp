@@ -5,13 +5,45 @@
 
 namespace xihe::rendering
 {
-RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassType pass_type) :
+RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassType pass_type, const PassInfo &pass_info) :
     name_{std::move(name)}, pass_type_(pass_type), render_context_{render_context}
-{}
+{
+
+	create_render_target_func_ = [pass_info](backend::Image &&swapchain_image) {
+		auto &device = swapchain_image.get_device();
+
+		std::vector<backend::Image> images;
+
+		for (const auto &output : pass_info.outputs)
+		{
+			vk::Extent3D extent = swapchain_image.get_extent();
+			if (output.override_resolution.width != 0 && output.override_resolution.height != 0)
+			{
+				extent = vk::Extent3D(output.override_resolution.width, output.override_resolution.height, 1);
+			}
+			backend::ImageBuilder image_builder{extent};
+			image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY)
+			    .with_format(output.format);
+			if (common::is_depth_format(output.format))
+			{
+				image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled);
+			}
+			else
+			{
+				image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+			}
+			backend::Image image = image_builder.build(device);
+			images.push_back(std::move(image));
+		}
+
+		return std::make_unique<RenderTarget>(std::move(images));
+	};
+
+}
 
 std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image) const
 {
-	throw std::runtime_error("Not implemented");
+	return create_render_target_func_(std::move(swapchain_image));
 }
 
 RenderTarget *RdgPass::get_render_target() const
@@ -167,5 +199,14 @@ void RdgPass::draw_subpass(backend::CommandBuffer &command_buffer, const RenderT
 	backend::ScopedDebugLabel subpass_debug_label{command_buffer, subpass->get_debug_name().c_str()};
 
 	subpass->draw(command_buffer);
+}
+
+void RdgPass::set_subpasses(std::vector<std::unique_ptr<Subpass>> &&subpasses)
+{
+	subpasses_ = std::move(subpasses);
+	for (auto &subpass : subpasses_)
+	{
+		subpass->prepare();
+	}
 }
 }        // namespace xihe::rendering
