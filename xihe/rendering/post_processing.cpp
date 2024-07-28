@@ -1,5 +1,8 @@
 #include "post_processing.h"
 
+#include "backend/device.h"
+#include "rendering/rdg_builder.h"
+
 namespace
 {
 vk::Extent3D downsample_extent(const vk::Extent3D &extent, uint32_t level)
@@ -10,11 +13,13 @@ vk::Extent3D downsample_extent(const vk::Extent3D &extent, uint32_t level)
 	    std::max(1u, extent.depth >> level)};
 }
 
+
+
 }        // namespace
 
 namespace xihe::rendering
 {
-void render_blur(backend::CommandBuffer &command_buffer)
+void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer, const backend::Sampler &sampler)
 {
 	const auto discard_blur_view = [&](const backend::ImageView &view) {
 		common::ImageMemoryBarrier memory_barrier;
@@ -52,8 +57,8 @@ void render_blur(backend::CommandBuffer &command_buffer)
 	const auto dispatch_pass = [&](const backend::ImageView &dst, const backend::ImageView &src, bool final = false) {
 		discard_blur_view(dst);
 
-		auto dst_extent = downsample_extent(dst.get_image().get_extent(), dst.get_subresource_range().baseMipLevel);
-		auto src_extent = downsample_extent(src.get_image().get_extent(), dst.get_subresource_range().baseMipLevel);
+		const auto dst_extent = downsample_extent(dst.get_image().get_extent(), dst.get_subresource_range().baseMipLevel);
+		const auto src_extent = downsample_extent(src.get_image().get_extent(), dst.get_subresource_range().baseMipLevel);
 
 		Push push{};
 		push.width            = dst_extent.width;
@@ -64,7 +69,7 @@ void render_blur(backend::CommandBuffer &command_buffer)
 		push.inv_input_height = 1.0f / static_cast<float>(src_extent.height);
 
 		command_buffer.push_constants(push);
-		command_buffer.bind_image(src, *linear_sampler_, 0, 0, 0);
+		command_buffer.bind_image(src, sampler, 0, 0, 0);
 		command_buffer.bind_image(dst, 0, 1, 0);
 		command_buffer.dispatch((push.width + 7) / 8, (push.height + 7) / 8, 1);
 

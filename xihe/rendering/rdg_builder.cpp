@@ -40,6 +40,9 @@ void RdgBuilder::add_raster_pass(const std::string &name, const PassInfo &pass_i
 	}
 
 	rdg_passes_.emplace(name, std::make_unique<RdgPass>(name, render_context_,  RdgPassType::kRaster, pass_info));
+
+
+
 	rdg_passes_[name]->set_subpasses(std::move(subpasses));
 
 	pass_order_.push_back(name);
@@ -62,18 +65,6 @@ void RdgBuilder::execute() const
 
 		set_viewport_and_scissor(command_buffer, render_target->get_extent());
 
-		auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
-		/*uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
-		for (auto &image_info : image_infos)
-		{
-			auto index = render_context_.get_bindless_descriptor_set()->update(image_info);
-
-			if (index < first_bindless_descriptor_set_index)
-			{
-				first_bindless_descriptor_set_index = index;
-			}
-		}*/
-		// rdg_pass->prepare(command_buffer);
 		rdg_pass->execute(command_buffer, *render_target, {});
 	}
 #elif 1
