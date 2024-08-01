@@ -32,11 +32,14 @@ class RdgBuilder
 
 	void add_compute_pass(const std::string &name, const PassInfo &pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function);
 
+	void compile();
+
 	void execute() const;
 
   private:
 	RenderContext                                            &render_context_;
 	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
+	std::vector<RdgNode>                                      rdg_nodes_{};
 	std::vector<std::string> 							   pass_order_{};
 };
 

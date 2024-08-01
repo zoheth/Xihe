@@ -44,7 +44,7 @@ bool xihe::TestApp::prepare(Window *window)
 		for (uint32_t i = 0; i < kCascadeCount; ++i)
 		{
 			auto subpass = std::make_unique<rendering::ShadowSubpass>(*render_context_, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, *scene_, *p_cascade_script, i);
-			subpass->set_depth_stencil_attachment(i);
+			subpass->set_depth_stencil_attachment(i); 
 
 			subpasses.push_back(std::move(subpass));
 
@@ -62,7 +62,7 @@ bool xihe::TestApp::prepare(Window *window)
 	{
 		rendering::PassInfo pass_info{};
 		pass_info.outputs = {
-		    {rendering::RdgResourceType::kAttachment, "hdr image", vk::Format::eR16G16B16A16Sfloat},
+		    {rendering::RdgResourceType::kSwapchain, "swapchain image"},
 		    {rendering::RdgResourceType::kAttachment, "depth image", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())},
 		    {rendering::RdgResourceType::kAttachment, "albedo image", vk::Format::eR8G8B8A8Unorm},
 		    {rendering::RdgResourceType::kAttachment, "normal image", vk::Format::eA2B10G10R10UnormPack32},
@@ -81,10 +81,11 @@ bool xihe::TestApp::prepare(Window *window)
 
 		lighting_subpass->set_input_attachments({1, 2, 3});
 
-		std::vector<std::unique_ptr<rendering::Subpass>> subpasses{std::move(scene_subpass), std::move(lighting_subpass)};
+		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
+		subpasses.push_back(std::move(scene_subpass));
+		subpasses.push_back(std::move(lighting_subpass));
 		rdg_builder_->add_raster_pass("main_pass", pass_info, std::move(subpasses));
 	}
-
 
 
 	/*rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", rendering::RdgPassType::kRaster, *scene_, *p_cascade_script);

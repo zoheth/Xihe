@@ -50,6 +50,11 @@ void RdgBuilder::add_raster_pass(const std::string &name, const PassInfo &pass_i
 	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
 }
 
+void RdgBuilder::compile()
+{
+	
+}
+
 void RdgBuilder::execute() const
 {
 	backend::CommandBuffer &command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,

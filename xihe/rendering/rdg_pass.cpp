@@ -14,9 +14,24 @@ RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassT
 
 		std::vector<backend::Image> images;
 
+		vk::Extent3D swapchain_image_extent = swapchain_image.get_extent();
+
+		if (auto swapchain_count = std::ranges::count_if(pass_info.outputs, [](const auto &output) {
+			return output.type == RdgResourceType::kSwapchain;
+		}); swapchain_count > 1)
+		{
+			throw std::runtime_error("Multiple swapchain outputs are not supported.");
+		}
+
 		for (const auto &output : pass_info.outputs)
 		{
-			vk::Extent3D extent = swapchain_image.get_extent();
+			if (output.type == RdgResourceType::kSwapchain)
+			{
+				images.push_back(std::move(swapchain_image));
+				continue;
+			}
+
+			vk::Extent3D extent = swapchain_image_extent;
 			if (output.override_resolution.width != 0 && output.override_resolution.height != 0)
 			{
 				extent = vk::Extent3D(output.override_resolution.width, output.override_resolution.height, 1);
