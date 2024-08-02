@@ -6,6 +6,7 @@
 
 namespace xihe::rendering
 {
+std::unique_ptr<backend::Sampler> get_shadowmap_sampler(backend::Device &device);
 
 class ShadowSubpass : public Subpass
 {

@@ -12,6 +12,19 @@
 
 namespace xihe::rendering
 {
+std::unique_ptr<backend::Sampler> get_shadowmap_sampler(backend::Device &device)
+{
+	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
+	shadowmap_sampler_create_info.minFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.magFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.addressModeU  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeV  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeW  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.borderColor   = vk::BorderColor::eFloatOpaqueWhite;
+	shadowmap_sampler_create_info.compareEnable = VK_TRUE;
+	shadowmap_sampler_create_info.compareOp     = vk::CompareOp::eGreaterOrEqual;
+	return std::make_unique<backend::Sampler>(device, shadowmap_sampler_create_info);
+}
 
 ShadowSubpass::ShadowSubpass(RenderContext          &render_context,
                              backend::ShaderSource &&vertex_source,
@@ -25,7 +38,6 @@ ShadowSubpass::ShadowSubpass(RenderContext          &render_context,
     cascade_index_{cascade_index}
 {
 }
-
 
 void ShadowSubpass::prepare()
 {

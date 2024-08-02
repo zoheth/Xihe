@@ -5,25 +5,46 @@
 
 namespace xihe::rendering
 {
-RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassType pass_type, const PassInfo &pass_info) :
-    name_{std::move(name)}, pass_type_(pass_type), render_context_{render_context}
+RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassType pass_type, PassInfo &&pass_info) :
+    name_{std::move(name)}, render_context_{render_context}, pass_type_(pass_type), pass_info_{std::move(pass_info)}
 {
+	for (const auto &output : pass_info_.outputs)
+	{
+		if (output.type == RdgResourceType::kSwapchain)
+		{
+			use_swapchain_image_ = true;
+		}
+		load_store_.emplace_back(output.load_op, vk::AttachmentStoreOp::eStore);
+		if (output.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment)
+		{
+			load_store_.back().store_op = vk::AttachmentStoreOp::eDontCare;
+		}
+		if (common::is_depth_format(output.format))
+		{
+			clear_value_.emplace_back(vk::ClearDepthStencilValue{0.0f, 0});
+		}
+		else
+		{
+			clear_value_.emplace_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
+		}
+	}
 
-	create_render_target_func_ = [pass_info](backend::Image &&swapchain_image) {
+	create_render_target_func_ = [this](backend::Image &&swapchain_image) {
 		auto &device = swapchain_image.get_device();
 
 		std::vector<backend::Image> images;
 
 		vk::Extent3D swapchain_image_extent = swapchain_image.get_extent();
 
-		if (auto swapchain_count = std::ranges::count_if(pass_info.outputs, [](const auto &output) {
-			return output.type == RdgResourceType::kSwapchain;
-		}); swapchain_count > 1)
+		if (auto swapchain_count = std::ranges::count_if(pass_info_.outputs, [](const auto &output) {
+			    return output.type == RdgResourceType::kSwapchain;
+		    });
+		    swapchain_count > 1)
 		{
 			throw std::runtime_error("Multiple swapchain outputs are not supported.");
 		}
 
-		for (const auto &output : pass_info.outputs)
+		for (const auto &output : pass_info_.outputs)
 		{
 			if (output.type == RdgResourceType::kSwapchain)
 			{
@@ -41,11 +62,11 @@ RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassT
 			    .with_format(output.format);
 			if (common::is_depth_format(output.format))
 			{
-				image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled);
+				image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | output.usage);
 			}
 			else
 			{
-				image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled);
+				image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | output.usage);
 			}
 			backend::Image image = image_builder.build(device);
 			images.push_back(std::move(image));
@@ -54,6 +75,7 @@ RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassT
 		return std::make_unique<RenderTarget>(std::move(images));
 	};
 
+	input_image_views_.resize(pass_info_.inputs.size());
 }
 
 std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swapchain_image) const
@@ -66,7 +88,7 @@ RenderTarget *RdgPass::get_render_target() const
 	return &render_context_.get_active_frame().get_render_target(name_);
 	/*if (use_swapchain_image())
 	{
-		return &render_context_.get_active_frame().get_render_target(name_);
+	    return &render_context_.get_active_frame().get_render_target(name_);
 	}
 	assert(render_target_ && "If use_swapchain_image returns false, the render_target_ must be created during initialization.");
 	return render_target_.get();*/
@@ -105,13 +127,33 @@ void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &rend
 			}
 		}
 
-		end_draw(command_buffer, render_target);	
+		end_draw(command_buffer, render_target);
 	}
 }
 
 std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderTarget &render_target) const
 {
-	return {};
+	auto &views = render_target.get_views();
+
+	std::vector<vk::DescriptorImageInfo> descriptor_image_infos{};
+
+	for (uint32_t i =0;i<pass_info_.outputs.size();++i)
+	{
+		if (pass_info_.outputs[i].usage & vk::ImageUsageFlagBits::eSampled)
+		{
+			assert(pass_info_.outputs[i].sampler);
+
+			vk::DescriptorImageInfo descriptor_image_info{};
+			descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+			descriptor_image_info.imageView   = views[i].get_handle();
+			descriptor_image_info.sampler     = pass_info_.outputs[i].sampler;
+
+			descriptor_image_infos.push_back(descriptor_image_info);
+		
+		}
+	}
+
+	return descriptor_image_infos;
 }
 
 void RdgPass::prepare(backend::CommandBuffer &command_buffer)
@@ -126,6 +168,16 @@ void RdgPass::prepare(backend::CommandBuffer &command_buffer)
 backend::Device &RdgPass::get_device() const
 {
 	return render_context_.get_device();
+}
+
+const std::string &RdgPass::get_name() const
+{
+	return name_;
+}
+
+PassInfo &RdgPass::get_pass_info()
+{
+	return pass_info_;
 }
 
 std::vector<std::unique_ptr<Subpass>> &RdgPass::get_subpasses()
@@ -143,13 +195,13 @@ const std::vector<common::LoadStoreInfo> &RdgPass::get_load_store() const
 	return load_store_;
 }
 
-backend::RenderPass & RdgPass::get_render_pass() const
+backend::RenderPass &RdgPass::get_render_pass() const
 {
 	assert(render_pass_ && "");
 	return *render_pass_;
 }
 
-backend::Framebuffer & RdgPass::get_framebuffer() const
+backend::Framebuffer &RdgPass::get_framebuffer() const
 {
 	assert(framebuffer_ && "");
 	return *framebuffer_;
@@ -168,6 +220,29 @@ bool RdgPass::use_swapchain_image() const
 
 void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
+	for (const auto &[index, barrier] : input_barriers_)
+	{
+		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
+		{
+			command_buffer.image_memory_barrier(*input_image_views_[index], std::get<common::ImageMemoryBarrier>(barrier));
+		}
+		else
+		{
+		}
+	}
+
+	auto &output_views = render_target.get_views();
+	for (const auto &[index, barrier] : output_barriers_)
+	{
+		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
+		{
+			command_buffer.image_memory_barrier(output_views[index], std::get<common::ImageMemoryBarrier>(barrier));
+		}
+		else
+		{
+		}
+	}
+
 	if (pass_type_ == RdgPassType::kRaster)
 	{
 		// Pad clear values if they're less than render target attachments
@@ -183,7 +258,7 @@ void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &r
 		else
 		{
 			command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
-		}	
+		}
 	}
 }
 
@@ -192,6 +267,19 @@ void RdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &ren
 	if (pass_type_ == RdgPassType::kRaster)
 	{
 		command_buffer.end_render_pass();
+
+		if (use_swapchain_image_)
+		{
+			auto                      &views = render_target.get_views();
+			common::ImageMemoryBarrier memory_barrier{};
+			memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+			memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
+			memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+
+			command_buffer.image_memory_barrier(views[0], memory_barrier);
+		}
 	}
 }
 
@@ -223,5 +311,21 @@ void RdgPass::set_subpasses(std::vector<std::unique_ptr<Subpass>> &&subpasses)
 	{
 		subpass->prepare();
 	}
+}
+
+void RdgPass::set_input_image_view(uint32_t index, const backend::ImageView *image_view)
+{
+	assert(index < input_image_views_.size());
+	input_image_views_[index] = image_view;
+}
+
+void RdgPass::add_input_memory_barrier(uint32_t index, Barrier &&barrier)
+{
+	input_barriers_[index] = barrier;
+}
+
+void RdgPass::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
+{
+	output_barriers_[index] = barrier;
 }
 }        // namespace xihe::rendering

@@ -59,7 +59,7 @@ struct RdgResourceInfo
 		vk::Extent3D        extent;
 		vk::ImageUsageFlags usage;
 		vk::ImageLayout     layout;
-		backend::Image     *image;
+		backend::ImageView *image_view;
 	};
 
 	union Data

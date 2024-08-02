@@ -3,6 +3,22 @@
 namespace xihe::rendering
 {
 
+struct ResourceState
+{
+	int last_write_pass = -1;
+
+	/*vk::PipelineStageFlags2 prev_stage_mask = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        prev_access_mask = vk::AccessFlagBits2::eNone;
+	vk::ImageLayout         prev_layout      = vk::ImageLayout::eUndefined;*/
+	vk::PipelineStageFlags2 producer_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        producer_access_mask = vk::AccessFlagBits2::eNone;
+	vk::ImageLayout         producer_layout      = vk::ImageLayout::eUndefined;
+
+	const backend::ImageView *image_view = nullptr;
+
+	std::vector<int> read_passes;
+};
+
 void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
 {
 	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
@@ -32,40 +48,42 @@ RdgBuilder::RdgBuilder(RenderContext &render_context) :
 {
 }
 
-void RdgBuilder::add_raster_pass(const std::string &name, const PassInfo &pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses)
+void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses)
 {
-	if (rdg_passes_.contains(name))
+	/*if (rdg_passes_.contains(name))
 	{
-		throw std::runtime_error{"Pass with name " + name + " already exists"};
-	}
+	    throw std::runtime_error{"Pass with name " + name + " already exists"};
+	}*/
 
-	rdg_passes_.emplace(name, std::make_unique<RdgPass>(name, render_context_,  RdgPassType::kRaster, pass_info));
+	rdg_passes_.push_back(std::make_unique<RdgPass>(name, render_context_, RdgPassType::kRaster, std::move(pass_info)));
+
+	
+
+	rdg_passes_.back()->set_subpasses(std::move(subpasses));
 
 
-
-	rdg_passes_[name]->set_subpasses(std::move(subpasses));
-
-	pass_order_.push_back(name);
-
-	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
+	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
 
 void RdgBuilder::compile()
 {
-	
+	topological_sort();
+	prepare_memory_barriers();
 }
 
-void RdgBuilder::execute() const
+void RdgBuilder::execute()
 {
+	compile();
+
 	backend::CommandBuffer &command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
-	                                                vk::CommandBufferLevel::ePrimary, 0);
+	                                                                                         vk::CommandBufferLevel::ePrimary, 0);
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
 #if 1
-	for (auto &rdg_name : pass_order_)
+	for (auto &index : pass_order_)
 	{
-		auto &rdg_pass = rdg_passes_.at(rdg_name);
+		auto         &rdg_pass      = rdg_passes_.at(index);
 		RenderTarget *render_target = rdg_pass->get_render_target();
 
 		set_viewport_and_scissor(command_buffer, render_target->get_extent());
@@ -146,4 +164,181 @@ void RdgBuilder::execute() const
 	render_context_.submit(command_buffer);
 }
 
+void RdgBuilder::topological_sort()
+{
+	pass_order_.clear();
+
+	// Step 1: Build the graph
+	std::unordered_map<std::string, std::vector<int>> resource_to_producers;
+	std::vector<std::unordered_set<int>>              adjacency_list(rdg_passes_.size());
+	std::vector<int>                                  indegree(rdg_passes_.size(), 0);
+
+	for (int i = 0; i < rdg_passes_.size(); ++i)
+	{
+		const PassInfo &pass_info = rdg_passes_[i]->get_pass_info();
+		for (const auto &output : pass_info.outputs)
+		{
+			resource_to_producers[output.name].push_back(i);
+		}
+	}
+
+	for (int i = 0; i < rdg_passes_.size(); ++i)
+	{
+		const PassInfo &pass_info = rdg_passes_[i]->get_pass_info();
+		for (const auto &input : pass_info.inputs)
+		{
+			if (resource_to_producers.contains(input.name))
+			{
+				for (int producer : resource_to_producers[input.name])
+				{
+					if (adjacency_list[producer].insert(i).second)
+					{
+						indegree[i]++;
+					}
+				}
+			}
+		}
+	}
+
+	// Step 2: Perform Kahn's Algorithm for topological sorting
+	std::queue<int> zero_indegree_queue;
+	for (int i = 0; i < indegree.size(); ++i)
+	{
+		if (indegree[i] == 0)
+		{
+			zero_indegree_queue.push(i);
+		}
+	}
+
+	while (!zero_indegree_queue.empty())
+	{
+		int node = zero_indegree_queue.front();
+		zero_indegree_queue.pop();
+		pass_order_.push_back(node);
+
+		for (int neighbor : adjacency_list[node])
+		{
+			indegree[neighbor]--;
+			if (indegree[neighbor] == 0)
+			{
+				zero_indegree_queue.push(neighbor);
+			}
+		}
+	}
+
+	// Check for cycles (if the sorted_indices size is not equal to the number of nodes)
+	if (pass_order_.size() != rdg_passes_.size())
+	{
+		throw std::runtime_error("Cycle detected in the pass dependency graph.");
+	}
+}
+
+void RdgBuilder::prepare_memory_barriers()
+{
+	std::unordered_map<std::string, ResourceState> resource_states;
+
+	for (int idx : pass_order_)
+	{
+		const PassInfo &pass_info = rdg_passes_[idx]->get_pass_info();
+
+		for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
+		{
+			auto &input = pass_info.inputs[i];
+
+			const std::string &resource_name = input.name;
+			if (resource_states.contains(resource_name))
+			{
+				ResourceState &state = resource_states[resource_name];
+
+				if (state.last_write_pass != -1)
+				{
+					switch (input.type)
+					{
+						case kAttachment:
+						{
+							common::ImageMemoryBarrier barrier{};
+							barrier.old_layout      = state.producer_layout;
+							barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
+							barrier.src_stage_mask  = state.producer_stage_mask;
+							barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
+							barrier.src_access_mask = state.producer_access_mask;
+							barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+
+							rdg_passes_[idx]->add_input_memory_barrier(i, barrier);
+							break;
+						}
+						default:
+						{
+							throw std::runtime_error("Not Implemented");
+						}
+					}
+				}
+			}
+			rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
+			
+		}
+		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();
+		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
+		{
+			auto &output = pass_info.outputs[i];
+
+			const std::string &resource_name = output.name;
+			ResourceState     &state         = resource_states[resource_name];
+
+			state.last_write_pass = idx;
+
+			switch (output.type)
+			{
+				case kAttachment:
+				{
+					if (common::is_depth_format(output.format))
+					{
+						state.producer_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+						state.producer_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
+						state.producer_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+					}
+					else
+					{
+						state.producer_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+						state.producer_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+						state.producer_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+					}
+
+					common::ImageMemoryBarrier barrier{};
+					barrier.old_layout      = vk::ImageLayout::eUndefined;
+					barrier.new_layout      = state.producer_layout;
+					barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+					barrier.dst_stage_mask  = state.producer_stage_mask;
+					barrier.src_access_mask = {};
+					barrier.dst_access_mask = state.producer_access_mask;
+
+					rdg_passes_.at(idx)->add_output_memory_barrier(i, barrier);
+
+					break;
+				}
+				case kSwapchain:
+				{
+					common::ImageMemoryBarrier barrier{};
+					barrier.old_layout      = vk::ImageLayout::eUndefined;
+					barrier.new_layout = vk::ImageLayout::eColorAttachmentOptimal;
+					barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+					barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+					barrier.src_access_mask = {};
+					barrier.dst_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+
+					rdg_passes_.at(idx)->add_output_memory_barrier(i, barrier);
+
+					break;
+				}
+				default:
+				{
+					throw std::runtime_error("Not Implemented");
+				}
+			}
+
+			state.last_write_pass = idx;
+			state.image_view = &image_view[i];
+		}
+	}
+}
 }        // namespace xihe::rendering

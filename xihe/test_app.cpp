@@ -38,6 +38,8 @@ bool xihe::TestApp::prepare(Window *window)
 	scene_->add_component(std::move(cascade_script));
 
 	{
+		shadowmap_sampler_ = rendering::get_shadowmap_sampler(*get_device());
+
 		std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
 		rendering::PassInfo                              pass_info{};
 
@@ -52,20 +54,32 @@ bool xihe::TestApp::prepare(Window *window)
 			    rendering::RdgResourceType::kAttachment,
 			    "shadow_map_" + std::to_string(i),
 			    common::get_suitable_depth_format(get_device()->get_gpu().get_handle()),
+				vk::ImageUsageFlagBits::eSampled
 			});
+
+			pass_info.outputs.back().set_sampler(shadowmap_sampler_->get_handle());
+
 			pass_info.outputs.back().override_resolution = vk::Extent2D{2048, 2048};
 		}
 
-		rdg_builder_->add_raster_pass("shadow_pass", pass_info, std::move(subpasses));
+		rdg_builder_->add_raster_pass("shadow_pass", std::move(pass_info), std::move(subpasses));
 	}
 
 	{
 		rendering::PassInfo pass_info{};
+		pass_info.inputs  = {
+				    {rendering::RdgResourceType::kAttachment, "shadow_map_0"},
+				    {rendering::RdgResourceType::kAttachment, "shadow_map_1"},
+				    {rendering::RdgResourceType::kAttachment, "shadow_map_2"}
+				};
+
+		vk::ImageUsageFlags rt_usage_flags = vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
+
 		pass_info.outputs = {
-		    {rendering::RdgResourceType::kSwapchain, "swapchain image"},
-		    {rendering::RdgResourceType::kAttachment, "depth image", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())},
-		    {rendering::RdgResourceType::kAttachment, "albedo image", vk::Format::eR8G8B8A8Unorm},
-		    {rendering::RdgResourceType::kAttachment, "normal image", vk::Format::eA2B10G10R10UnormPack32},
+		    {rendering::RdgResourceType::kSwapchain, "swapchain"},
+		    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), rt_usage_flags},
+		    {rendering::RdgResourceType::kAttachment, "albedo", vk::Format::eR8G8B8A8Unorm, rt_usage_flags},
+		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, rt_usage_flags},
 		};
 
 		auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
@@ -84,7 +98,7 @@ bool xihe::TestApp::prepare(Window *window)
 		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
 		subpasses.push_back(std::move(scene_subpass));
 		subpasses.push_back(std::move(lighting_subpass));
-		rdg_builder_->add_raster_pass("main_pass", pass_info, std::move(subpasses));
+		rdg_builder_->add_raster_pass("main_pass", std::move(pass_info), std::move(subpasses));
 	}
 
 

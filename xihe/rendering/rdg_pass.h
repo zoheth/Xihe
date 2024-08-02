@@ -1,5 +1,7 @@
 #pragma once
 
+#include <variant>
+
 #include "rendering/rdg.h"
 #include "rendering/render_pipeline.h"
 #include "rendering/render_target.h"
@@ -10,6 +12,8 @@ namespace rendering
 {
 class RenderPipeline;
 class RenderTarget;
+
+using Barrier = std::variant<common::ImageMemoryBarrier, common::BufferMemoryBarrier>;
 
 struct PassInfo
 {
@@ -23,8 +27,16 @@ struct PassInfo
 		RdgResourceType      type;
 		std::string          name;
 		vk::Format           format;
-		vk::AttachmentLoadOp load_op{vk::AttachmentLoadOp::eClear};
+		vk::ImageUsageFlags  usage{};
 		vk::Extent2D         override_resolution{};
+		vk::AttachmentLoadOp load_op{vk::AttachmentLoadOp::eClear};
+		vk::Sampler          sampler{VK_NULL_HANDLE};
+
+		void set_sampler(vk::Sampler s)
+		{
+			sampler = s;
+			usage |= vk::ImageUsageFlagBits::eSampled;
+		}
 	};
 	std::vector<Input>  inputs;
 	std::vector<Output> outputs;
@@ -33,7 +45,7 @@ struct PassInfo
 class RdgPass
 {
   public:
-	RdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, const PassInfo &pass_info);
+	RdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info);
 
 	RdgPass(RdgPass &&) = default;
 
@@ -59,7 +71,16 @@ class RdgPass
 
 	void set_subpasses(std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
+	void set_input_image_view(uint32_t index, const backend::ImageView *image_view);
+
+	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
+	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
+
 	backend::Device &get_device() const;
+
+	const std::string &get_name() const;
+
+	PassInfo &get_pass_info();
 
 	std::vector<std::unique_ptr<Subpass>> &get_subpasses();
 
@@ -88,11 +109,13 @@ class RdgPass
 
 	std::string name_{};
 
-	RdgPassType pass_type_{};
-
 	RenderContext &render_context_;
 
-	// std::unique_ptr<RenderPipeline> render_pipeline_{nullptr};
+	RdgPassType pass_type_{};
+
+	PassInfo pass_info_;
+
+	std::vector<const backend::ImageView *> input_image_views_;
 
 	std::vector<std::unique_ptr<Subpass>> subpasses_;
 
@@ -101,9 +124,12 @@ class RdgPass
 
 	RenderTarget::CreateFunc create_render_target_func_{nullptr};
 
+	std::unordered_map<uint32_t, Barrier> input_barriers_;
+	std::unordered_map<uint32_t, Barrier> output_barriers_;
+
 	std::unique_ptr<RenderTarget> render_target_{nullptr};
 
-	bool use_swapchain_image_{true};
+	bool use_swapchain_image_{false};
 
 	backend::RenderPass  *render_pass_{nullptr};
 	backend::Framebuffer *framebuffer_{nullptr};

@@ -7,6 +7,7 @@
 
 namespace xihe::rendering
 {
+
 static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
 struct SecondaryDrawTask : enki::ITaskSet
@@ -25,24 +26,31 @@ class RdgBuilder
   public:
 	explicit RdgBuilder(RenderContext &render_context);
 
-	template <typename T, typename... Args>
-	void add_pass(std::string name, Args &&...args);
+	/*template <typename T, typename... Args>
+	void add_pass(std::string name, Args &&...args);*/
 
-	void add_raster_pass(const std::string &name, const PassInfo &pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
+	void add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
-	void add_compute_pass(const std::string &name, const PassInfo &pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function);
+	void add_compute_pass(const std::string &name, PassInfo &&pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function);
 
 	void compile();
 
-	void execute() const;
+	void execute();
 
   private:
-	RenderContext                                            &render_context_;
-	std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
-	std::vector<RdgNode>                                      rdg_nodes_{};
-	std::vector<std::string> 							   pass_order_{};
+	void topological_sort();
+	void prepare_memory_barriers();
+
+  private:
+	RenderContext &render_context_;
+	// std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
+	std::vector<std::unique_ptr<RdgPass>> rdg_passes_{};
+	std::vector<int>                      pass_order_{};
+
+	std::vector<RdgResource> rdg_resources_{};
 };
 
+#if 0
 template <typename T, typename... Args>
 void RdgBuilder::add_pass(std::string name, Args &&...args)
 {
@@ -58,8 +66,9 @@ void RdgBuilder::add_pass(std::string name, Args &&...args)
 
 	/*if (rdg_passes_[name]->use_swapchain_image())
 	{
-		render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
+	    render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
 	}*/
 	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
 }
+#endif
 }        // namespace xihe::rendering
