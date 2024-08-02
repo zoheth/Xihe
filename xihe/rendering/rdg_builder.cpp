@@ -80,7 +80,7 @@ void RdgBuilder::execute()
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-#if 1
+#if 0
 	for (auto &index : pass_order_)
 	{
 		auto         &rdg_pass      = rdg_passes_.at(index);
@@ -98,13 +98,13 @@ void RdgBuilder::execute()
 	auto        reset_mode = backend::CommandBuffer::ResetMode::kResetPool;
 	const auto &queue      = render_context_.get_device().get_suitable_graphics_queue();
 
-	std::unordered_map<std::string, std::vector<SecondaryDrawTask>> rdg_pass_tasks;
+	std::unordered_map<int, std::vector<SecondaryDrawTask>> rdg_pass_tasks;
 
 	uint32_t thread_index = 1;
 
-	for (auto &rdg_name : pass_order_)
+	for (auto &index : pass_order_)
 	{
-		auto &rdg_pass = rdg_passes_.at(rdg_name);
+		auto &rdg_pass = rdg_passes_.at(index);
 		// RenderTarget *render_target = rdg_pass->get_render_target();
 
 		/*auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
@@ -119,7 +119,7 @@ void RdgBuilder::execute()
 		    }
 		}*/
 
-		rdg_pass_tasks[rdg_name] = std::vector<SecondaryDrawTask>(rdg_pass->get_subpass_count());
+		rdg_pass_tasks[index] = std::vector<SecondaryDrawTask>(rdg_pass->get_subpass_count());
 
 		rdg_pass->prepare(command_buffer);
 
@@ -132,24 +132,24 @@ void RdgBuilder::execute()
 
 			rdg_pass->set_thread_index(i, thread_index);
 
-			rdg_pass_tasks[rdg_name][i].init(&secondary_command_buffer, rdg_pass.get(), i);
+			rdg_pass_tasks[index][i].init(&secondary_command_buffer, rdg_pass.get(), i);
 
-			scheduler.AddTaskSetToPipe(&rdg_pass_tasks[rdg_name][i]);
+			scheduler.AddTaskSetToPipe(&rdg_pass_tasks[index][i]);
 			thread_index++;
 		}
 	}
 
 	uint32_t pass_index = 0;
 
-	for (auto &rdg_name : pass_order_)
+	for (auto &index : pass_order_)
 	{
-		auto &rdg_pass = rdg_passes_.at(rdg_name);
+		auto &rdg_pass = rdg_passes_.at(index);
 
 		std::vector<backend::CommandBuffer *> secondary_command_buffers;
 		for (uint32_t i = 0; i < rdg_pass->get_subpass_count(); ++i)
 		{
-			scheduler.WaitforTask(&rdg_pass_tasks[rdg_name][i]);
-			secondary_command_buffers.push_back(rdg_pass_tasks[rdg_name][i].command_buffer);
+			scheduler.WaitforTask(&rdg_pass_tasks[index][i]);
+			secondary_command_buffers.push_back(rdg_pass_tasks[index][i].command_buffer);
 		}
 
 		rdg_pass->execute(command_buffer, *rdg_pass->get_render_target(), secondary_command_buffers);
