@@ -31,7 +31,7 @@ class RdgBuilder
 
 	void add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
-	void add_compute_pass(const std::string &name, PassInfo &&pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function);
+	void add_compute_pass(const std::string &name, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources, ComputeRdgPass::ComputeFunction &&compute_function);
 
 	void compile();
 

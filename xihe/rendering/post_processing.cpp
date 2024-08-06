@@ -13,17 +13,29 @@ vk::Extent3D downsample_extent(const vk::Extent3D &extent, uint32_t level)
 	    std::max(1u, extent.depth >> level)};
 }
 
-
-
 }        // namespace
 
 namespace xihe::rendering
 {
-/*
- * input_image_views: [0] = hdr image view
- */
-void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer, const backend::Sampler &sampler, std::vector<const backend::ImageView *> &input_image_views, std::vector<const backend::ImageView *> &output_image_views)
+
+std::unique_ptr<backend::Sampler> get_linear_sampler(backend::Device &device)
 {
+	auto sampler_info         = vk::SamplerCreateInfo{};
+	sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.minFilter    = vk::Filter::eLinear;
+	sampler_info.magFilter    = vk::Filter::eLinear;
+	sampler_info.maxLod       = VK_LOD_CLAMP_NONE;
+
+	return std::make_unique<backend::Sampler>(device, sampler_info);
+}
+
+
+void render_blur(backend::CommandBuffer &command_buffer, ComputeRdgPass& rdg_pass)
+{
+	backend::Sampler *sampler = rdg_pass.get_pass_info().outputs[0].sampler;
+	assert(sampler);
 	const auto discard_blur_view = [&](const backend::ImageView &view) {
 		common::ImageMemoryBarrier memory_barrier;
 
@@ -72,13 +84,29 @@ void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer
 		push.inv_input_height = 1.0f / static_cast<float>(src_extent.height);
 
 		command_buffer.push_constants(push);
-		command_buffer.bind_image(src, sampler, 0, 0, 0);
+		command_buffer.bind_image(src, *sampler, 0, 0, 0);
 		command_buffer.bind_image(dst, 0, 1, 0);
 		command_buffer.dispatch((push.width + 7) / 8, (push.height + 7) / 8, 1);
 
 		read_only_blur_view(dst, final);
 	};
 
+	auto &views = rdg_pass.get_render_target()->get_views();
+	auto &hdr_view = *rdg_pass.get_input_image_views()[0];
 
+	command_buffer.bind_pipeline_layout(*rdg_pass.get_pipeline_layouts()[0]);
+	dispatch_pass(views[0], hdr_view);
+
+	command_buffer.bind_pipeline_layout(*rdg_pass.get_pipeline_layouts()[1]);
+	for (uint32_t index = 1; index < views.size(); index++)
+	{
+		dispatch_pass(views[index], views[index - 1]);
+	}
+
+	command_buffer.bind_pipeline_layout(*rdg_pass.get_pipeline_layouts()[2]);
+	for (uint32_t index = views.size() - 2; index > 0; index--)
+	{
+		dispatch_pass(views[index], views[index + 1], index == 1);
+	}
 }
 }

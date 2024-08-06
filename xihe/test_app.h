@@ -25,6 +25,8 @@ private:
 
 	std::unique_ptr<backend::Sampler> shadowmap_sampler_{nullptr};
 
+	std::unique_ptr<backend::Sampler> linear_sampler_{nullptr};
+
 	std::unique_ptr<rendering::RenderTarget> shadow_render_target_{nullptr};
 
 	std::unique_ptr<rendering::RenderPipeline> shadow_render_pipeline_{nullptr};

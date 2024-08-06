@@ -60,8 +60,12 @@ void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
 
-void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function)
+void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources, ComputeRdgPass::ComputeFunction &&compute_function)
 {
+	rdg_passes_.push_back(std::make_unique<ComputeRdgPass>(name, render_context_, RdgPassType::kCompute, std::move(pass_info), shader_sources));
+	dynamic_cast<ComputeRdgPass *> (rdg_passes_.back().get())->set_compute_function(std::move(compute_function));
+
+	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
 
 void RdgBuilder::compile()
@@ -263,7 +267,17 @@ void RdgBuilder::prepare_memory_barriers()
 							barrier.src_access_mask = state.producer_access_mask;
 							barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
 
+							if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kCompute)
+							{
+								barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
+							}
+
 							rdg_passes_[idx]->add_input_memory_barrier(i, barrier);
+							break;
+						}
+
+						case kReference:
+						{
 							break;
 						}
 						default:

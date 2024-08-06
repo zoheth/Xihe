@@ -2,12 +2,11 @@
 
 #include "backend/shader_module.h"
 #include "platform/filesystem.h"
-#include "rendering/rdg_passes/composite_pass.h"
-#include "rendering/rdg_passes/main_pass.h"
-#include "rendering/rdg_passes/post_processing.h"
-#include "rendering/rdg_passes/shadow_pass.h"
+
+#include "rendering/post_processing.h"
 #include "rendering/render_context.h"
 #include "rendering/subpass.h"
+#include "rendering/subpasses/composite_subpass.h"
 #include "rendering/subpasses/forward_subpass.h"
 #include "rendering/subpasses/lighting_subpass.h"
 #include "rendering/subpasses/shadow_subpass.h"
@@ -46,20 +45,18 @@ bool xihe::TestApp::prepare(Window *window)
 		for (uint32_t i = 0; i < kCascadeCount; ++i)
 		{
 			auto subpass = std::make_unique<rendering::ShadowSubpass>(*render_context_, backend::ShaderSource{"shadow/csm.vert"}, backend::ShaderSource{"shadow/csm.frag"}, *scene_, *p_cascade_script, i);
-			subpass->set_depth_stencil_attachment(i); 
+			subpass->set_depth_stencil_attachment(i);
 
 			subpasses.push_back(std::move(subpass));
 
-			pass_info.outputs.push_back({
-			    rendering::RdgResourceType::kAttachment,
-			    "shadow_map_" + std::to_string(i),
-			    common::get_suitable_depth_format(get_device()->get_gpu().get_handle()),
-				vk::ImageUsageFlagBits::eSampled
-			});
+			pass_info.outputs.push_back({rendering::RdgResourceType::kAttachment,
+			                             "shadow_map_" + std::to_string(i),
+			                             common::get_suitable_depth_format(get_device()->get_gpu().get_handle()),
+			                             vk::ImageUsageFlagBits::eSampled});
 
-			pass_info.outputs.back().set_sampler(shadowmap_sampler_->get_handle());
+			pass_info.outputs.back().set_sampler(shadowmap_sampler_.get());
 
-			pass_info.outputs.back().override_resolution = vk::Extent2D{2048, 2048};
+			pass_info.outputs.back().override_resolution = vk::Extent3D{2048, 2048, 1};
 		}
 
 		rdg_builder_->add_raster_pass("shadow_pass", std::move(pass_info), std::move(subpasses));
@@ -67,16 +64,15 @@ bool xihe::TestApp::prepare(Window *window)
 
 	{
 		rendering::PassInfo pass_info{};
-		pass_info.inputs  = {
-				    {rendering::RdgResourceType::kAttachment, "shadow_map_0"},
-				    {rendering::RdgResourceType::kAttachment, "shadow_map_1"},
-				    {rendering::RdgResourceType::kAttachment, "shadow_map_2"}
-				};
+		pass_info.inputs = {
+		    {rendering::RdgResourceType::kAttachment, "shadow_map_0"},
+		    {rendering::RdgResourceType::kAttachment, "shadow_map_1"},
+		    {rendering::RdgResourceType::kAttachment, "shadow_map_2"}};
 
 		vk::ImageUsageFlags rt_usage_flags = vk::ImageUsageFlagBits::eInputAttachment | vk::ImageUsageFlagBits::eTransientAttachment;
 
 		pass_info.outputs = {
-		    {rendering::RdgResourceType::kSwapchain, "swapchain"},
+		    {rendering::RdgResourceType::kAttachment, "hdr", vk::Format::eR16G16B16A16Sfloat, vk::ImageUsageFlagBits::eSampled},
 		    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), rt_usage_flags},
 		    {rendering::RdgResourceType::kAttachment, "albedo", vk::Format::eR8G8B8A8Unorm, rt_usage_flags},
 		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, rt_usage_flags},
@@ -101,7 +97,45 @@ bool xihe::TestApp::prepare(Window *window)
 		rdg_builder_->add_raster_pass("main_pass", std::move(pass_info), std::move(subpasses));
 	}
 
+	{
+		linear_sampler_ = rendering::get_linear_sampler(*get_device());
+		rendering::PassInfo pass_info{};
+		pass_info.inputs = {
+		    {rendering::RdgResourceType::kAttachment, "hdr"}};
 
+		for (uint32_t i = 0; i < 7; ++i)
+		{
+			pass_info.outputs.push_back({rendering::RdgResourceType::kAttachment, "blur_" + std::to_string(i), vk::Format::eR16G16B16A16Sfloat, vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled});
+			pass_info.outputs.back().modify_extent = [i](const vk::Extent3D &extent) { return vk::Extent3D{
+				                                                                           std::max(1u, extent.width >> i),
+				                                                                           std::max(1u, extent.height >> i),
+				                                                                           std::max(1u, extent.depth >> i)}; };
+			pass_info.outputs.back().set_sampler(linear_sampler_.get());
+		}
+
+		rdg_builder_->add_compute_pass("blur_pass", std::move(pass_info),
+		                               {backend::ShaderSource("post_processing/threshold.comp"),
+		                                backend::ShaderSource("post_processing/blur_down.comp"),
+		                                backend::ShaderSource("post_processing/blur_up.comp")},
+		                               rendering::render_blur);
+	}
+
+	{
+		rendering::PassInfo pass_info{};
+		pass_info.inputs = {
+		    {rendering::RdgResourceType::kAttachment, "hdr"},
+		    {rendering::RdgResourceType::kReference, "blur_1"}};
+
+		pass_info.outputs = {
+		    {rendering::RdgResourceType::kSwapchain, "swapchain"}};
+
+		auto                                             composite_vs = backend::ShaderSource{"post_processing/composite.vert"};
+		auto                                             composite_fs = backend::ShaderSource{"post_processing/composite.frag"};
+		auto                                             subpass      = std::make_unique<rendering::CompositeSubpass>(*render_context_, std::move(composite_vs), std::move(composite_fs));
+		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
+		subpasses.push_back(std::move(subpass));
+		rdg_builder_->add_raster_pass("composite_pass", std::move(pass_info), std::move(subpasses));
+	}
 
 	/*rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", rendering::RdgPassType::kRaster, *scene_, *p_cascade_script);
 

@@ -28,11 +28,13 @@ struct PassInfo
 		std::string          name;
 		vk::Format           format;
 		vk::ImageUsageFlags  usage{};
-		vk::Extent2D         override_resolution{};
-		vk::AttachmentLoadOp load_op{vk::AttachmentLoadOp::eClear};
-		vk::Sampler          sampler{VK_NULL_HANDLE};
+		vk::Extent3D         override_resolution{};
+		std::function<vk::Extent3D(const vk::Extent3D &)> modify_extent{};
 
-		void set_sampler(vk::Sampler s)
+		vk::AttachmentLoadOp load_op{vk::AttachmentLoadOp::eClear};
+		backend::Sampler          *sampler{nullptr};
+
+		void set_sampler(backend::Sampler *s)
 		{
 			sampler = s;
 			usage |= vk::ImageUsageFlagBits::eSampled;
@@ -68,11 +70,14 @@ class RdgPass
 	virtual void prepare(backend::CommandBuffer &command_buffer);
 
 	void set_input_image_view(uint32_t index, const backend::ImageView *image_view);
+	std::vector<const backend::ImageView *> &get_input_image_views();
 
 	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
 	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
 
 	backend::Device &get_device() const;
+
+	const RdgPassType &get_pass_type() const;
 
 	const std::string &get_name() const;
 
@@ -99,7 +104,7 @@ class RdgPass
 
 	std::vector<const backend::ImageView *> input_image_views_;
 
-	//std::vector<std::unique_ptr<Subpass>> subpasses_;
+	// std::vector<std::unique_ptr<Subpass>> subpasses_;
 
 	std::vector<common::LoadStoreInfo> load_store_;
 	std::vector<vk::ClearValue>        clear_value_;
@@ -113,13 +118,13 @@ class RdgPass
 
 	bool use_swapchain_image_{false};
 
-	//backend::RenderPass  *render_pass_{nullptr};
-	//backend::Framebuffer *framebuffer_{nullptr};
+	// backend::RenderPass  *render_pass_{nullptr};
+	// backend::Framebuffer *framebuffer_{nullptr};
 };
 
 class RasterRdgPass : public RdgPass
 {
-public:
+  public:
 	RasterRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
 	~RasterRdgPass() override = default;
@@ -144,14 +149,13 @@ public:
 	 */
 	void set_thread_index(uint32_t subpass_index, uint32_t thread_index);
 
-protected:
+  protected:
 	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
 
 	void end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target) override;
 
-private:
-	void                                  add_subpass(std::unique_ptr<Subpass> &&subpass);
-
+  private:
+	void add_subpass(std::unique_ptr<Subpass> &&subpass);
 
 	std::vector<std::unique_ptr<Subpass>> subpasses_;
 
@@ -161,7 +165,23 @@ private:
 
 class ComputeRdgPass : public RdgPass
 {
-	
+  public:
+	using ComputeFunction = std::function<void(backend::CommandBuffer &command_buffer, ComputeRdgPass &rdg_pass)>;
+
+	ComputeRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources);
+
+	~ComputeRdgPass() override = default;
+
+	void set_compute_function(ComputeFunction &&compute_function);
+
+	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers) override;
+
+	std::vector<backend::PipelineLayout *> &get_pipeline_layouts();
+
+  private:
+	std::vector<backend::PipelineLayout *> pipeline_layouts_;
+
+	ComputeFunction compute_function_{nullptr};
 };
 }        // namespace rendering
 }        // namespace xihe

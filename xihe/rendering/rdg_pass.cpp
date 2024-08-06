@@ -102,14 +102,13 @@ std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderT
 
 	for (uint32_t i = 0; i < pass_info_.outputs.size(); ++i)
 	{
-		if (pass_info_.outputs[i].usage & vk::ImageUsageFlagBits::eSampled)
+		if ((pass_info_.outputs[i].usage & vk::ImageUsageFlagBits::eSampled) && pass_info_.outputs[i].sampler)
 		{
-			assert(pass_info_.outputs[i].sampler);
 
 			vk::DescriptorImageInfo descriptor_image_info{};
 			descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			descriptor_image_info.imageView   = views[i].get_handle();
-			descriptor_image_info.sampler     = pass_info_.outputs[i].sampler;
+			descriptor_image_info.sampler     = pass_info_.outputs[i].sampler->get_handle();
 
 			descriptor_image_infos.push_back(descriptor_image_info);
 		}
@@ -125,6 +124,11 @@ void RdgPass::prepare(backend::CommandBuffer &command_buffer)
 backend::Device &RdgPass::get_device() const
 {
 	return render_context_.get_device();
+}
+
+const RdgPassType & RdgPass::get_pass_type() const
+{
+	return pass_type_;
 }
 
 const std::string &RdgPass::get_name() const
@@ -209,6 +213,11 @@ void RdgPass::set_input_image_view(uint32_t index, const backend::ImageView *ima
 {
 	assert(index < input_image_views_.size());
 	input_image_views_[index] = image_view;
+}
+
+std::vector<const backend::ImageView *> &RdgPass::get_input_image_views()
+{
+	return input_image_views_;
 }
 
 void RdgPass::add_input_memory_barrier(uint32_t index, Barrier &&barrier)
@@ -345,6 +354,31 @@ void RasterRdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)
 {
 	subpass->prepare();
 	subpasses_.emplace_back(std::move(subpass));
+}
+
+ComputeRdgPass::ComputeRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources) :
+    RdgPass(std::move(name), render_context, pass_type, std::move(pass_info))
+{
+	for (const auto &shader_source : shader_sources)
+	{
+		auto &shader_module = get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eCompute, shader_source);
+		pipeline_layouts_.push_back(&get_device().get_resource_cache().request_pipeline_layout({&shader_module}));
+	}
+}
+
+void ComputeRdgPass::set_compute_function(ComputeFunction &&compute_function)
+{
+	compute_function_ = std::move(compute_function);
+}
+
+void ComputeRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
+{
+	compute_function_(command_buffer, *this);
+}
+
+std::vector<backend::PipelineLayout *> &ComputeRdgPass::get_pipeline_layouts()
+{
+	return pipeline_layouts_;
 }
 
 void RasterRdgPass::draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const
