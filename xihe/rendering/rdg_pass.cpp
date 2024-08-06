@@ -94,50 +94,13 @@ RenderTarget *RdgPass::get_render_target() const
 	return render_target_.get();*/
 }
 
-void RdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
-{
-	if (pass_type_ == RdgPassType::kRaster)
-	{
-		if (!secondary_command_buffers.empty())
-		{
-			begin_draw(command_buffer, render_target, vk::SubpassContents::eSecondaryCommandBuffers);
-			for (size_t i = 0; i < subpasses_.size(); ++i)
-			{
-				subpasses_[i]->update_render_target_attachments(render_target);
-				if (i != 0)
-				{
-					command_buffer.get_handle().nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
-				}
-
-				command_buffer.execute_commands({*secondary_command_buffers[i]});
-			}
-		}
-		else
-		{
-			begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
-			for (size_t i = 0; i < subpasses_.size(); ++i)
-			{
-				subpasses_[i]->update_render_target_attachments(render_target);
-				if (i != 0)
-				{
-					command_buffer.next_subpass();
-				}
-
-				draw_subpass(command_buffer, render_target, i);
-			}
-		}
-
-		end_draw(command_buffer, render_target);
-	}
-}
-
 std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderTarget &render_target) const
 {
 	auto &views = render_target.get_views();
 
 	std::vector<vk::DescriptorImageInfo> descriptor_image_infos{};
 
-	for (uint32_t i =0;i<pass_info_.outputs.size();++i)
+	for (uint32_t i = 0; i < pass_info_.outputs.size(); ++i)
 	{
 		if (pass_info_.outputs[i].usage & vk::ImageUsageFlagBits::eSampled)
 		{
@@ -149,7 +112,6 @@ std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderT
 			descriptor_image_info.sampler     = pass_info_.outputs[i].sampler;
 
 			descriptor_image_infos.push_back(descriptor_image_info);
-		
 		}
 	}
 
@@ -158,11 +120,6 @@ std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderT
 
 void RdgPass::prepare(backend::CommandBuffer &command_buffer)
 {
-	if (pass_type_ == RdgPassType::kRaster)
-	{
-		render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
-		framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);
-	}
 }
 
 backend::Device &RdgPass::get_device() const
@@ -180,38 +137,38 @@ PassInfo &RdgPass::get_pass_info()
 	return pass_info_;
 }
 
-std::vector<std::unique_ptr<Subpass>> &RdgPass::get_subpasses()
-{
-	return subpasses_;
-}
-
-uint32_t RdgPass::get_subpass_count() const
-{
-	return subpasses_.size();
-}
-
-const std::vector<common::LoadStoreInfo> &RdgPass::get_load_store() const
-{
-	return load_store_;
-}
-
-backend::RenderPass &RdgPass::get_render_pass() const
-{
-	assert(render_pass_ && "");
-	return *render_pass_;
-}
-
-backend::Framebuffer &RdgPass::get_framebuffer() const
-{
-	assert(framebuffer_ && "");
-	return *framebuffer_;
-}
-
-void RdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
-{
-	assert(subpass_index < subpasses_.size());
-	subpasses_[subpass_index]->set_thread_index(thread_index);
-}
+// std::vector<std::unique_ptr<Subpass>> &RdgPass::get_subpasses()
+//{
+//	return subpasses_;
+// }
+//
+// uint32_t RdgPass::get_subpass_count() const
+//{
+//	return subpasses_.size();
+// }
+//
+// const std::vector<common::LoadStoreInfo> &RdgPass::get_load_store() const
+//{
+//	return load_store_;
+// }
+//
+// backend::RenderPass &RdgPass::get_render_pass() const
+//{
+//	assert(render_pass_ && "");
+//	return *render_pass_;
+// }
+//
+// backend::Framebuffer &RdgPass::get_framebuffer() const
+//{
+//	assert(framebuffer_ && "");
+//	return *framebuffer_;
+// }
+//
+// void RdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
+//{
+//	assert(subpass_index < subpasses_.size());
+//	subpasses_[subpass_index]->set_thread_index(thread_index);
+// }
 
 bool RdgPass::use_swapchain_image() const
 {
@@ -242,75 +199,10 @@ void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &r
 		{
 		}
 	}
-
-	if (pass_type_ == RdgPassType::kRaster)
-	{
-		// Pad clear values if they're less than render target attachments
-		while (clear_value_.size() < render_target.get_attachments().size())
-		{
-			clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
-		}
-
-		if (render_pass_ && framebuffer_)
-		{
-			command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
-		}
-		else
-		{
-			command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
-		}
-	}
 }
 
 void RdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
-	if (pass_type_ == RdgPassType::kRaster)
-	{
-		command_buffer.end_render_pass();
-
-		if (use_swapchain_image_)
-		{
-			auto                      &views = render_target.get_views();
-			common::ImageMemoryBarrier memory_barrier{};
-			memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-			memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-			memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
-			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
-
-			command_buffer.image_memory_barrier(views[0], memory_barrier);
-		}
-	}
-}
-
-void RdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)
-{
-	subpass->prepare();
-	subpasses_.emplace_back(std::move(subpass));
-}
-
-void RdgPass::draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const
-{
-	auto &subpass = subpasses_[i];
-
-	subpass->set_render_target(&render_target);
-
-	if (subpass->get_debug_name().empty())
-	{
-		subpass->set_debug_name(fmt::format("RP subpass #{}", i));
-	}
-	backend::ScopedDebugLabel subpass_debug_label{command_buffer, subpass->get_debug_name().c_str()};
-
-	subpass->draw(command_buffer);
-}
-
-void RdgPass::set_subpasses(std::vector<std::unique_ptr<Subpass>> &&subpasses)
-{
-	subpasses_ = std::move(subpasses);
-	for (auto &subpass : subpasses_)
-	{
-		subpass->prepare();
-	}
 }
 
 void RdgPass::set_input_image_view(uint32_t index, const backend::ImageView *image_view)
@@ -328,4 +220,146 @@ void RdgPass::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
 {
 	output_barriers_[index] = barrier;
 }
+
+RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses) :
+    RdgPass(std::move(name), render_context, pass_type, std::move(pass_info)), subpasses_{std::move(subpasses)}
+{
+	for (auto &subpass : subpasses_)
+	{
+		subpass->prepare();
+	}
+}
+
+void RasterRdgPass::prepare(backend::CommandBuffer &command_buffer)
+{
+	render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
+	framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);
+}
+
+void RasterRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
+{
+	if (!secondary_command_buffers.empty())
+	{
+		begin_draw(command_buffer, render_target, vk::SubpassContents::eSecondaryCommandBuffers);
+		for (size_t i = 0; i < subpasses_.size(); ++i)
+		{
+			subpasses_[i]->update_render_target_attachments(render_target);
+			if (i != 0)
+			{
+				command_buffer.get_handle().nextSubpass(vk::SubpassContents::eSecondaryCommandBuffers);
+			}
+
+			command_buffer.execute_commands({*secondary_command_buffers[i]});
+		}
+	}
+	else
+	{
+		begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
+		for (size_t i = 0; i < subpasses_.size(); ++i)
+		{
+			subpasses_[i]->update_render_target_attachments(render_target);
+			if (i != 0)
+			{
+				command_buffer.next_subpass();
+			}
+
+			draw_subpass(command_buffer, render_target, i);
+		}
+	}
+
+	end_draw(command_buffer, render_target);
+}
+
+std::vector<std::unique_ptr<Subpass>> &RasterRdgPass::get_subpasses()
+{
+	return subpasses_;
+}
+
+uint32_t RasterRdgPass::get_subpass_count() const
+{
+	return subpasses_.size();
+}
+
+const std::vector<common::LoadStoreInfo> &RasterRdgPass::get_load_store() const
+{
+	return load_store_;
+}
+
+backend::RenderPass &RasterRdgPass::get_render_pass() const
+{
+	return *render_pass_;
+}
+
+backend::Framebuffer &RasterRdgPass::get_framebuffer() const
+{
+	return *framebuffer_;
+}
+
+void RasterRdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
+{
+	assert(subpass_index < subpasses_.size());
+	subpasses_[subpass_index]->set_thread_index(thread_index);
+}
+
+void RasterRdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
+{
+	RdgPass::begin_draw(command_buffer, render_target, contents);
+
+	// Pad clear values if they're less than render target attachments
+	while (clear_value_.size() < render_target.get_attachments().size())
+	{
+		clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
+	}
+
+	if (render_pass_ && framebuffer_)
+	{
+		command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
+	}
+	else
+	{
+		command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
+	}
+}
+
+void RasterRdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
+{
+	command_buffer.end_render_pass();
+
+	if (use_swapchain_image_)
+	{
+		auto                      &views = render_target.get_views();
+		common::ImageMemoryBarrier memory_barrier{};
+		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+
+		command_buffer.image_memory_barrier(views[0], memory_barrier);
+	}
+
+	RdgPass::end_draw(command_buffer, render_target);
+}
+
+void RasterRdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)
+{
+	subpass->prepare();
+	subpasses_.emplace_back(std::move(subpass));
+}
+
+void RasterRdgPass::draw_subpass(backend::CommandBuffer &command_buffer, const RenderTarget &render_target, uint32_t i) const
+{
+	auto &subpass = subpasses_[i];
+
+	subpass->set_render_target(&render_target);
+
+	if (subpass->get_debug_name().empty())
+	{
+		subpass->set_debug_name(fmt::format("RP subpass #{}", i));
+	}
+	backend::ScopedDebugLabel subpass_debug_label{command_buffer, subpass->get_debug_name().c_str()};
+
+	subpass->draw(command_buffer);
+}
+
 }        // namespace xihe::rendering

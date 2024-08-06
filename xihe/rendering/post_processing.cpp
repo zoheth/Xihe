@@ -19,7 +19,10 @@ vk::Extent3D downsample_extent(const vk::Extent3D &extent, uint32_t level)
 
 namespace xihe::rendering
 {
-void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer, const backend::Sampler &sampler)
+/*
+ * input_image_views: [0] = hdr image view
+ */
+void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer, const backend::Sampler &sampler, std::vector<const backend::ImageView *> &input_image_views, std::vector<const backend::ImageView *> &output_image_views)
 {
 	const auto discard_blur_view = [&](const backend::ImageView &view) {
 		common::ImageMemoryBarrier memory_barrier;
@@ -75,5 +78,7 @@ void render_blur(RdgBuilder &rdg_builder, backend::CommandBuffer &command_buffer
 
 		read_only_blur_view(dst, final);
 	};
+
+
 }
 }

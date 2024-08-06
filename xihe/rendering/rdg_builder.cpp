@@ -25,7 +25,7 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-void SecondaryDrawTask::init(backend::CommandBuffer *command_buffer, RdgPass const *pass, uint32_t subpass_index)
+void SecondaryDrawTask::init(backend::CommandBuffer *command_buffer, RasterRdgPass const *pass, uint32_t subpass_index)
 {
 	this->command_buffer = command_buffer;
 	this->pass           = pass;
@@ -55,14 +55,13 @@ void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, 
 	    throw std::runtime_error{"Pass with name " + name + " already exists"};
 	}*/
 
-	rdg_passes_.push_back(std::make_unique<RdgPass>(name, render_context_, RdgPassType::kRaster, std::move(pass_info)));
-
-	
-
-	rdg_passes_.back()->set_subpasses(std::move(subpasses));
-
+	rdg_passes_.push_back(std::make_unique<RasterRdgPass>(name, render_context_, RdgPassType::kRaster, std::move(pass_info), std::move(subpasses)));
 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
+}
+
+void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info, std::function<void(backend::CommandBuffer &)> &&compute_function)
+{
 }
 
 void RdgBuilder::compile()
@@ -80,7 +79,7 @@ void RdgBuilder::execute()
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-#if 0
+#if 1
 	for (auto &index : pass_order_)
 	{
 		auto         &rdg_pass      = rdg_passes_.at(index);
@@ -275,7 +274,6 @@ void RdgBuilder::prepare_memory_barriers()
 				}
 			}
 			rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
-			
 		}
 		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();
 		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
@@ -320,7 +318,7 @@ void RdgBuilder::prepare_memory_barriers()
 				{
 					common::ImageMemoryBarrier barrier{};
 					barrier.old_layout      = vk::ImageLayout::eUndefined;
-					barrier.new_layout = vk::ImageLayout::eColorAttachmentOptimal;
+					barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
 					barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
 					barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
 					barrier.src_access_mask = {};
@@ -337,7 +335,7 @@ void RdgBuilder::prepare_memory_barriers()
 			}
 
 			state.last_write_pass = idx;
-			state.image_view = &image_view[i];
+			state.image_view      = &image_view[i];
 		}
 	}
 }

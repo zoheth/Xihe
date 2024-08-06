@@ -12,12 +12,12 @@ static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffe
 
 struct SecondaryDrawTask : enki::ITaskSet
 {
-	void init(backend::CommandBuffer *command_buffer, RdgPass const *pass, uint32_t subpass_index);
+	void init(backend::CommandBuffer *command_buffer, RasterRdgPass const *pass, uint32_t subpass_index);
 
 	void ExecuteRange(enki::TaskSetPartition range, uint32_t threadnum) override;
 
 	backend::CommandBuffer *command_buffer;
-	RdgPass const          *pass;
+	RasterRdgPass const    *pass;
 	uint32_t                subpass_index;
 };
 
