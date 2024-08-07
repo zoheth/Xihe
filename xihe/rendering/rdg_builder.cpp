@@ -285,10 +285,18 @@ void RdgBuilder::prepare_memory_barriers()
 							throw std::runtime_error("Not Implemented");
 						}
 					}
+					state.last_write_pass = -1;
 				}
 			}
 			rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
 		}
+
+		// todo 
+		if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kCompute)
+		{
+			continue;
+		}
+
 		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();
 		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
 		{

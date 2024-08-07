@@ -373,7 +373,9 @@ void ComputeRdgPass::set_compute_function(ComputeFunction &&compute_function)
 
 void ComputeRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
 {
+	begin_draw(command_buffer, render_target, vk::SubpassContents::eInline);
 	compute_function_(command_buffer, *this);
+	end_draw(command_buffer, render_target);
 }
 
 std::vector<backend::PipelineLayout *> &ComputeRdgPass::get_pipeline_layouts()
