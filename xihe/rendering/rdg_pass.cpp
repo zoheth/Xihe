@@ -14,6 +14,10 @@ RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassT
 		{
 			use_swapchain_image_ = true;
 		}
+		if (!output.override_resolution.width)
+		{
+			needs_recreate_rt_ = true;
+		}
 		load_store_.emplace_back(output.load_op, vk::AttachmentStoreOp::eStore);
 		if (output.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment)
 		{
@@ -57,6 +61,11 @@ RdgPass::RdgPass(std::string name, RenderContext &render_context, const RdgPassT
 			{
 				extent = vk::Extent3D(output.override_resolution.width, output.override_resolution.height, 1);
 			}
+			if (output.modify_extent)
+			{
+				extent = output.modify_extent(extent);
+			}
+
 			backend::ImageBuilder image_builder{extent};
 			image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY)
 			    .with_format(output.format);
@@ -86,7 +95,7 @@ std::unique_ptr<RenderTarget> RdgPass::create_render_target(backend::Image &&swa
 RenderTarget *RdgPass::get_render_target() const
 {
 	return &render_context_.get_active_frame().get_render_target(name_);
-	/*if (use_swapchain_image())
+	/*if (needs_recreate_rt())
 	{
 	    return &render_context_.get_active_frame().get_render_target(name_);
 	}
@@ -104,7 +113,6 @@ std::vector<vk::DescriptorImageInfo> RdgPass::get_descriptor_image_infos(RenderT
 	{
 		if ((pass_info_.outputs[i].usage & vk::ImageUsageFlagBits::eSampled) && pass_info_.outputs[i].sampler)
 		{
-
 			vk::DescriptorImageInfo descriptor_image_info{};
 			descriptor_image_info.imageLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 			descriptor_image_info.imageView   = views[i].get_handle();
@@ -126,7 +134,7 @@ backend::Device &RdgPass::get_device() const
 	return render_context_.get_device();
 }
 
-const RdgPassType & RdgPass::get_pass_type() const
+const RdgPassType &RdgPass::get_pass_type() const
 {
 	return pass_type_;
 }
@@ -174,9 +182,9 @@ PassInfo &RdgPass::get_pass_info()
 //	subpasses_[subpass_index]->set_thread_index(thread_index);
 // }
 
-bool RdgPass::use_swapchain_image() const
+bool RdgPass::needs_recreate_rt() const
 {
-	return use_swapchain_image_;
+	return needs_recreate_rt_;
 }
 
 void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)

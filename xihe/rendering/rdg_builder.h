@@ -64,7 +64,7 @@ void RdgBuilder::add_pass(std::string name, Args &&...args)
 
 	pass_order_.push_back(name);
 
-	/*if (rdg_passes_[name]->use_swapchain_image())
+	/*if (rdg_passes_[name]->needs_recreate_rt())
 	{
 	    render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
 	}*/

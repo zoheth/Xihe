@@ -403,7 +403,7 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Rd
 
 		frames_[i]->update_render_target(name, std::move(render_target));
 	}
-	if (rdg_pass->use_swapchain_image())
+	if (rdg_pass->needs_recreate_rt())
 	{
 		create_render_target_functions_[name] =
 		    [name, rdg_pass](backend::Image &&swapchain_image) {

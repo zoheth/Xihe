@@ -87,7 +87,7 @@ class RdgPass
 
 	/// \brief Checks if the render target should be created using a swapchain image.
 	/// \return True if a swapchain image should be used, otherwise false.
-	bool use_swapchain_image() const;
+	bool needs_recreate_rt() const;
 
   protected:
 	virtual void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents = vk::SubpassContents::eInline);
@@ -116,6 +116,7 @@ class RdgPass
 
 	std::unique_ptr<RenderTarget> render_target_{nullptr};
 
+	bool needs_recreate_rt_{false};
 	bool use_swapchain_image_{false};
 
 	// backend::RenderPass  *render_pass_{nullptr};
