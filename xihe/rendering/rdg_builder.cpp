@@ -108,37 +108,28 @@ void RdgBuilder::execute()
 	for (auto &index : pass_order_)
 	{
 		auto &rdg_pass = rdg_passes_.at(index);
-		// RenderTarget *render_target = rdg_pass->get_render_target();
 
-		/*auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
-		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
-		for (auto &image_info : image_infos)
+		if (rdg_pass->get_pass_type() == kRaster)
 		{
-		    auto index = render_context_.get_bindless_descriptor_set()->update(image_info);
+			auto *raster_pass = dynamic_cast<RasterRdgPass *>(rdg_pass.get());
+			rdg_pass_tasks[index]      = std::vector<SecondaryDrawTask>(raster_pass->get_subpass_count());
 
-		    if (index < first_bindless_descriptor_set_index)
-		    {
-		        first_bindless_descriptor_set_index = index;
-		    }
-		}*/
+			rdg_pass->prepare(command_buffer);
 
-		rdg_pass_tasks[index] = std::vector<SecondaryDrawTask>(rdg_pass->get_subpass_count());
+			for (uint32_t i = 0; i < raster_pass->get_subpass_count(); ++i)
+			{
+				auto &secondary_command_buffer = render_context_.get_active_frame().request_command_buffer(queue,
+				                                                                                           reset_mode,
+				                                                                                           vk::CommandBufferLevel::eSecondary,
+				                                                                                           thread_index);
 
-		rdg_pass->prepare(command_buffer);
+				raster_pass->set_thread_index(i, thread_index);
 
-		for (uint32_t i = 0; i < rdg_pass->get_subpass_count(); ++i)
-		{
-			auto &secondary_command_buffer = render_context_.get_active_frame().request_command_buffer(queue,
-			                                                                                           reset_mode,
-			                                                                                           vk::CommandBufferLevel::eSecondary,
-			                                                                                           thread_index);
+				rdg_pass_tasks[index][i].init(&secondary_command_buffer, raster_pass, i);
 
-			rdg_pass->set_thread_index(i, thread_index);
-
-			rdg_pass_tasks[index][i].init(&secondary_command_buffer, rdg_pass.get(), i);
-
-			scheduler.AddTaskSetToPipe(&rdg_pass_tasks[index][i]);
-			thread_index++;
+				scheduler.AddTaskSetToPipe(&rdg_pass_tasks[index][i]);
+				thread_index++;
+			}
 		}
 	}
 
@@ -149,10 +140,15 @@ void RdgBuilder::execute()
 		auto &rdg_pass = rdg_passes_.at(index);
 
 		std::vector<backend::CommandBuffer *> secondary_command_buffers;
-		for (uint32_t i = 0; i < rdg_pass->get_subpass_count(); ++i)
+
+		if (rdg_pass->get_pass_type() == kRaster)
 		{
-			scheduler.WaitforTask(&rdg_pass_tasks[index][i]);
-			secondary_command_buffers.push_back(rdg_pass_tasks[index][i].command_buffer);
+			auto *raster_pass = dynamic_cast<RasterRdgPass *>(rdg_pass.get());
+			for (uint32_t i = 0; i < raster_pass->get_subpass_count(); ++i)
+			{
+				scheduler.WaitforTask(&rdg_pass_tasks[index][i]);
+				secondary_command_buffers.push_back(rdg_pass_tasks[index][i].command_buffer);
+			}
 		}
 
 		rdg_pass->execute(command_buffer, *rdg_pass->get_render_target(), secondary_command_buffers);
