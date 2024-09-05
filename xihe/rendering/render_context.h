@@ -100,6 +100,7 @@ class RenderContext
 
 	// Per frame synchronization
 	vk::Semaphore acquired_semaphore_;
+	bool          first_acquired_{true};
 
 	vk::Semaphore graphics_semaphore_;
 	vk::Semaphore compute_semaphore_;

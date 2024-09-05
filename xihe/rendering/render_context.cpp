@@ -158,8 +158,15 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 
 	if (swapchain_)
 	{
-		assert(acquired_semaphore_ && "We do not have acquired_semaphore, it was probably consumed?\n");
-		render_semaphore = submit(*graphics_queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		if (first_acquired_)
+		{
+			assert(acquired_semaphore_ && "We do not have acquired_semaphore, it was probably consumed?\n");
+			render_semaphore = submit(*graphics_queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);	
+		}
+		else
+		{
+			render_semaphore = submit(*graphics_queue_, command_buffers, nullptr, vk::PipelineStageFlagBits::eNone);	
+		}
 	}
 	else
 	{
@@ -279,6 +286,7 @@ void RenderContext::end_frame(vk::Semaphore semaphore)
 	{
 		get_active_frame().release_owned_semaphore(acquired_semaphore_);
 		acquired_semaphore_ = nullptr;
+		first_acquired_     = true;
 	}
 	frame_active_ = false;
 }
@@ -362,7 +370,15 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
 	submit_info.setCommandBuffers(command_buffer_handles);
 
 	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
-	if (wait_semaphore_value != 0)
+	// Assume that the first submission is always the graphics queue and does not need to wait for the compute pass.
+	if (first_acquired_)
+	{
+		constexpr vk::PipelineStageFlags stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+		submit_info.setWaitSemaphores({acquired_semaphore_});
+		submit_info.setPWaitDstStageMask(&stage_mask);
+		first_acquired_ = false;
+	}
+	else if (wait_semaphore_value != 0)
 	{
 		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
 		submit_info.setWaitSemaphores({compute_semaphore_});

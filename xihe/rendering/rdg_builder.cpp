@@ -78,6 +78,25 @@ void RdgBuilder::execute()
 {
 	compile();
 
+	auto execute_compute_passes = [&](std::vector<RdgPass *> &compute_passes) {
+		if (compute_passes.empty())
+			return;
+
+		backend::CommandBuffer &compute_command_buffer = render_context_.request_compute_command_buffer(backend::CommandBuffer::ResetMode::kResetPool, vk::CommandBufferLevel::ePrimary, 0);
+		compute_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+		for (auto *pass : compute_passes)
+		{
+			RenderTarget *render_target = pass->get_render_target();
+			pass->execute(compute_command_buffer, *render_target, {});
+		}
+		compute_command_buffer.end();
+		/*render_context_.compute_submit({compute_command_buffer});
+		render_context_.destroy_command_buffer(compute_command_buffer);*/
+
+		compute_passes.clear();
+	};
+
 	backend::CommandBuffer &graphics_command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
 	                                                                                         vk::CommandBufferLevel::ePrimary, 0);
 	backend::CommandBuffer &compute_command_buffer  = render_context_.request_compute_command_buffer(backend::CommandBuffer::ResetMode::kResetPool, vk::CommandBufferLevel::ePrimary, 0);
