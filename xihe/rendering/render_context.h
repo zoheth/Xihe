@@ -73,6 +73,10 @@ class RenderContext
 
 	void submit(const backend::Queue &queue, const std::vector<backend::CommandBuffer *> &command_buffers);
 
+	void compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value = 0, uint64_t signal_semaphore_value = 0);
+
+	void graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value = 0, uint64_t signal_semaphore_value = 0);
+
 	bool handle_surface_changes(bool force_update = false);
 
 	void update_swapchain(const vk::Extent2D &extent);

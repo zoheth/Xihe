@@ -71,28 +71,62 @@ void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info,
 void RdgBuilder::compile()
 {
 	topological_sort();
-	prepare_memory_barriers();
+	setup_pass_dependencies();
 }
 
 void RdgBuilder::execute()
 {
 	compile();
 
-	backend::CommandBuffer &command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
+	backend::CommandBuffer &graphics_command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
 	                                                                                         vk::CommandBufferLevel::ePrimary, 0);
+	backend::CommandBuffer &compute_command_buffer  = render_context_.request_compute_command_buffer(backend::CommandBuffer::ResetMode::kResetPool, vk::CommandBufferLevel::ePrimary, 0);
 
-	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	graphics_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	compute_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
+	auto pre_pass_type = rdg_passes_[pass_order_[0]]->get_pass_type();
 #if 1
 	for (auto &index : pass_order_)
 	{
 		auto         &rdg_pass      = rdg_passes_.at(index);
 		RenderTarget *render_target = rdg_pass->get_render_target();
 
-		set_viewport_and_scissor(command_buffer, render_target->get_extent());
+		if (rdg_pass->get_pass_type() != pre_pass_type)
+		{
 
-		rdg_pass->execute(command_buffer, *render_target, {});
+			if (rdg_pass->get_pass_type() == kCompute)
+			{
+				graphics_command_buffer.end();
+				render_context_.graphics_submit({&graphics_command_buffer}, rdg_pass->get_wait_semaphore_value(), rdg_pass->get_signal_semaphore_value());
+				graphics_command_buffer.reset(backend::CommandBuffer::ResetMode::kResetPool);
+				graphics_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+			}
+			else if (rdg_pass->get_pass_type() == kRaster)
+			{
+				compute_command_buffer.end();
+				render_context_.compute_submit({&compute_command_buffer}, rdg_pass->get_wait_semaphore_value(), rdg_pass->get_signal_semaphore_value());
+				compute_command_buffer.reset(backend::CommandBuffer::ResetMode::kResetPool);
+				compute_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+			}
+		}
+		if (rdg_pass->get_pass_type() == kCompute)
+		{
+			rdg_pass->execute(compute_command_buffer, *render_target, {});
+		}
+		else if (rdg_pass->get_pass_type() == kRaster)
+		{
+			set_viewport_and_scissor(graphics_command_buffer, render_target->get_extent());
+
+			rdg_pass->execute(graphics_command_buffer, *render_target, {});
+		}
+		pre_pass_type = rdg_pass->get_pass_type();
 	}
+
+	graphics_command_buffer.end();
+
+	render_context_.submit(graphics_command_buffer);
 #elif 1
 
 	enki::TaskScheduler scheduler;
@@ -156,11 +190,11 @@ void RdgBuilder::execute()
 		pass_index++;
 	}
 
-#endif
-
 	command_buffer.end();
 
 	render_context_.submit(command_buffer);
+
+#endif
 }
 
 void RdgBuilder::topological_sort()
@@ -172,12 +206,15 @@ void RdgBuilder::topological_sort()
 	std::vector<std::unordered_set<int>>              adjacency_list(rdg_passes_.size());
 	std::vector<int>                                  indegree(rdg_passes_.size(), 0);
 
+	 std::unordered_map<std::string, uint64_t> resource_timeline_values;
+
 	for (int i = 0; i < rdg_passes_.size(); ++i)
 	{
 		const PassInfo &pass_info = rdg_passes_[i]->get_pass_info();
 		for (const auto &output : pass_info.outputs)
 		{
 			resource_to_producers[output.name].push_back(i);
+			resource_timeline_values[output.name] = 0;
 		}
 	}
 
@@ -232,25 +269,37 @@ void RdgBuilder::topological_sort()
 	}
 }
 
-void RdgBuilder::prepare_memory_barriers()
+void RdgBuilder::setup_pass_dependencies()
 {
 	std::unordered_map<std::string, ResourceState> resource_states;
+	std::unordered_map<std::string, uint64_t>      resource_timeline_values;
+
+	uint64_t graphics_semaphore_value = 0;
+	uint64_t compute_semaphore_value  = 0;
 
 	for (int idx : pass_order_)
 	{
 		const PassInfo &pass_info = rdg_passes_[idx]->get_pass_info();
 
+		uint64_t wait_semaphore_value = 0;
+
 		for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
 		{
 			auto &input = pass_info.inputs[i];
-
 			const std::string &resource_name = input.name;
+
 			if (resource_states.contains(resource_name))
 			{
 				ResourceState &state = resource_states[resource_name];
 
 				if (state.last_write_pass != -1)
 				{
+
+					if (rdg_passes_[idx]->get_pass_type() != rdg_passes_[state.last_write_pass]->get_pass_type())
+					{
+						wait_semaphore_value = std::max(wait_semaphore_value, rdg_passes_[state.last_write_pass]->get_signal_semaphore_value());
+					}
+
 					switch (input.type)
 					{
 						case kAttachment:
@@ -287,10 +336,19 @@ void RdgBuilder::prepare_memory_barriers()
 			rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
 		}
 
-		// todo 
+		rdg_passes_[idx]->set_wait_semaphore(wait_semaphore_value);
+
+		// Signal semaphore after pass execution
 		if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kCompute)
 		{
+			rdg_passes_[idx]->set_signal_semaphore(++compute_semaphore_value);
+			// todo
+			// Temporarily ignore the output processing of compute passes
 			continue;
+		}
+		else if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kRaster)
+		{
+			rdg_passes_[idx]->set_signal_semaphore(++graphics_semaphore_value);
 		}
 
 		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();

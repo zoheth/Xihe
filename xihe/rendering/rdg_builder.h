@@ -39,7 +39,7 @@ class RdgBuilder
 
   private:
 	void topological_sort();
-	void prepare_memory_barriers();
+	void setup_pass_dependencies();
 
   private:
 	RenderContext &render_context_;

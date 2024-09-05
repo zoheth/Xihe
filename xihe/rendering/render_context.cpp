@@ -23,7 +23,7 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 
 	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
 
-	graphics_queue_ = &device.get_suitable_graphics_queue();
+	graphics_queue_               = &device.get_suitable_graphics_queue();
 	uint32_t compute_family_index = device.get_queue_family_index(vk::QueueFlagBits::eCompute);
 
 	if (compute_family_index == graphics_queue_->get_family_index())
@@ -174,12 +174,12 @@ vk::Extent2D const &RenderContext::get_surface_extent() const
 	return surface_extent_;
 }
 
-backend::CommandBuffer & RenderContext::request_graphics_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
+backend::CommandBuffer &RenderContext::request_graphics_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
 {
 	return get_active_frame().request_command_buffer(*graphics_queue_, reset_mode, level, thread_index);
 }
 
-backend::CommandBuffer & RenderContext::request_compute_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
+backend::CommandBuffer &RenderContext::request_compute_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
 {
 	return get_active_frame().request_command_buffer(*compute_queue_, reset_mode, level, thread_index);
 }
@@ -324,6 +324,59 @@ void RenderContext::submit(const backend::Queue &queue, const std::vector<backen
 	vk::Fence fence = frame.request_fence();
 
 	queue.get_handle().submit(submit_info, fence);
+}
+
+void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value)
+{
+	vk::SubmitInfo                 submit_info;
+	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
+	std::ranges::transform(command_buffers, command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
+		return cmd_buf->get_handle();
+	});
+	submit_info.setCommandBuffers(command_buffer_handles);
+
+	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
+	if (wait_semaphore_value != 0)
+	{
+		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
+		submit_info.setWaitSemaphores({graphics_semaphore_});
+	}
+	if (signal_semaphore_value != 0)
+	{
+		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
+		submit_info.setSignalSemaphores({compute_semaphore_});
+	}
+
+	submit_info.setPNext(&timeline_submit_info);
+
+	compute_queue_->get_handle().submit(submit_info, nullptr);
+}
+
+void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value)
+{
+	vk::SubmitInfo                 submit_info;
+	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
+	std::ranges::transform(command_buffers, command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
+		return cmd_buf->get_handle();
+	});
+	submit_info.setCommandBuffers(command_buffer_handles);
+
+	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
+	if (wait_semaphore_value != 0)
+	{
+		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
+		submit_info.setWaitSemaphores({compute_semaphore_});
+	}
+	if (signal_semaphore_value != 0)
+	{
+		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
+		submit_info.setSignalSemaphores({graphics_semaphore_});
+	}
+
+	submit_info.setPNext(&timeline_submit_info);
+
+	graphics_queue_->get_handle().submit(submit_info, nullptr);
+
 }
 
 bool RenderContext::handle_surface_changes(bool force_update)

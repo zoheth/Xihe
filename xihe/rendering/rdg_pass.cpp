@@ -187,6 +187,26 @@ bool RdgPass::needs_recreate_rt() const
 	return needs_recreate_rt_;
 }
 
+void RdgPass::set_wait_semaphore(uint64_t value)
+{
+	wait_semaphore_value_ = value;
+}
+
+void RdgPass::set_signal_semaphore(uint64_t value)
+{
+	signal_semaphore_value_ = value;
+}
+
+uint64_t RdgPass::get_wait_semaphore_value() const
+{
+	return wait_semaphore_value_;
+}
+
+uint64_t RdgPass::get_signal_semaphore_value() const
+{
+	return signal_semaphore_value_;
+}
+
 void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
 	for (const auto &[index, barrier] : input_barriers_)
