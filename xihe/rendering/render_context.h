@@ -75,7 +75,8 @@ class RenderContext
 
 	void compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value = 0, uint64_t signal_semaphore_value = 0);
 
-	void graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value = 0, uint64_t signal_semaphore_value = 0);
+	void graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value = 0, uint64_t signal_semaphore_value = 0, bool is_first_submission = false,
+	                     bool is_last_submission = false);
 
 	bool handle_surface_changes(bool force_update = false);
 

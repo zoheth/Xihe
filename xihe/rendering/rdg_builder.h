@@ -38,14 +38,23 @@ class RdgBuilder
 	void execute();
 
   private:
+	void build_pass_batches();
 	void topological_sort();
 	void setup_pass_dependencies();
 
   private:
+	struct PassBatch
+	{
+		std::vector<RdgPass *> passes;
+		RdgPassType            type;
+		uint64_t               wait_semaphore_value{0};        // 0 meaning no semaphore
+		uint64_t               signal_semaphore_value{0};
+	};
 	RenderContext &render_context_;
 	// std::unordered_map<std::string, std::unique_ptr<RdgPass>> rdg_passes_{};
 	std::vector<std::unique_ptr<RdgPass>> rdg_passes_{};
-	std::vector<int>                      pass_order_{};
+	// std::vector<int>                      pass_order_{};
+	std::vector<PassBatch> pass_batches_{};
 
 	std::vector<RdgResource> rdg_resources_{};
 };

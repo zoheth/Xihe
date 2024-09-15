@@ -360,7 +360,8 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	compute_queue_->get_handle().submit(submit_info, nullptr);
 }
 
-void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value)
+void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value, bool is_first_submission,
+                                    bool is_last_submission)
 {
 	vk::SubmitInfo                 submit_info;
 	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
@@ -369,29 +370,57 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
 	});
 	submit_info.setCommandBuffers(command_buffer_handles);
 
-	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
-	// Assume that the first submission is always the graphics queue and does not need to wait for the compute pass.
-	if (first_acquired_)
+	std::vector<vk::Semaphore>          wait_semaphores;
+	std::vector<vk::PipelineStageFlags> wait_stages;
+
+	// Handle the first submission: Wait on the swapchain's acquired semaphore
+	if (is_first_submission && swapchain_)
 	{
-		constexpr vk::PipelineStageFlags stage_mask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-		submit_info.setWaitSemaphores({acquired_semaphore_});
-		submit_info.setPWaitDstStageMask(&stage_mask);
-		first_acquired_ = false;
+		wait_semaphores.push_back(acquired_semaphore_);
+		wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
 	}
 	else if (wait_semaphore_value != 0)
 	{
+		vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
 		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
-		submit_info.setWaitSemaphores({compute_semaphore_});
+		submit_info.setPNext(&timeline_submit_info);
+
+		wait_semaphores.push_back(compute_semaphore_);
+		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
 	}
+
+	submit_info.setWaitSemaphores(wait_semaphores);
+	submit_info.setPWaitDstStageMask(wait_stages.data());
+
+	// Handle signal semaphores
+	std::vector<vk::Semaphore> signal_semaphores;
+
 	if (signal_semaphore_value != 0)
 	{
+		vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
 		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
-		submit_info.setSignalSemaphores({graphics_semaphore_});
+		submit_info.setPNext(&timeline_submit_info);
+
+		signal_semaphores.push_back(graphics_semaphore_);
 	}
 
-	submit_info.setPNext(&timeline_submit_info);
+	// Handle the last submission: Signal the render finished semaphore
+	RenderFrame &frame = get_active_frame();
+	const vk::Semaphore render_semaphore = frame.request_semaphore();
+	if (is_last_submission && swapchain_)
+	{
+		
+		signal_semaphores.push_back(render_semaphore);
+	}
+
+	submit_info.setSignalSemaphores(signal_semaphores);
 
 	graphics_queue_->get_handle().submit(submit_info, nullptr);
+
+	if (is_last_submission && swapchain_)
+	{
+		end_frame(render_semaphore);
+	}
 
 }
 
