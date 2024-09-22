@@ -86,6 +86,8 @@ class RenderContext
 
 	void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
 
+	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
+
   private:
 	backend::Device &device_;
 

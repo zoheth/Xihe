@@ -161,11 +161,11 @@ void RenderContext::submit(const std::vector<backend::CommandBuffer *> &command_
 		if (first_acquired_)
 		{
 			assert(acquired_semaphore_ && "We do not have acquired_semaphore, it was probably consumed?\n");
-			render_semaphore = submit(*graphics_queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);	
+			render_semaphore = submit(*graphics_queue_, command_buffers, acquired_semaphore_, vk::PipelineStageFlagBits::eColorAttachmentOutput);
 		}
 		else
 		{
-			render_semaphore = submit(*graphics_queue_, command_buffers, nullptr, vk::PipelineStageFlagBits::eNone);	
+			render_semaphore = submit(*graphics_queue_, command_buffers, nullptr, vk::PipelineStageFlagBits::eNone);
 		}
 	}
 	else
@@ -405,11 +405,10 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
 	}
 
 	// Handle the last submission: Signal the render finished semaphore
-	RenderFrame &frame = get_active_frame();
+	RenderFrame        &frame            = get_active_frame();
 	const vk::Semaphore render_semaphore = frame.request_semaphore();
 	if (is_last_submission && swapchain_)
 	{
-		
 		signal_semaphores.push_back(render_semaphore);
 	}
 
@@ -421,7 +420,6 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
 	{
 		end_frame(render_semaphore);
 	}
-
 }
 
 bool RenderContext::handle_surface_changes(bool force_update)
@@ -507,6 +505,19 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Rd
 		    [name, rdg_pass](backend::Image &&swapchain_image) {
 			    return rdg_pass->create_render_target(std::move(swapchain_image));
 		    };
+	}
+}
+
+uint32_t RenderContext::get_queue_family_index(vk::QueueFlagBits queue_flags) const
+{
+	switch (queue_flags)
+	{
+		case vk::QueueFlagBits::eGraphics:
+			return graphics_queue_->get_family_index();
+		case vk::QueueFlagBits::eCompute:
+			return compute_queue_->get_family_index();
+		default:
+			throw std::runtime_error("Unsupported queue family index");
 	}
 }
 }        // namespace xihe::rendering

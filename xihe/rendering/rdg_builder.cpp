@@ -143,7 +143,8 @@ void RdgBuilder::execute()
 			render_context_.compute_submit(
 			    {command_buffer},        // list of command buffers
 			    batch.wait_semaphore_value,
-			    batch.signal_semaphore_value);
+			    batch.signal_semaphore_value
+			);
 		}
 	}
 //	backend::CommandBuffer &graphics_command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
@@ -384,12 +385,6 @@ void RdgBuilder::build_pass_batches()
 				{
 					RdgPass *last_writer_pass = rdg_passes_[state.last_write_pass].get();
 
-					if (current_pass->get_pass_type() != last_writer_pass->get_pass_type())
-					{
-						// Need to wait on the semaphore from the last write pass
-						wait_semaphore_value = std::max(wait_semaphore_value, last_writer_pass->get_signal_semaphore_value());
-
-					}
 
 					// Add memory barrier between last write and current read
 					common::ImageMemoryBarrier barrier{};
@@ -403,6 +398,23 @@ void RdgBuilder::build_pass_batches()
 					if (current_pass->get_pass_type() == RdgPassType::kCompute)
 					{
 						barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
+					}
+
+					if (current_pass->get_pass_type() != last_writer_pass->get_pass_type())
+					{
+						// Need to wait on the semaphore from the last write pass
+						wait_semaphore_value = std::max(wait_semaphore_value, last_writer_pass->get_signal_semaphore_value());
+
+						if (current_pass->get_pass_type() == RdgPassType::kCompute)
+						{
+							barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+							barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+						}
+						else if (current_pass->get_pass_type() == RdgPassType::kRaster)
+						{
+							barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+							barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+						}
 					}
 
 					current_pass->add_input_memory_barrier(i, barrier);
