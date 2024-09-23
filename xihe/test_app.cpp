@@ -14,6 +14,7 @@
 
 bool xihe::TestApp::prepare(Window *window)
 {
+
 	if (!XiheApp::prepare(window))
 	{
 		return false;
@@ -36,6 +37,7 @@ bool xihe::TestApp::prepare(Window *window)
 	auto *p_cascade_script = cascade_script.get();
 	scene_->add_component(std::move(cascade_script));
 
+	// shadow pass
 	{
 		shadowmap_sampler_ = rendering::get_shadowmap_sampler(*get_device());
 
@@ -62,6 +64,7 @@ bool xihe::TestApp::prepare(Window *window)
 		rdg_builder_->add_raster_pass("shadow_pass", std::move(pass_info), std::move(subpasses));
 	}
 
+	// main pass
 	{
 		rendering::PassInfo pass_info{};
 		pass_info.inputs = {
@@ -97,6 +100,7 @@ bool xihe::TestApp::prepare(Window *window)
 		rdg_builder_->add_raster_pass("main_pass", std::move(pass_info), std::move(subpasses));
 	}
 
+	// blur pass
 	{
 		linear_sampler_ = rendering::get_linear_sampler(*get_device());
 		rendering::PassInfo pass_info{};
@@ -120,6 +124,7 @@ bool xihe::TestApp::prepare(Window *window)
 		                               rendering::render_blur);
 	}
 
+	// composite pass
 	{
 		rendering::PassInfo pass_info{};
 		pass_info.inputs = {

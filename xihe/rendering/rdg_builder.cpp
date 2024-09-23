@@ -291,17 +291,13 @@ void RdgBuilder::topological_sort()
 void RdgBuilder::setup_pass_dependencies()
 {
 	std::unordered_map<std::string, ResourceState> resource_states;
-	std::unordered_map<std::string, uint64_t>      resource_timeline_values;
 
-	uint64_t graphics_semaphore_value = 0;
-	uint64_t compute_semaphore_value  = 0;
 
 	for (int idx : pass_order_)
 	{
 		const PassInfo &pass_info = rdg_passes_[idx]->get_pass_info();
 
-		uint64_t wait_semaphore_value = 0;
-
+		// Handle input resources for the current pass
 		for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
 		{
 			auto &input = pass_info.inputs[i];
@@ -311,14 +307,9 @@ void RdgBuilder::setup_pass_dependencies()
 			{
 				ResourceState &state = resource_states[resource_name];
 
+				// Check if there's a preceding write to this resource
 				if (state.last_write_pass != -1)
 				{
-
-					if (rdg_passes_[idx]->get_pass_type() != rdg_passes_[state.last_write_pass]->get_pass_type())
-					{
-						wait_semaphore_value = std::max(wait_semaphore_value, rdg_passes_[state.last_write_pass]->get_signal_semaphore_value());
-					}
-
 					switch (input.type)
 					{
 						case kAttachment:
@@ -355,22 +346,8 @@ void RdgBuilder::setup_pass_dependencies()
 			rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
 		}
 
-		rdg_passes_[idx]->set_wait_semaphore(wait_semaphore_value);
-
-		// Signal semaphore after pass execution
-		if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kCompute)
-		{
-			rdg_passes_[idx]->set_signal_semaphore(++compute_semaphore_value);
-			// todo
-			// Temporarily ignore the output processing of compute passes
-			continue;
-		}
-		else if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kRaster)
-		{
-			rdg_passes_[idx]->set_signal_semaphore(++graphics_semaphore_value);
-		}
-
 		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();
+
 		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
 		{
 			auto &output = pass_info.outputs[i];
