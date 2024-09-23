@@ -63,7 +63,7 @@ void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, 
 void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources, ComputeRdgPass::ComputeFunction &&compute_function)
 {
 	rdg_passes_.push_back(std::make_unique<ComputeRdgPass>(name, render_context_, RdgPassType::kCompute, std::move(pass_info), shader_sources));
-	dynamic_cast<ComputeRdgPass *> (rdg_passes_.back().get())->set_compute_function(std::move(compute_function));
+	dynamic_cast<ComputeRdgPass *>(rdg_passes_.back().get())->set_compute_function(std::move(compute_function));
 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
@@ -82,7 +82,7 @@ void RdgBuilder::execute()
 	size_t batch_count = pass_batches_.size();
 	for (size_t i = 0; i < batch_count; ++i)
 	{
-		const auto       &batch          = pass_batches_[i];
+		const auto &batch = pass_batches_[i];
 
 		backend::CommandBuffer *command_buffer = nullptr;
 
@@ -143,8 +143,7 @@ void RdgBuilder::execute()
 			render_context_.compute_submit(
 			    {command_buffer},        // list of command buffers
 			    batch.wait_semaphore_value,
-			    batch.signal_semaphore_value
-			);
+			    batch.signal_semaphore_value);
 		}
 	}
 //	backend::CommandBuffer &graphics_command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
@@ -155,7 +154,7 @@ void RdgBuilder::execute()
 //	compute_command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 //
 //	auto pre_pass_type = rdg_passes_[pass_order_[0]]->get_pass_type();
-//#if 1
+// #if 1
 //	for (auto &index : pass_order_)
 //	{
 //		auto         &rdg_pass      = rdg_passes_.at(index);
@@ -214,8 +213,8 @@ void RdgBuilder::execute()
 
 		if (rdg_pass->get_pass_type() == kRaster)
 		{
-			auto *raster_pass = dynamic_cast<RasterRdgPass *>(rdg_pass.get());
-			rdg_pass_tasks[index]      = std::vector<SecondaryDrawTask>(raster_pass->get_subpass_count());
+			auto *raster_pass     = dynamic_cast<RasterRdgPass *>(rdg_pass.get());
+			rdg_pass_tasks[index] = std::vector<SecondaryDrawTask>(raster_pass->get_subpass_count());
 
 			rdg_pass->prepare(command_buffer);
 
@@ -355,10 +354,9 @@ void RdgBuilder::build_pass_batches()
 			}
 			current_batch_type = pass_type;
 			current_batch.type = pass_type;
-
 		}
 
-		 // Add the current pass to the batch
+		// Add the current pass to the batch
 		current_batch.passes.push_back(current_pass);
 
 		RDG_LOG("");
@@ -375,7 +373,7 @@ void RdgBuilder::build_pass_batches()
 			const auto        &input         = pass_info.inputs[i];
 			const std::string &resource_name = input.name;
 
-			 RDG_LOG("  Processing Input [{}]: {}", i, resource_name.c_str());
+			RDG_LOG("  Processing Input [{}]: {}", i, resource_name.c_str());
 
 			if (resource_states.contains(resource_name))
 			{
@@ -384,7 +382,6 @@ void RdgBuilder::build_pass_batches()
 				if (state.last_write_pass != -1)
 				{
 					RdgPass *last_writer_pass = rdg_passes_[state.last_write_pass].get();
-
 
 					// Add memory barrier between last write and current read
 					common::ImageMemoryBarrier barrier{};
@@ -543,7 +540,6 @@ void RdgBuilder::build_pass_batches()
 	{
 		throw std::runtime_error("Cycle detected in the pass dependency graph.");
 	}
-
 }
 
 void RdgBuilder::topological_sort()
@@ -556,7 +552,7 @@ void RdgBuilder::topological_sort()
 	std::vector<std::unordered_set<int>>              adjacency_list(rdg_passes_.size());
 	std::vector<int>                                  indegree(rdg_passes_.size(), 0);
 
-	 std::unordered_map<std::string, uint64_t> resource_timeline_values;
+	std::unordered_map<std::string, uint64_t> resource_timeline_values;
 
 	for (int i = 0; i < rdg_passes_.size(); ++i)
 	{
@@ -601,7 +597,6 @@ void RdgBuilder::topological_sort()
 
 	std::vector<RdgPass *> current_passes;
 
-	
 	uint32_t processed_node_count = 0;
 
 	while (!zero_indegree_queue.empty())
@@ -611,8 +606,8 @@ void RdgBuilder::topological_sort()
 		++processed_node_count;
 
 		current_passes.push_back(rdg_passes_[node].get());
-		auto pass_type = rdg_passes_[node]->get_pass_type();
-		bool need_submit = false;
+		auto     pass_type              = rdg_passes_[node]->get_pass_type();
+		bool     need_submit            = false;
 		uint64_t signal_semaphore_value = 0;
 		for (int neighbor : adjacency_list[node])
 		{
@@ -655,56 +650,27 @@ void RdgBuilder::topological_sort()
 
 void RdgBuilder::setup_pass_dependencies()
 {
-<<<<<<< HEAD
-	std::unordered_map<std::string, ResourceState> resource_states;
+	// std::unordered_map<std::string, ResourceState> resource_states;
+	// std::unordered_map<std::string, uint64_t>      resource_timeline_values;
 
-=======
-	//std::unordered_map<std::string, ResourceState> resource_states;
-	//std::unordered_map<std::string, uint64_t>      resource_timeline_values;
+	// uint64_t graphics_semaphore_value = 0;
+	// uint64_t compute_semaphore_value  = 0;
 
-	//uint64_t graphics_semaphore_value = 0;
-	//uint64_t compute_semaphore_value  = 0;
->>>>>>> 322844f8c2c595da1009dc300543d3a28214657f
-
-	//for (int idx : pass_order_)
+	// for (int idx : pass_order_)
 	//{
 	//	const PassInfo &pass_info = rdg_passes_[idx]->get_pass_info();
 
-<<<<<<< HEAD
-		// Handle input resources for the current pass
-		for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
-		{
-			auto &input = pass_info.inputs[i];
-			const std::string &resource_name = input.name;
-=======
 	//	uint64_t wait_semaphore_value = 0;
 
 	//	for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
 	//	{
 	//		auto &input = pass_info.inputs[i];
 	//		const std::string &resource_name = input.name;
->>>>>>> 322844f8c2c595da1009dc300543d3a28214657f
 
 	//		if (resource_states.contains(resource_name))
 	//		{
 	//			ResourceState &state = resource_states[resource_name];
 
-<<<<<<< HEAD
-				// Check if there's a preceding write to this resource
-				if (state.last_write_pass != -1)
-				{
-					switch (input.type)
-					{
-						case kAttachment:
-						{
-							common::ImageMemoryBarrier barrier{};
-							barrier.old_layout      = state.producer_layout;
-							barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-							barrier.src_stage_mask  = state.producer_stage_mask;
-							barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
-							barrier.src_access_mask = state.producer_access_mask;
-							barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
-=======
 	//			if (state.last_write_pass != -1)
 	//			{
 
@@ -724,7 +690,6 @@ void RdgBuilder::setup_pass_dependencies()
 	//						barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
 	//						barrier.src_access_mask = state.producer_access_mask;
 	//						barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
->>>>>>> 322844f8c2c595da1009dc300543d3a28214657f
 
 	//						if (rdg_passes_[idx]->get_pass_type() == RdgPassType::kCompute)
 	//						{
@@ -750,13 +715,6 @@ void RdgBuilder::setup_pass_dependencies()
 	//		rdg_passes_[idx]->set_input_image_view(i, resource_states[resource_name].image_view);
 	//	}
 
-<<<<<<< HEAD
-		auto &image_view = render_context_.get_active_frame().get_render_target(rdg_passes_[idx]->get_name()).get_views();
-
-		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
-		{
-			auto &output = pass_info.outputs[i];
-=======
 	//	rdg_passes_[idx]->set_wait_semaphore(wait_semaphore_value);
 
 	//	// Signal semaphore after pass execution
@@ -776,7 +734,6 @@ void RdgBuilder::setup_pass_dependencies()
 	//	for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
 	//	{
 	//		auto &output = pass_info.outputs[i];
->>>>>>> 322844f8c2c595da1009dc300543d3a28214657f
 
 	//		const std::string &resource_name = output.name;
 	//		ResourceState     &state         = resource_states[resource_name];
