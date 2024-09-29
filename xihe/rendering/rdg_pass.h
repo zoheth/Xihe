@@ -75,6 +75,8 @@ class RdgPass
 	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
 	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
 
+	void add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier);
+
 	backend::Device &get_device() const;
 
 	const RdgPassType &get_pass_type() const;
@@ -117,8 +119,14 @@ class RdgPass
 
 	RenderTarget::CreateFunc create_render_target_func_{nullptr};
 
+	// Barriers applied before execution to ensure the input resources are in the correct state for reading.
 	std::unordered_map<uint32_t, Barrier> input_barriers_;
+
+	// Barriers applied before execution to ensure the output resources are in the correct state for writing.
 	std::unordered_map<uint32_t, Barrier> output_barriers_;
+
+	// Barriers applied after execution to release resource ownership for cross-queue synchronization.
+	std::unordered_map<const backend::ImageView *, Barrier> release_barriers_;
 
 	std::unique_ptr<RenderTarget> render_target_{nullptr};
 

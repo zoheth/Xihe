@@ -167,7 +167,7 @@ void XiheApp::update(float delta_time)
 		callback(delta_time);
 	}
 
-	render_context_->begin();
+	// render_context_->begin();
 
 	// command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 

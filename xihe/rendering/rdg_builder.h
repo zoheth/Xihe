@@ -10,6 +10,23 @@ namespace xihe::rendering
 
 static void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent);
 
+struct ResourceState
+{
+	int producer_pass = -1;
+	int prev_pass     = -1;
+
+	vk::PipelineStageFlags2 prev_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        prev_access_mask = vk::AccessFlagBits2::eNone;
+	vk::ImageLayout         prev_layout      = vk::ImageLayout::eUndefined;
+	/*vk::PipelineStageFlags2 producer_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	vk::AccessFlags2        producer_access_mask = vk::AccessFlagBits2::eNone;
+	vk::ImageLayout         producer_layout      = vk::ImageLayout::eUndefined;*/
+
+	const backend::ImageView *image_view = nullptr;
+
+	std::vector<int> read_passes;
+};
+
 struct SecondaryDrawTask : enki::ITaskSet
 {
 	void init(backend::CommandBuffer *command_buffer, RasterRdgPass const *pass, uint32_t subpass_index);
@@ -38,6 +55,7 @@ class RdgBuilder
 	void execute();
 
   private:
+	bool setup_memory_barrier(const ResourceState &state, const RdgPass *rdg_pass, common::ImageMemoryBarrier &barrier) const;
 	void build_pass_batches();
 	void topological_sort();
 	void setup_pass_dependencies();
@@ -57,6 +75,8 @@ class RdgBuilder
 	std::vector<PassBatch> pass_batches_{};
 
 	std::vector<RdgResource> rdg_resources_{};
+
+	bool is_dirty_{true};
 };
 
 #if 0

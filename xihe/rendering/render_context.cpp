@@ -343,17 +343,27 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	});
 	submit_info.setCommandBuffers(command_buffer_handles);
 
+	std::vector<vk::Semaphore>          wait_semaphores;
+	std::vector<vk::PipelineStageFlags> wait_stages;
+
 	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
 	if (wait_semaphore_value != 0)
 	{
 		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
-		submit_info.setWaitSemaphores({graphics_semaphore_});
+		wait_semaphores.push_back(graphics_semaphore_);
+		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader); 
 	}
 	if (signal_semaphore_value != 0)
 	{
 		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
 		submit_info.setSignalSemaphores({compute_semaphore_});
 	}
+
+	if (!wait_semaphores.empty())
+    {
+        submit_info.setWaitSemaphores(wait_semaphores);
+        submit_info.setPWaitDstStageMask(wait_stages.data());
+    }
 
 	submit_info.setPNext(&timeline_submit_info);
 
@@ -363,62 +373,79 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value, bool is_first_submission,
                                     bool is_last_submission)
 {
-	vk::SubmitInfo                 submit_info;
-	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
-	std::ranges::transform(command_buffers, command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
-		return cmd_buf->get_handle();
-	});
-	submit_info.setCommandBuffers(command_buffer_handles);
+	 vk::SubmitInfo                 submit_info{};
+    std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size());
+    std::transform(command_buffers.begin(), command_buffers.end(), command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
+        return cmd_buf->get_handle();
+    });
+    submit_info.setCommandBuffers(command_buffer_handles);
 
-	std::vector<vk::Semaphore>          wait_semaphores;
-	std::vector<vk::PipelineStageFlags> wait_stages;
+    std::vector<vk::Semaphore>          wait_semaphores;
+    std::vector<vk::PipelineStageFlags> wait_stages;
+    std::vector<uint64_t>               wait_semaphore_values;
 
-	// Handle the first submission: Wait on the swapchain's acquired semaphore
-	if (is_first_submission && swapchain_)
+    std::vector<vk::Semaphore> signal_semaphores;
+    std::vector<uint64_t>      signal_semaphore_values;
+
+    // Handle the first submission: Wait on the swapchain's acquired semaphore
+    if (is_first_submission && swapchain_)
+    {
+        wait_semaphores.push_back(acquired_semaphore_);
+        wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+        wait_semaphore_values.push_back(0); // Placeholder value for binary semaphore
+    }
+    else if (wait_semaphore_value != 0)
+    {
+        wait_semaphores.push_back(compute_semaphore_);
+        wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
+        wait_semaphore_values.push_back(wait_semaphore_value);
+    }
+
+    // Handle signal semaphores
+    if (signal_semaphore_value != 0)
+    {
+        signal_semaphores.push_back(graphics_semaphore_);
+        signal_semaphore_values.push_back(signal_semaphore_value);
+    }
+
+    // Handle the last submission: Signal the render finished semaphore
+    RenderFrame        &frame            = get_active_frame();
+    const vk::Semaphore render_semaphore = frame.request_semaphore();
+    if (is_last_submission && swapchain_)
+    {
+        signal_semaphores.push_back(render_semaphore);
+        signal_semaphore_values.push_back(0); // Placeholder value for binary semaphore
+    }
+
+    if (!wait_semaphores.empty())
+    {
+        submit_info.setWaitSemaphores(wait_semaphores);
+        submit_info.setPWaitDstStageMask(wait_stages.data());
+    }
+
+    if (!signal_semaphores.empty())
+    {
+        submit_info.setSignalSemaphores(signal_semaphores);
+    }
+
+    // Create TimelineSemaphoreSubmitInfo with matching counts
+    vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
+    timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_values);
+    timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_values);
+
+    // Attach the TimelineSemaphoreSubmitInfo to the submit info
+    submit_info.setPNext(&timeline_submit_info);
+
+
+    if (is_last_submission && swapchain_)
+    {
+		vk::Fence fence = frame.request_fence();
+		graphics_queue_->get_handle().submit(submit_info, fence);
+        end_frame(render_semaphore);
+    }
+	else
 	{
-		wait_semaphores.push_back(acquired_semaphore_);
-		wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-	}
-	else if (wait_semaphore_value != 0)
-	{
-		vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
-		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
-		submit_info.setPNext(&timeline_submit_info);
-
-		wait_semaphores.push_back(compute_semaphore_);
-		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
-	}
-
-	submit_info.setWaitSemaphores(wait_semaphores);
-	submit_info.setPWaitDstStageMask(wait_stages.data());
-
-	// Handle signal semaphores
-	std::vector<vk::Semaphore> signal_semaphores;
-
-	if (signal_semaphore_value != 0)
-	{
-		vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
-		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
-		submit_info.setPNext(&timeline_submit_info);
-
-		signal_semaphores.push_back(graphics_semaphore_);
-	}
-
-	// Handle the last submission: Signal the render finished semaphore
-	RenderFrame        &frame            = get_active_frame();
-	const vk::Semaphore render_semaphore = frame.request_semaphore();
-	if (is_last_submission && swapchain_)
-	{
-		signal_semaphores.push_back(render_semaphore);
-	}
-
-	submit_info.setSignalSemaphores(signal_semaphores);
-
-	graphics_queue_->get_handle().submit(submit_info, nullptr);
-
-	if (is_last_submission && swapchain_)
-	{
-		end_frame(render_semaphore);
+		graphics_queue_->get_handle().submit(submit_info, nullptr);
 	}
 }
 

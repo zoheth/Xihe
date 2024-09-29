@@ -235,6 +235,16 @@ void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &r
 
 void RdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
+	for (auto &[view, barrier] : release_barriers_)
+	{
+		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
+		{
+			command_buffer.image_memory_barrier(*view, std::get<common::ImageMemoryBarrier>(barrier));
+		}
+		else
+		{
+		}
+	}
 }
 
 void RdgPass::set_input_image_view(uint32_t index, const backend::ImageView *image_view)
@@ -256,6 +266,11 @@ void RdgPass::add_input_memory_barrier(uint32_t index, Barrier &&barrier)
 void RdgPass::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
 {
 	output_barriers_[index] = barrier;
+}
+
+void RdgPass::add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier)
+{
+	release_barriers_[image_view] = barrier;
 }
 
 RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses) :

@@ -3,22 +3,6 @@
 namespace xihe::rendering
 {
 
-struct ResourceState
-{
-	int last_write_pass = -1;
-
-	/*vk::PipelineStageFlags2 prev_stage_mask = vk::PipelineStageFlagBits2::eTopOfPipe;
-	vk::AccessFlags2        prev_access_mask = vk::AccessFlagBits2::eNone;
-	vk::ImageLayout         prev_layout      = vk::ImageLayout::eUndefined;*/
-	vk::PipelineStageFlags2 producer_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
-	vk::AccessFlags2        producer_access_mask = vk::AccessFlagBits2::eNone;
-	vk::ImageLayout         producer_layout      = vk::ImageLayout::eUndefined;
-
-	const backend::ImageView *image_view = nullptr;
-
-	std::vector<int> read_passes;
-};
-
 void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
 {
 	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
@@ -73,10 +57,12 @@ void RdgBuilder::compile()
 	/*topological_sort();
 	setup_pass_dependencies();*/
 	build_pass_batches();
+	
 }
 
 void RdgBuilder::execute()
 {
+	render_context_.begin_frame();
 	compile();
 #if 1
 	size_t batch_count = pass_batches_.size();
@@ -110,6 +96,7 @@ void RdgBuilder::execute()
 		// Execute each pass in the batch
 		for (RdgPass *rdg_pass : batch.passes)
 		{
+			LOGI("Executing pass: {}", rdg_pass->get_name().c_str());
 			RenderTarget *render_target = rdg_pass->get_render_target();
 
 			if (batch.type == RdgPassType::kRaster)
@@ -265,6 +252,68 @@ void RdgBuilder::execute()
 #endif
 }
 
+bool RdgBuilder::setup_memory_barrier(const ResourceState &state, const RdgPass *rdg_pass, common::ImageMemoryBarrier &barrier) const
+{
+	RdgPass *prev_pass = rdg_passes_[state.prev_pass].get();
+
+	if (state.prev_pass != state.producer_pass && prev_pass->get_pass_type()==rdg_pass->get_pass_type())
+	{
+		return false;
+	}
+
+	barrier.new_layout = vk::ImageLayout::eShaderReadOnlyOptimal;
+	barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+	if (rdg_pass->get_pass_type() == RdgPassType::kCompute)
+	{
+		barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
+	}
+	else if (rdg_pass->get_pass_type() == RdgPassType::kRaster)
+	{
+		barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eFragmentShader;
+	}
+
+	if (rdg_pass->get_pass_type() != prev_pass->get_pass_type())
+	{
+		// Need to wait on the semaphore from the last write pass
+		// todo
+		//wait_semaphore_value = std::max(wait_semaphore_value, last_writer_pass->get_signal_semaphore_value());
+		common::ImageMemoryBarrier release_barrier{};
+		if (rdg_pass->get_pass_type() == RdgPassType::kCompute)
+		{
+			release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+		}
+		else if (rdg_pass->get_pass_type() == RdgPassType::kRaster)
+		{
+			release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+		}
+		release_barrier.old_layout = state.prev_layout;
+		release_barrier.new_layout      = state.prev_layout;
+		release_barrier.src_stage_mask = state.prev_stage_mask;
+		release_barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eBottomOfPipe;
+		release_barrier.src_access_mask = state.prev_access_mask;
+		release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
+		prev_pass->add_release_barrier(state.image_view, release_barrier);
+
+		barrier.old_layout      = state.prev_layout;
+		barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+		barrier.src_access_mask = vk::AccessFlagBits2::eNone;
+
+		return true;
+	}
+
+	barrier.old_layout      = state.prev_layout;
+	barrier.src_stage_mask  = state.prev_stage_mask;
+	barrier.src_access_mask = state.prev_access_mask;
+
+	return true;
+}
+
 // #define RDG_LOG_ENABLED
 
 #ifdef RDG_LOG_ENABLED
@@ -273,8 +322,11 @@ void RdgBuilder::execute()
 #	define RDG_LOG(...)
 #endif
 
+
+
 void RdgBuilder::build_pass_batches()
 {
+	pass_batches_.clear();
 	// Step 1: Build the dependency graph
 	std::unordered_map<std::string, std::vector<int>> resource_to_producers;
 	std::vector<std::unordered_set<int>>              adjacency_list(rdg_passes_.size());
@@ -379,44 +431,23 @@ void RdgBuilder::build_pass_batches()
 			{
 				ResourceState &state = resource_states[resource_name];
 
-				if (state.last_write_pass != -1)
+				if (state.prev_pass != -1)
 				{
-					RdgPass *last_writer_pass = rdg_passes_[state.last_write_pass].get();
-
-					// Add memory barrier between last write and current read
-					common::ImageMemoryBarrier barrier{};
-					barrier.old_layout      = state.producer_layout;
-					barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-					barrier.src_stage_mask  = state.producer_stage_mask;
-					barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
-					barrier.src_access_mask = state.producer_access_mask;
-					barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
-
-					if (current_pass->get_pass_type() == RdgPassType::kCompute)
-					{
-						barrier.dst_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
-					}
-
-					if (current_pass->get_pass_type() != last_writer_pass->get_pass_type())
+					auto prev_pass       = rdg_passes_[state.prev_pass].get();
+					if (prev_pass->get_pass_type() != current_pass->get_pass_type())
 					{
 						// Need to wait on the semaphore from the last write pass
-						wait_semaphore_value = std::max(wait_semaphore_value, last_writer_pass->get_signal_semaphore_value());
-
-						if (current_pass->get_pass_type() == RdgPassType::kCompute)
-						{
-							barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
-							barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
-						}
-						else if (current_pass->get_pass_type() == RdgPassType::kRaster)
-						{
-							barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
-							barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
-						}
+						wait_semaphore_value = std::max(wait_semaphore_value, prev_pass->get_signal_semaphore_value());
 					}
-
-					current_pass->add_input_memory_barrier(i, barrier);
-
-					state.last_write_pass = -1;        // Reset last write pass
+					common::ImageMemoryBarrier barrier{};
+					if(setup_memory_barrier(state, current_pass, barrier))
+					{
+						current_pass->add_input_memory_barrier(i, barrier);
+						state.prev_access_mask = barrier.dst_access_mask;
+						state.prev_layout      = barrier.new_layout;
+						state.prev_stage_mask  = barrier.dst_stage_mask;
+						state.prev_pass = node;	
+					}
 				}
 			}
 			else
@@ -440,39 +471,47 @@ void RdgBuilder::build_pass_batches()
 
 			ResourceState &state = resource_states[resource_name];
 
-			state.last_write_pass = node;
+			state.producer_pass = node;
+			state.prev_pass     = node;
 
 			// Update resource state with new layout, stage mask, access mask
 			if (output.type == kAttachment)
 			{
 				if (common::is_depth_format(output.format))
 				{
-					state.producer_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-					state.producer_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
-					state.producer_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
+					state.prev_layout      = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+					state.prev_stage_mask  = vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests;
+					state.prev_access_mask = vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite;
 				}
 				else
 				{
-					state.producer_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-					state.producer_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-					state.producer_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+					state.prev_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+					state.prev_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+					state.prev_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+				}
+
+				if (current_pass->get_pass_type() == RdgPassType::kCompute)
+				{
+					state.prev_layout     = vk::ImageLayout::eShaderReadOnlyOptimal;
+					state.prev_stage_mask = vk::PipelineStageFlagBits2::eComputeShader;
+					state.prev_access_mask = vk::AccessFlagBits2::eNone;
 				}
 
 				common::ImageMemoryBarrier barrier{};
 				barrier.old_layout      = vk::ImageLayout::eUndefined;
-				barrier.new_layout      = state.producer_layout;
+				barrier.new_layout      = state.prev_layout;
 				barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
-				barrier.dst_stage_mask  = state.producer_stage_mask;
+				barrier.dst_stage_mask  = state.prev_stage_mask;
 				barrier.src_access_mask = {};
-				barrier.dst_access_mask = state.producer_access_mask;
+				barrier.dst_access_mask = state.prev_access_mask;
 
 				current_pass->add_output_memory_barrier(i, barrier);
 			}
 			else if (output.type == kSwapchain)
 			{
-				state.producer_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-				state.producer_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-				state.producer_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+				state.prev_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+				state.prev_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+				state.prev_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
 
 				common::ImageMemoryBarrier barrier{};
 				barrier.old_layout      = vk::ImageLayout::eUndefined;

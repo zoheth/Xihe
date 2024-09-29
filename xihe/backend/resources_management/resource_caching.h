@@ -645,6 +645,8 @@ T &request_resource(Device &device, ResourceRecord *recorder, std::unordered_map
 	size_t      res_id   = resources.size();
 
 	LOGD("Building #{} cache object ({})", res_id, res_type);
+	hash = 0;
+	hash_param(hash, args...);
 
 	// Only error handle in release
 #ifndef XH_DEBUG
