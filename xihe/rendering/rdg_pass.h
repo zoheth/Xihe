@@ -6,6 +6,14 @@
 #include "rendering/render_pipeline.h"
 #include "rendering/render_target.h"
 
+// #define RDG_LOG_ENABLED
+
+#ifdef RDG_LOG_ENABLED
+#	define RDG_LOG(...) LOGI(__VA_ARGS__)
+#else
+#	define RDG_LOG(...)
+#endif
+
 namespace xihe
 {
 namespace rendering
@@ -75,6 +83,9 @@ class RdgPass
 	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
 	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
 
+	// Each RDG pass corresponds to multiple in-flight frames, clean up some states to avoid interference.
+	void reset_before_frame();
+
 	void add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier);
 
 	backend::Device &get_device() const;
@@ -85,20 +96,12 @@ class RdgPass
 
 	PassInfo &get_pass_info();
 
-	const std::vector<common::LoadStoreInfo> &get_load_store() const;
-
 	/// \brief Checks if the render target should be created using a swapchain image.
 	/// \return True if a swapchain image should be used, otherwise false.
 	bool needs_recreate_rt() const;
 
-	void set_wait_semaphore(uint64_t value);
-	void set_signal_semaphore(uint64_t value);
-
 	void set_batch_index(int64_t index);
 	int64_t get_batch_index() const;
-
-	uint64_t get_wait_semaphore_value() const;
-	uint64_t get_signal_semaphore_value() const;
 
   protected:
 	virtual void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents = vk::SubpassContents::eInline);
@@ -136,13 +139,8 @@ class RdgPass
 	bool needs_recreate_rt_{false};
 	bool use_swapchain_image_{false};
 
-	uint64_t wait_semaphore_value_{0};        // 0 meaning no semaphore
-	uint64_t signal_semaphore_value_{0};
-
 	int64_t batch_index_{-1};
 
-	// backend::RenderPass  *render_pass_{nullptr};
-	// backend::Framebuffer *framebuffer_{nullptr};
 };
 
 class RasterRdgPass : public RdgPass

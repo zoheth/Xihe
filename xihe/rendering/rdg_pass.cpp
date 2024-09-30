@@ -149,52 +149,9 @@ PassInfo &RdgPass::get_pass_info()
 	return pass_info_;
 }
 
-// std::vector<std::unique_ptr<Subpass>> &RdgPass::get_subpasses()
-//{
-//	return subpasses_;
-// }
-//
-// uint32_t RdgPass::get_subpass_count() const
-//{
-//	return subpasses_.size();
-// }
-//
-// const std::vector<common::LoadStoreInfo> &RdgPass::get_load_store() const
-//{
-//	return load_store_;
-// }
-//
-// backend::RenderPass &RdgPass::get_render_pass() const
-//{
-//	assert(render_pass_ && "");
-//	return *render_pass_;
-// }
-//
-// backend::Framebuffer &RdgPass::get_framebuffer() const
-//{
-//	assert(framebuffer_ && "");
-//	return *framebuffer_;
-// }
-//
-// void RdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
-//{
-//	assert(subpass_index < subpasses_.size());
-//	subpasses_[subpass_index]->set_thread_index(thread_index);
-// }
-
 bool RdgPass::needs_recreate_rt() const
 {
 	return needs_recreate_rt_;
-}
-
-void RdgPass::set_wait_semaphore(uint64_t value)
-{
-	wait_semaphore_value_ = value;
-}
-
-void RdgPass::set_signal_semaphore(uint64_t value)
-{
-	signal_semaphore_value_ = value;
 }
 
 void RdgPass::set_batch_index(int64_t index)
@@ -209,16 +166,6 @@ int64_t RdgPass::get_batch_index() const
 		throw std::runtime_error("Batch index not set.");
 	}
 	return batch_index_;
-}
-
-uint64_t RdgPass::get_wait_semaphore_value() const
-{
-	return wait_semaphore_value_;
-}
-
-uint64_t RdgPass::get_signal_semaphore_value() const
-{
-	return signal_semaphore_value_;
 }
 
 void RdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
@@ -280,6 +227,11 @@ void RdgPass::add_input_memory_barrier(uint32_t index, Barrier &&barrier)
 void RdgPass::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
 {
 	output_barriers_[index] = barrier;
+}
+
+void RdgPass::reset_before_frame()
+{
+	release_barriers_.clear();
 }
 
 void RdgPass::add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier)

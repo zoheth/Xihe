@@ -57,8 +57,6 @@ class RdgBuilder
   private:
 	bool setup_memory_barrier(const ResourceState &state, const RdgPass *rdg_pass, common::ImageMemoryBarrier &barrier) const;
 	void build_pass_batches();
-	void topological_sort();
-	void setup_pass_dependencies();
 
   private:
 	struct PassBatch
