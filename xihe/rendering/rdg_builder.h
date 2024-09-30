@@ -65,7 +65,7 @@ class RdgBuilder
 	{
 		std::vector<RdgPass *> passes;
 		RdgPassType            type;
-		uint64_t               wait_semaphore_value{0};        // 0 meaning no semaphore
+		int64_t                wait_batch_index{-1};
 		uint64_t               signal_semaphore_value{0};
 	};
 	RenderContext &render_context_;

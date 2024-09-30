@@ -334,7 +334,7 @@ void RenderContext::submit(const backend::Queue &queue, const std::vector<backen
 	queue.get_handle().submit(submit_info, fence);
 }
 
-void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value)
+void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value)
 {
 	vk::SubmitInfo                 submit_info;
 	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size(), nullptr);
@@ -347,17 +347,19 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	std::vector<vk::PipelineStageFlags> wait_stages;
 
 	vk::TimelineSemaphoreSubmitInfoKHR timeline_submit_info;
+
 	if (wait_semaphore_value != 0)
 	{
 		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
 		wait_semaphores.push_back(graphics_semaphore_);
 		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader); 
 	}
-	if (signal_semaphore_value != 0)
-	{
-		timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
-		submit_info.setSignalSemaphores({compute_semaphore_});
-	}
+
+	++compute_semaphore_value_;
+	signal_semaphore_value = compute_semaphore_value_;
+	timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
+	submit_info.setSignalSemaphores({compute_semaphore_});
+	
 
 	if (!wait_semaphores.empty())
     {
@@ -370,7 +372,7 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	compute_queue_->get_handle().submit(submit_info, nullptr);
 }
 
-void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t wait_semaphore_value, uint64_t signal_semaphore_value, bool is_first_submission,
+void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value, bool is_first_submission,
                                     bool is_last_submission)
 {
 	 vk::SubmitInfo                 submit_info{};
@@ -402,11 +404,11 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
     }
 
     // Handle signal semaphores
-    if (signal_semaphore_value != 0)
-    {
-        signal_semaphores.push_back(graphics_semaphore_);
-        signal_semaphore_values.push_back(signal_semaphore_value);
-    }
+	++graphics_semaphore_value_;
+	signal_semaphore_value = graphics_semaphore_value_;
+	signal_semaphores.push_back(graphics_semaphore_);
+	signal_semaphore_values.push_back(signal_semaphore_value);
+    
 
     // Handle the last submission: Signal the render finished semaphore
     RenderFrame        &frame            = get_active_frame();

@@ -94,6 +94,9 @@ class RdgPass
 	void set_wait_semaphore(uint64_t value);
 	void set_signal_semaphore(uint64_t value);
 
+	void set_batch_index(int64_t index);
+	int64_t get_batch_index() const;
+
 	uint64_t get_wait_semaphore_value() const;
 	uint64_t get_signal_semaphore_value() const;
 
@@ -135,6 +138,8 @@ class RdgPass
 
 	uint64_t wait_semaphore_value_{0};        // 0 meaning no semaphore
 	uint64_t signal_semaphore_value_{0};
+
+	int64_t batch_index_{-1};
 
 	// backend::RenderPass  *render_pass_{nullptr};
 	// backend::Framebuffer *framebuffer_{nullptr};

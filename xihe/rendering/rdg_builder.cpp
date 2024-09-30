@@ -68,7 +68,7 @@ void RdgBuilder::execute()
 	size_t batch_count = pass_batches_.size();
 	for (size_t i = 0; i < batch_count; ++i)
 	{
-		const auto &batch = pass_batches_[i];
+		auto &batch = pass_batches_[i];
 
 		backend::CommandBuffer *command_buffer = nullptr;
 
@@ -115,13 +115,16 @@ void RdgBuilder::execute()
 		bool is_first_submission = (i == 0);
 		bool is_last_submission  = (i == batch_count - 1 && batch.type == RdgPassType::kRaster);
 
+		const auto     last_wait_batch      = batch.wait_batch_index;
+		const uint64_t wait_semaphore_value = last_wait_batch>=0? pass_batches_[last_wait_batch].signal_semaphore_value : 0;
+
 		// Submit the command buffer with appropriate semaphores
 		if (batch.type == RdgPassType::kRaster)
 		{
 			render_context_.graphics_submit(
 			    {command_buffer},        // list of command buffers
-			    batch.wait_semaphore_value,
 			    batch.signal_semaphore_value,
+			    wait_semaphore_value,
 			    is_first_submission,
 			    is_last_submission);
 		}
@@ -129,8 +132,8 @@ void RdgBuilder::execute()
 		{
 			render_context_.compute_submit(
 			    {command_buffer},        // list of command buffers
-			    batch.wait_semaphore_value,
-			    batch.signal_semaphore_value);
+			    batch.signal_semaphore_value,
+			    wait_semaphore_value);
 		}
 	}
 //	backend::CommandBuffer &graphics_command_buffer = render_context_.request_graphics_command_buffer(backend::CommandBuffer::ResetMode::kResetPool,
@@ -361,9 +364,6 @@ void RdgBuilder::build_pass_batches()
 	// Step 2: Perform Kahn's Algorithm for topological sorting and build pass batches
 	std::unordered_map<std::string, ResourceState> resource_states;
 
-	uint64_t graphics_semaphore_value = 0;
-	uint64_t compute_semaphore_value  = 0;
-
 	std::queue<int> zero_indegree_queue;
 	for (int i = 0; i < indegree.size(); ++i)
 	{
@@ -392,15 +392,6 @@ void RdgBuilder::build_pass_batches()
 			if (!current_batch.passes.empty())
 			{
 				// Finish the current batch
-				RDG_LOG("Finished PassBatch:");
-				RDG_LOG("  Type: {}", (current_batch.type == RdgPassType::kRaster) ? "Raster" : "Compute");
-				RDG_LOG("  Wait Semaphore Value: {}", current_batch.wait_semaphore_value);
-				RDG_LOG("  Signal Semaphore Value: {}", current_batch.signal_semaphore_value);
-				RDG_LOG("  Passes in Batch:");
-				for (const auto &pass : current_batch.passes)
-				{
-					RDG_LOG("    Pass Name: {}", pass->get_name().c_str());
-				}
 				pass_batches_.push_back(std::move(current_batch));
 				current_batch = PassBatch{};
 			}
@@ -410,12 +401,9 @@ void RdgBuilder::build_pass_batches()
 
 		// Add the current pass to the batch
 		current_batch.passes.push_back(current_pass);
+		current_pass->set_batch_index(pass_batches_.size());
 
-		RDG_LOG("");
-		RDG_LOG("Processing Pass: {}", current_pass->get_name().c_str());
-		RDG_LOG("  Pass Type: {}", (pass_type == RdgPassType::kRaster) ? "Raster" : "Compute");
-
-		uint64_t wait_semaphore_value = 0;
+		int64_t wait_batch_index = -1;
 
 		const PassInfo &pass_info = current_pass->get_pass_info();
 
@@ -437,7 +425,7 @@ void RdgBuilder::build_pass_batches()
 					if (prev_pass->get_pass_type() != current_pass->get_pass_type())
 					{
 						// Need to wait on the semaphore from the last write pass
-						wait_semaphore_value = std::max(wait_semaphore_value, prev_pass->get_signal_semaphore_value());
+						wait_batch_index = std::max(wait_batch_index, prev_pass->get_batch_index());
 					}
 					common::ImageMemoryBarrier barrier{};
 					if(setup_memory_barrier(state, current_pass, barrier))
@@ -461,7 +449,7 @@ void RdgBuilder::build_pass_batches()
 		}
 
 		// Update the batch's wait semaphore value
-		current_batch.wait_semaphore_value = std::max(current_batch.wait_semaphore_value, wait_semaphore_value);
+		current_batch.wait_batch_index = std::max(current_batch.wait_batch_index, wait_batch_index);
 
 		// Process outputs
 		for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
@@ -532,22 +520,6 @@ void RdgBuilder::build_pass_batches()
 			state.image_view = &image_view[i];
 		}
 
-		// Set the pass's wait semaphore value
-		current_pass->set_wait_semaphore(wait_semaphore_value);
-
-		// Set the pass's signal semaphore value and update the batch's signal semaphore value
-		uint64_t signal_semaphore_value = 0;
-		if (pass_type == RdgPassType::kCompute)
-		{
-			signal_semaphore_value = ++compute_semaphore_value;
-		}
-		else if (pass_type == RdgPassType::kRaster)
-		{
-			signal_semaphore_value = ++graphics_semaphore_value;
-		}
-		current_pass->set_signal_semaphore(signal_semaphore_value);
-		current_batch.signal_semaphore_value = signal_semaphore_value;
-
 		// Process adjacent nodes
 		for (int neighbor : adjacency_list[node])
 		{
@@ -562,15 +534,6 @@ void RdgBuilder::build_pass_batches()
 	// Finish the last batch if any passes are left
 	if (!current_batch.passes.empty())
 	{
-		RDG_LOG("Finished PassBatch:");
-		RDG_LOG("  Type: {}", (current_batch.type == RdgPassType::kRaster) ? "Raster" : "Compute");
-		RDG_LOG("  Wait Semaphore Value: {}", current_batch.wait_semaphore_value);
-		RDG_LOG("  Signal Semaphore Value: {}", current_batch.signal_semaphore_value);
-		RDG_LOG("  Passes in Batch:");
-		for (const auto &pass : current_batch.passes)
-		{
-			RDG_LOG("    Pass Name: {}", pass->get_name().c_str());
-		}
 		pass_batches_.push_back(std::move(current_batch));
 	}
 

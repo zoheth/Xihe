@@ -197,6 +197,20 @@ void RdgPass::set_signal_semaphore(uint64_t value)
 	signal_semaphore_value_ = value;
 }
 
+void RdgPass::set_batch_index(int64_t index)
+{
+	batch_index_ = index;
+}
+
+int64_t RdgPass::get_batch_index() const
+{
+	if (batch_index_ == -1)
+	{
+		throw std::runtime_error("Batch index not set.");
+	}
+	return batch_index_;
+}
+
 uint64_t RdgPass::get_wait_semaphore_value() const
 {
 	return wait_semaphore_value_;
