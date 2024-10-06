@@ -43,3 +43,6 @@
 [submodule "third_party/enkiTS"]
 	path = third_party/enkiTS
 	url = https://github.com/dougbinks/enkiTS
+[submodule "third_party/meshoptimizer"]
+	path = third_party/meshoptimizer
+	url = https://github.com/zeux/meshoptimizer
