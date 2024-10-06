@@ -39,4 +39,5 @@ target_link_libraries(xihe PUBLIC
     SPIRV
     spirv-cross-glsl
     glslang-default-resource-limits
+    meshoptimizer
 )

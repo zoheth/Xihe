@@ -3,6 +3,8 @@
 #include "material.h"
 #include "rendering/subpass.h"
 
+#include "meshoptimizer.h"
+
 namespace xihe::sg
 {
 SubMesh::SubMesh(const std::string &name) :

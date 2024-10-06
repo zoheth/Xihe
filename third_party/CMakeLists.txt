@@ -321,3 +321,7 @@ if (MSVC)
   endif ()
 endif ()
 set_property(TARGET ${ASTC_RAW_TARGET} PROPERTY FOLDER "ThirdParty")
+
+# meshoptimizer
+add_subdirectory(meshoptimizer)
+set_property(TARGET meshoptimizer PROPERTY FOLDER "ThirdParty")
