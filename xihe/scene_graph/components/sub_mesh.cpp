@@ -7,6 +7,28 @@
 
 namespace xihe::sg
 {
+
+template <typename T>
+void generate_meshlets(const SubMesh &sub_mesh, std::vector<float> &vertex_positions, std::vector<T> &indices)
+{
+	constexpr size_t max_vertices  = 64;
+	constexpr size_t max_triangles = 124;
+	constexpr float  cone_weight   = 0.0f;
+
+	const size_t max_meshlets = meshopt_buildMeshletsBound(sub_mesh.index_count, max_vertices, max_triangles);
+
+	std::vector<meshopt_Meshlet> local_meshlets(max_meshlets);
+
+	std::vector<uint32_t> meshlet_vertex_indices(max_meshlets * max_vertices);
+
+	std::vector<uint8_t> meshlet_triangle(max_meshlets * max_triangles * 3);
+
+	size_t meshlet_count = meshopt_buildMeshlets(local_meshlets.data(), meshlet_vertex_indices.data(), meshlet_triangle.data(),
+	                                             indices.data(), sub_mesh.index_count, vertex_positions.data(), sub_mesh.vertex_count,
+	                                             sizeof(float) * 3,
+	                                             max_vertices, max_triangles, cone_weight);
+}
+
 SubMesh::SubMesh(const std::string &name) :
     Component{name}
 {}
@@ -81,4 +103,4 @@ backend::ShaderVariant &SubMesh::get_mut_shader_variant()
 {
 	return shader_variant_;
 }
-}
+}        // namespace xihe::sg

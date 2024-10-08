@@ -1,6 +1,7 @@
 #include "test_app.h"
 
 #include "backend/shader_module.h"
+#include "backend/shader_compiler/glsl_compiler.h"
 #include "platform/filesystem.h"
 
 #include "rendering/post_processing.h"
@@ -11,6 +12,16 @@
 #include "rendering/subpasses/lighting_subpass.h"
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
+
+xihe::TestApp::TestApp()
+{
+	// Adding device extensions
+	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
+	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+	add_device_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+
+	backend::GlslCompiler::set_target_environment(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
+}
 
 bool xihe::TestApp::prepare(Window *window)
 {
@@ -156,6 +167,22 @@ bool xihe::TestApp::prepare(Window *window)
 void xihe::TestApp::update(float delta_time)
 {
 	XiheApp::update(delta_time);
+}
+
+void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
+{
+	XiheApp::request_gpu_features(gpu);
+	// Check whether the device supports task and mesh shaders
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShader);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
+
+	// Pipeline statistics
+	auto &requested_features = gpu.get_mutable_requested_features();
+	if (gpu.get_features().pipelineStatisticsQuery)
+	{
+		requested_features.pipelineStatisticsQuery = VK_TRUE;
+	}
 }
 
 std::unique_ptr<xihe::Application> create_application()

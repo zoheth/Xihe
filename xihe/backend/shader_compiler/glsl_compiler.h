@@ -13,6 +13,9 @@ namespace xihe::backend
 class GlslCompiler
 {
   public:
+	static void set_target_environment(glslang::EShTargetLanguage        target_language,
+	                                   glslang::EShTargetLanguageVersion target_language_version);
+
 	bool compile_to_spirv(vk::ShaderStageFlagBits     stage,
 	                      const std::vector<uint8_t> &glsl_source,
 	                      const std::string          &entry_point,

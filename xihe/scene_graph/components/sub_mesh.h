@@ -30,9 +30,9 @@ class SubMesh : public Component
 
 	std::uint32_t index_offset = 0;
 
-	std::uint32_t vertices_count = 0;
+	std::uint32_t vertex_count = 0;
 
-	std::uint32_t vertex_indices = 0;
+	std::uint32_t index_count = 0;
 
 	std::unordered_map<std::string, backend::Buffer> vertex_buffers;
 

@@ -333,33 +333,21 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	gpu.get_mutable_requested_features().shaderSampledImageArrayDynamicIndexing = VK_TRUE;
 	gpu.get_mutable_requested_features().depthClamp                             = VK_TRUE;
 
-	auto &features = gpu.request_extension_features<vk::PhysicalDeviceDescriptorIndexingFeatures>();
-
-	features.shaderSampledImageArrayNonUniformIndexing = VK_TRUE;
-
-	features.descriptorBindingSampledImageUpdateAfterBind = VK_TRUE;
-	features.descriptorBindingStorageImageUpdateAfterBind = VK_TRUE;
-	features.descriptorBindingPartiallyBound              = VK_TRUE;
-	features.descriptorBindingUpdateUnusedWhilePending    = VK_TRUE;
-	features.descriptorBindingVariableDescriptorCount     = VK_TRUE;
-
-	features.runtimeDescriptorArray = VK_TRUE;
-
-	/*vk::PhysicalDeviceProperties2 device_properties{};
-	device_properties.pNext = &descriptor_indexing_properties_;
-
-	gpu.get_handle().getProperties2(&device_properties);*/
-
 	if (gpu.get_features().samplerAnisotropy)
 	{
 		gpu.get_mutable_requested_features().samplerAnisotropy = VK_TRUE;
 	}
 
-	auto &requested_synchronisation2_features = gpu.request_extension_features<vk::PhysicalDeviceSynchronization2FeaturesKHR>();
-	requested_synchronisation2_features.synchronization2 = VK_TRUE;
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, shaderSampledImageArrayNonUniformIndexing);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, descriptorBindingSampledImageUpdateAfterBind);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, descriptorBindingStorageImageUpdateAfterBind);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, descriptorBindingPartiallyBound);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, descriptorBindingUpdateUnusedWhilePending);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, descriptorBindingVariableDescriptorCount);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDescriptorIndexingFeaturesEXT, runtimeDescriptorArray);
 
-	auto &requested_timeline_semaphore_features = gpu.request_extension_features<vk::PhysicalDeviceTimelineSemaphoreFeatures>();
-	requested_timeline_semaphore_features.timelineSemaphore = VK_TRUE;
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceSynchronization2FeaturesKHR, synchronization2);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceTimelineSemaphoreFeatures, timelineSemaphore);
 }
 
 void XiheApp::create_render_context()

@@ -138,15 +138,15 @@ void ShadowSubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::Sub
 		}
 	}
 
-	if (sub_mesh.vertex_indices != 0)
+	if (sub_mesh.index_count != 0)
 	{
 		command_buffer.bind_index_buffer(*sub_mesh.index_buffer, sub_mesh.index_offset, sub_mesh.index_type);
 
-		command_buffer.draw_indexed(sub_mesh.vertex_indices, 1, 0, 0, 0);
+		command_buffer.draw_indexed(sub_mesh.index_count, 1, 0, 0, 0);
 	}
 	else
 	{
-		command_buffer.draw(sub_mesh.vertices_count, 1, 0, 0);
+		command_buffer.draw(sub_mesh.vertex_count, 1, 0, 0);
 	}
 }
 

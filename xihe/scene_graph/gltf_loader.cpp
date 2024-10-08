@@ -653,6 +653,9 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 	{
 		auto mesh = parse_mesh(gltf_mesh);
 
+		// Used to generate meshlets
+		std::vector<float> vertex_positions;
+
 		for (size_t i_primitive = 0; i_primitive < gltf_mesh.primitives.size(); i_primitive++)
 		{
 			const auto &gltf_primitive = gltf_mesh.primitives[i_primitive];
@@ -670,7 +673,10 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 				if (attrib_name == "position")
 				{
 					assert(attribute.second < model_.accessors.size());
-					submesh->vertices_count = to_u32(model_.accessors[attribute.second].count);
+					submesh->vertex_count = to_u32(model_.accessors[attribute.second].count);
+
+					vertex_positions.resize(vertex_data.size() / sizeof(float));
+					std::memcpy(vertex_positions.data(), vertex_data.data(), vertex_data.size());
 				}
 				backend::BufferBuilder buffer_builder{vertex_data.size()};
 				buffer_builder.with_usage(vk::BufferUsageFlagBits::eVertexBuffer)
@@ -691,7 +697,7 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 			if (gltf_primitive.indices >= 0)
 			{
-				submesh->vertex_indices = to_u32(get_attribute_size(&model_, gltf_primitive.indices));
+				submesh->index_count = to_u32(get_attribute_size(&model_, gltf_primitive.indices));
 
 				auto format = get_attribute_format(&model_, gltf_primitive.indices);
 
@@ -706,6 +712,9 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 						break;
 					case vk::Format::eR16Uint:
 						submesh->index_type = vk::IndexType::eUint16;
+						/*std::vector<uint16_t> index_data16(index_data.size() / sizeof(uint16_t));
+						std::memcpy(index_data16.data(), index_data.data(), index_data.size());*/
+						
 						break;
 					case vk::Format::eR32Uint:
 						submesh->index_type = vk::IndexType::eUint32;
@@ -726,7 +735,7 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 			}
 			else
 			{
-				submesh->vertices_count = to_u32(get_attribute_size(&model_, gltf_primitive.attributes.at("POSITION")));
+				submesh->vertex_count = to_u32(get_attribute_size(&model_, gltf_primitive.attributes.at("POSITION")));
 			}
 
 			if (gltf_primitive.material < 0)

@@ -50,6 +50,12 @@ EShLanguage find_shader_language(vk::ShaderStageFlagBits stage)
 glslang::EShTargetLanguage        GlslCompiler::env_target_language_         = glslang::EShTargetLanguage::EShTargetNone;
 glslang::EShTargetLanguageVersion GlslCompiler::env_target_language_version_ = static_cast<glslang::EShTargetLanguageVersion>(0);
 
+void GlslCompiler::set_target_environment(glslang::EShTargetLanguage target_language, glslang::EShTargetLanguageVersion target_language_version)
+{
+	env_target_language_         = target_language;
+	env_target_language_version_ = target_language_version;
+}
+
 bool GlslCompiler::compile_to_spirv(vk::ShaderStageFlagBits stage, const std::vector<uint8_t> &glsl_source, const std::string &entry_point, const ShaderVariant &shader_variant, std::vector<std::uint32_t> &spirv, std::string &info_log)
 {
 	glslang::InitializeProcess();
