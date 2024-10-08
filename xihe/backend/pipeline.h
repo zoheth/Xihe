@@ -52,4 +52,14 @@ class GraphicsPipeline : public Pipeline
 	GraphicsPipeline(Device &device, vk::PipelineCache pipeline_cache, PipelineState &pipeline_state);
 };
 
+class MeshShadingPipeline : public Pipeline
+{
+  public:
+	MeshShadingPipeline(MeshShadingPipeline &&other) = default;
+
+	~MeshShadingPipeline() override = default;
+
+	MeshShadingPipeline(Device &device, vk::PipelineCache pipeline_cache, PipelineState &pipeline_state);
+};
+
 }        // namespace xihe::backend

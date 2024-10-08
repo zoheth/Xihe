@@ -239,8 +239,8 @@ void RdgPass::add_release_barrier(const backend::ImageView *image_view, Barrier 
 	release_barriers_[image_view] = barrier;
 }
 
-RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses) :
-    RdgPass(std::move(name), render_context, pass_type, std::move(pass_info)), subpasses_{std::move(subpasses)}
+RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses) :
+    RdgPass(std::move(name), render_context, kRaster, std::move(pass_info)), subpasses_{std::move(subpasses)}
 {
 	for (auto &subpass : subpasses_)
 	{
@@ -365,8 +365,8 @@ void RasterRdgPass::add_subpass(std::unique_ptr<Subpass> &&subpass)
 	subpasses_.emplace_back(std::move(subpass));
 }
 
-ComputeRdgPass::ComputeRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources) :
-    RdgPass(std::move(name), render_context, pass_type, std::move(pass_info))
+ComputeRdgPass::ComputeRdgPass(std::string name, RenderContext &render_context, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources) :
+    RdgPass(std::move(name), render_context, kCompute, std::move(pass_info))
 {
 	for (const auto &shader_source : shader_sources)
 	{

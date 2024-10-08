@@ -268,6 +268,13 @@ void CommandBuffer::dispatch_indirect(const backend::Buffer &buffer, vk::DeviceS
 	get_handle().dispatchIndirect(buffer.get_handle(), offset);
 }
 
+void CommandBuffer::draw_mesh_tasks(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
+{
+	flush(vk::PipelineBindPoint::eGraphics);
+
+	get_handle().drawMeshTasksEXT(group_count_x, group_count_y, group_count_z);
+}
+
 void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data)
 {
 	get_handle().updateBuffer(buffer.get_handle(), offset, data.size(), data.data());

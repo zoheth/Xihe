@@ -50,6 +50,7 @@ GraphicsPipeline &ResourceCache::request_graphics_pipeline(PipelineState &pipeli
 	return request_resource(device_, recorder_, graphics_pipeline_mutex_, state_.graphics_pipelines, pipeline_cache_, pipeline_state);
 }
 
+
 ComputePipeline &ResourceCache::request_compute_pipeline(PipelineState &pipeline_state)
 {
 	return request_resource(device_, recorder_, compute_pipeline_mutex_, state_.compute_pipelines, pipeline_cache_, pipeline_state);

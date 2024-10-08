@@ -39,14 +39,14 @@ void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, 
 	    throw std::runtime_error{"Pass with name " + name + " already exists"};
 	}*/
 
-	rdg_passes_.push_back(std::make_unique<RasterRdgPass>(name, render_context_, RdgPassType::kRaster, std::move(pass_info), std::move(subpasses)));
+	rdg_passes_.push_back(std::make_unique<RasterRdgPass>(name, render_context_, std::move(pass_info), std::move(subpasses)));
 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
 
 void RdgBuilder::add_compute_pass(const std::string &name, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources, ComputeRdgPass::ComputeFunction &&compute_function)
 {
-	rdg_passes_.push_back(std::make_unique<ComputeRdgPass>(name, render_context_, RdgPassType::kCompute, std::move(pass_info), shader_sources));
+	rdg_passes_.push_back(std::make_unique<ComputeRdgPass>(name, render_context_, std::move(pass_info), shader_sources));
 	dynamic_cast<ComputeRdgPass *>(rdg_passes_.back().get())->set_compute_function(std::move(compute_function));
 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());

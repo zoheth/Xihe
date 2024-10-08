@@ -17,7 +17,8 @@ enum RdgPassType
 {
 	kNone    = 0,
 	kRaster  = 1 << 0,
-	kCompute = 1 << 1
+	kCompute = 1 << 1,
+	kMesh    = 1 << 2
 };
 
 struct RdgResourceHandle

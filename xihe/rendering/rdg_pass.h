@@ -146,7 +146,7 @@ class RdgPass
 class RasterRdgPass : public RdgPass
 {
   public:
-	RasterRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
+	RasterRdgPass(std::string name, RenderContext &render_context, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
 
 	~RasterRdgPass() override = default;
 
@@ -189,7 +189,7 @@ class ComputeRdgPass : public RdgPass
   public:
 	using ComputeFunction = std::function<void(backend::CommandBuffer &command_buffer, ComputeRdgPass &rdg_pass)>;
 
-	ComputeRdgPass(std::string name, RenderContext &render_context, RdgPassType pass_type, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources);
+	ComputeRdgPass(std::string name, RenderContext &render_context, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources);
 
 	~ComputeRdgPass() override = default;
 
@@ -203,6 +203,12 @@ class ComputeRdgPass : public RdgPass
 	std::vector<backend::PipelineLayout *> pipeline_layouts_;
 
 	ComputeFunction compute_function_{nullptr};
+};
+
+class MeshShadingRdgPass : public RdgPass
+{
+  public:
+	MeshShadingRdgPass(std::string name, RenderContext &render_context, )
 };
 }        // namespace rendering
 }        // namespace xihe

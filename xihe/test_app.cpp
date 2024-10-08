@@ -172,17 +172,6 @@ void xihe::TestApp::update(float delta_time)
 void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	XiheApp::request_gpu_features(gpu);
-	// Check whether the device supports task and mesh shaders
-	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShader);
-	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
-	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
-
-	// Pipeline statistics
-	auto &requested_features = gpu.get_mutable_requested_features();
-	if (gpu.get_features().pipelineStatisticsQuery)
-	{
-		requested_features.pipelineStatisticsQuery = VK_TRUE;
-	}
 }
 
 std::unique_ptr<xihe::Application> create_application()
