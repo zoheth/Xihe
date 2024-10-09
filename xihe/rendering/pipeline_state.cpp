@@ -257,6 +257,11 @@ void PipelineState::set_subpass_index(uint32_t subpass_index)
 
 }
 
+void PipelineState::set_has_mesh_shader()
+{
+	has_mesh_shader_ = true;
+}
+
 const backend::PipelineLayout &PipelineState::get_pipeline_layout() const
 {
 	assert(pipeline_layout_ && "Graphics state Pipeline layout is not set");
@@ -306,6 +311,11 @@ const DepthStencilState &PipelineState::get_depth_stencil_state() const
 const ColorBlendState &PipelineState::get_color_blend_state() const
 {
 	return color_blend_state_;
+}
+
+bool PipelineState::has_mesh_shader() const
+{
+	return has_mesh_shader_;
 }
 
 uint32_t PipelineState::get_subpass_index() const

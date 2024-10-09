@@ -5,7 +5,6 @@
 #include "backend/swapchain.h"
 #include "platform/window.h"
 #include "rendering/rdg_pass.h"
-#include "rendering/rdg_passes/main_pass.h"
 #include "rendering/render_target.h"
 
 namespace xihe::rendering

@@ -40,6 +40,11 @@ class Subpass
   public:
 	Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
 
+	Subpass(RenderContext          &render_context,
+	        backend::ShaderSource &&task_shader,
+	        backend::ShaderSource &&mesh_shader,
+	        backend::ShaderSource &&fragment_shader);
+
 	Subpass(const Subpass &) = delete;
 
 	Subpass(Subpass &&) = default;
@@ -73,6 +78,8 @@ class Subpass
 	RenderContext &get_render_context();
 
 	const backend::ShaderSource &get_vertex_shader() const;
+	const backend::ShaderSource &get_task_shader() const;
+	const backend::ShaderSource &get_mesh_shader() const;
 
 	const backend::ShaderSource &get_fragment_shader() const;
 
@@ -197,7 +204,11 @@ class Subpass
   private:
 	std::string debug_name_{};
 
-	backend::ShaderSource vertex_shader_;
+
+	std::optional<backend::ShaderSource> vertex_shader_;
+
+	std::optional<backend::ShaderSource> task_shader_;
+	std::optional<backend::ShaderSource> mesh_shader_;  
 
 	backend::ShaderSource fragment_shader_;
 

@@ -205,10 +205,5 @@ class ComputeRdgPass : public RdgPass
 	ComputeFunction compute_function_{nullptr};
 };
 
-class MeshShadingRdgPass : public RdgPass
-{
-  public:
-	MeshShadingRdgPass(std::string name, RenderContext &render_context, )
-};
 }        // namespace rendering
 }        // namespace xihe

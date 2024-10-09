@@ -436,6 +436,11 @@ void CommandBuffer::set_depth_bounds(float min_depth_bounds, float max_depth_bou
 	get_handle().setDepthBounds(min_depth_bounds, max_depth_bounds);
 }
 
+void CommandBuffer::set_has_mesh_shader()
+{
+	pipeline_state_.set_has_mesh_shader();
+}
+
 void CommandBuffer::bind_pipeline_layout(PipelineLayout &pipeline_layout)
 {
 	pipeline_state_.set_pipeline_layout(pipeline_layout);

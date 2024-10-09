@@ -1,6 +1,5 @@
 #include "lighting_subpass.h"
 
-#include "rendering/rdg_passes/shadow_pass.h"
 #include "rendering/render_context.h"
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"

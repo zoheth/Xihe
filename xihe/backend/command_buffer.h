@@ -152,6 +152,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void set_depth_bounds(float min_depth_bounds, float max_depth_bounds);
 
+	void set_has_mesh_shader();
+
 	void bind_pipeline_layout(PipelineLayout &pipeline_layout);
 
 	RenderPass &get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses);

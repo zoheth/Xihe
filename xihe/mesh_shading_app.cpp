@@ -1,7 +1,7 @@
 #include "mesh_shading_app.h"
 
-
 #include "backend/shader_compiler/glsl_compiler.h"
+#include "rendering/subpasses/mesh_shading_test_subpass.h"
 
 xihe::MeshShadingApp::MeshShadingApp()
 {
@@ -20,7 +20,24 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 		return false;
 	}
 
+	auto subpass = std::make_unique<rendering::MeshShadingTestSubpass>(*render_context_, backend::ShaderSource{"mesh_shading/mesh_shader_culling.task"}, backend::ShaderSource{"mesh_shading/mesh_shader_culling.mesh"}, backend::ShaderSource{"mesh_shading/mesh_shader_culling.frag"});
 
+	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
+	subpasses.push_back(std::move(subpass));
+
+	rendering::PassInfo pass_info{};
+	pass_info.outputs = {
+	    {rendering::RdgResourceType::kSwapchain, "swapchain"}};
+
+	rdg_builder_->add_raster_pass("mesh_shader_culling_pass", std::move(pass_info), std::move(subpasses));
+
+	return true;
+
+}
+
+void xihe::MeshShadingApp::update(float delta_time)
+{
+	XiheApp::update(delta_time);
 }
 
 void xihe::MeshShadingApp::request_gpu_features(backend::PhysicalDevice &gpu)
@@ -38,3 +55,9 @@ void xihe::MeshShadingApp::request_gpu_features(backend::PhysicalDevice &gpu)
 		requested_features.pipelineStatisticsQuery = VK_TRUE;
 	}
 }
+
+
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::MeshShadingApp>();
+//}

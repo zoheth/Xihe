@@ -58,9 +58,9 @@ struct DepthStencilState
 {
 	bool               depth_test_enable{VK_TRUE};
 	bool               depth_write_enable{VK_TRUE};
-	vk::CompareOp  depth_compare_op{vk::CompareOp::eGreater};
-	bool           depth_bounds_test_enable{VK_FALSE};
-	bool           stencil_test_enable{VK_FALSE};
+	vk::CompareOp      depth_compare_op{vk::CompareOp::eGreater};
+	bool               depth_bounds_test_enable{VK_FALSE};
+	bool               stencil_test_enable{VK_FALSE};
 	vk::StencilOpState front{};
 	vk::StencilOpState back{};
 };
@@ -140,6 +140,8 @@ class PipelineState
 
 	void set_subpass_index(uint32_t subpass_index);
 
+	void set_has_mesh_shader();
+
 	const backend::PipelineLayout &get_pipeline_layout() const;
 
 	const backend::RenderPass *get_render_pass() const;
@@ -159,6 +161,8 @@ class PipelineState
 	const DepthStencilState &get_depth_stencil_state() const;
 
 	const ColorBlendState &get_color_blend_state() const;
+
+	bool has_mesh_shader() const;
 
 	uint32_t get_subpass_index() const;
 
@@ -181,6 +185,8 @@ class PipelineState
 	MultisampleState            multisample_state_{};
 	DepthStencilState           depth_stencil_state_{};
 	ColorBlendState             color_blend_state_{};
+
+	bool has_mesh_shader_{false};
 
 	uint32_t subpass_index_{0U};
 };

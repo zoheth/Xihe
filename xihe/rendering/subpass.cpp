@@ -27,6 +27,13 @@ Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_s
     fragment_shader_{std::move(fragment_shader)}
 {}
 
+Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&task_shader, backend::ShaderSource &&mesh_shader, backend::ShaderSource &&fragment_shader) :
+    render_context_{render_context},
+    task_shader_{std::move(task_shader)},
+    mesh_shader_{std::move(mesh_shader)},
+    fragment_shader_{std::move(fragment_shader)}
+{}
+
 void Subpass::update_render_target_attachments(RenderTarget &render_target) const
 {
 	render_target.set_input_attachments(input_attachments_);
@@ -48,7 +55,32 @@ RenderContext &Subpass::get_render_context()
 
 const backend::ShaderSource &Subpass::get_vertex_shader() const
 {
-	return vertex_shader_;
+	if (!vertex_shader_.has_value())
+	{
+		throw std::runtime_error("Vertex shader not set");
+	}
+
+	return vertex_shader_.value();
+}
+
+const backend::ShaderSource &Subpass::get_task_shader() const
+{
+	if (!task_shader_.has_value())
+	{
+		throw std::runtime_error("Task shader not set");
+	}
+
+	return task_shader_.value();
+}
+
+const backend::ShaderSource &Subpass::get_mesh_shader() const
+{
+	if (!mesh_shader_.has_value())
+	{
+		throw std::runtime_error("Mesh shader not set");
+	}
+
+	return mesh_shader_.value();
 }
 
 const backend::ShaderSource &Subpass::get_fragment_shader() const
@@ -111,7 +143,7 @@ const uint32_t &Subpass::get_depth_stencil_resolve_attachment() const
 	return depth_stencil_resolve_attachment_;
 }
 
-const uint32_t & Subpass::get_depth_stencil_attachment() const
+const uint32_t &Subpass::get_depth_stencil_attachment() const
 {
 	return depth_stencil_attachment_;
 }
