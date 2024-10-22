@@ -9,6 +9,7 @@
 #include "scene_graph/components/texture.h"
 #include "scene_graph/node.h"
 #include "scene_graph/scene.h"
+#include "shared_uniform.h"
 
 namespace xihe::rendering
 {
@@ -73,7 +74,7 @@ void ShadowSubpass::update_uniforms(backend::CommandBuffer &command_buffer, sg::
 {
 	sg::OrthographicCamera &cascade_camera = cascade_script_.get_cascade_camera(cascade_index_);
 
-	GlobalUniform global_uniform{};
+	SceneUniform global_uniform{};
 
 	global_uniform.camera_view_proj = cascade_camera.get_pre_rotation() * xihe::vulkan_style_projection(cascade_camera.get_projection()) * cascade_camera.get_view();
 
@@ -83,7 +84,7 @@ void ShadowSubpass::update_uniforms(backend::CommandBuffer &command_buffer, sg::
 
 	auto &transform = node.get_transform();
 
-	auto allocation = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(GlobalUniform), thread_index);
+	auto allocation = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
 
 	global_uniform.model           = transform.get_world_matrix();
 	global_uniform.camera_position = glm::vec3((glm::inverse(cascade_camera.get_view())[3]));

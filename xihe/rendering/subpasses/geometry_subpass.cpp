@@ -9,6 +9,7 @@
 #include "scene_graph/components/texture.h"
 #include "scene_graph/node.h"
 #include "scene_graph/scene.h"
+#include "shared_uniform.h"
 
 #include <ranges>
 
@@ -86,7 +87,7 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 
 void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index)
 {
-	GlobalUniform global_uniform{};
+	SceneUniform global_uniform{};
 
 	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
 
@@ -94,7 +95,7 @@ void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg:
 
 	auto &transform = node.get_transform();
 
-	auto allocation = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(GlobalUniform), thread_index);
+	auto allocation = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
 
 	global_uniform.model           = transform.get_world_matrix();
 	global_uniform.camera_position = glm::vec3((glm::inverse(camera_.get_view())[3]));

@@ -30,8 +30,6 @@ void MeshShadingTestSubpass::draw(backend::CommandBuffer &command_buffer)
 	auto &pipeline_layout = command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules);
 	command_buffer.bind_pipeline_layout(pipeline_layout);
 
-	// todo bind descriptor set
-
 	uint32_t N             = density_level_ == 0 ? 4 : (density_level_ == 1 ? 6 : (density_level_ == 2 ? 8 : 2));
 	uint32_t group_count_x = N;
 	uint32_t group_count_y = N;

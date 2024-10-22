@@ -1,9 +1,5 @@
 #pragma once
 
-#include "common/error.h"
-
-#include "common/glm_common.h"
-
 #include "rendering/subpass.h"
 
 namespace xihe
@@ -18,29 +14,6 @@ class SubMesh;
 class Camera;
 }
 
-struct alignas(16) GlobalUniform
-{
-	glm::mat4 model;
-
-	glm::mat4 camera_view_proj;
-
-	glm::vec3 camera_position;
-};
-
-/**
- * @brief PBR material uniform for base shader
- */
-struct PBRMaterialUniform
-{
-	glm::uvec4 texture_indices;
-
-	glm::vec4 base_color_factor;
-
-	float metallic_factor;
-
-	float roughness_factor;
-};
-
 namespace rendering
 {
 class GeometrySubpass : public Subpass
@@ -50,12 +23,9 @@ class GeometrySubpass : public Subpass
 
 	~GeometrySubpass() override = default;
 
-	virtual void prepare() override;
+	void prepare() override;
 
-	/**
-	 * @brief Record draw commands
-	 */
-	virtual void draw(backend::CommandBuffer &command_buffer) override;
+	void draw(backend::CommandBuffer &command_buffer) override;
 
   protected:
 	virtual void update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index);
