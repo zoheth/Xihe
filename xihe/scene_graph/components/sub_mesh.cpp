@@ -33,6 +33,45 @@ SubMesh::SubMesh(const std::string &name) :
     Component{name}
 {}
 
+SubMesh::SubMesh(MeshPrimitiveData primitive_data, backend::Device &device) :
+	Component{primitive_data.name}
+{
+	vertex_count = primitive_data.vertex_count;
+
+	for (const auto &attrib : primitive_data.attributes)
+	{
+		backend::BufferBuilder buffer_builder{attrib.data.size()};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eVertexBuffer).with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		backend::Buffer buffer{device, buffer_builder};
+		buffer.update(attrib.data);
+		buffer.set_debug_name(fmt::format("{}: '{}' vertex buffer", primitive_data.name, attrib.name));
+
+		vertex_buffers.insert(std::make_pair(attrib.name, std::move(buffer)));
+
+		sg::VertexAttribute vertex_attrib;
+		vertex_attrib.format = attrib.format;
+		vertex_attrib.stride = attrib.stride;
+
+		set_attribute(attrib.name, vertex_attrib);
+	}
+
+	if (!primitive_data.indices.empty())
+	{
+		backend::BufferBuilder buffer_builder{primitive_data.indices.size()};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eIndexBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+
+		index_buffer = std::make_unique<backend::Buffer>(device, buffer_builder);
+		index_buffer->set_debug_name(fmt::format("{}: index buffer", primitive_data.name));
+
+		index_buffer->update(primitive_data.indices);
+
+		index_type  = primitive_data.index_type;
+		index_count = primitive_data.index_count;
+	}
+}
+
 std::type_index SubMesh::get_type()
 {
 	return typeid(SubMesh);

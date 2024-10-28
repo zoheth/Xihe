@@ -2,6 +2,7 @@
 
 #include "backend/buffer.h"
 #include "backend/shader_module.h"
+#include "scene_graph/geometry_data.h"
 #include "scene_graph/component.h"
 
 namespace xihe::sg
@@ -21,6 +22,8 @@ class SubMesh : public Component
 {
   public:
 	SubMesh(const std::string &name = {});
+
+	SubMesh(MeshPrimitiveData primitive_data, backend::Device &device);
 
 	virtual ~SubMesh() = default;
 

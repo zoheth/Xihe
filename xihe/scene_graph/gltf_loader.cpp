@@ -17,6 +17,7 @@
 #include "components/light.h"
 #include "components/image/astc.h"
 #include "platform/filesystem.h"
+#include "scene_graph/geometry_data.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
@@ -306,6 +307,38 @@ vk::Format get_attribute_format(const tinygltf::Model *model, uint32_t accessorI
 
 	return format;
 };
+
+vk::IndexType get_index_type(const tinygltf::Model *model, int accessor_index)
+{
+	const auto &accessor = model->accessors[accessor_index];
+	switch (accessor.componentType)
+	{
+		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+			return vk::IndexType::eUint8EXT;        // Note: Requires enabling extension VK_EXT_index_type_uint8
+		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+			return vk::IndexType::eUint16;
+		case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+			return vk::IndexType::eUint32;
+		default:
+			throw std::runtime_error("Unsupported index component type");
+	}
+}
+
+std::vector<uint8_t> convert_indices_to_uint16(const std::vector<uint8_t> &indices)
+{
+	size_t               count = indices.size();
+	std::vector<uint8_t> converted_indices(count * 2);        // uint16_t is 2 bytes
+
+	const uint8_t *src = indices.data();
+	uint16_t      *dst = reinterpret_cast<uint16_t *>(converted_indices.data());
+
+	for (size_t i = 0; i < count; ++i)
+	{
+		dst[i] = static_cast<uint16_t>(src[i]);
+	}
+
+	return converted_indices;
+}
 
 std::vector<uint8_t> convert_underlying_data_stride(const std::vector<uint8_t> &src_data, uint32_t src_stride, uint32_t dst_stride)
 {
@@ -655,88 +688,53 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 		// Used to generate meshlets
 		std::vector<float> vertex_positions;
+		std::vector<MeshPrimitiveData> mesh_primitives;
 
 		for (size_t i_primitive = 0; i_primitive < gltf_mesh.primitives.size(); i_primitive++)
 		{
 			const auto &gltf_primitive = gltf_mesh.primitives[i_primitive];
+			MeshPrimitiveData primitive_data;
+			primitive_data.name = fmt::format("'{}' mesh, primitive #{}", gltf_mesh.name, i_primitive);
 
-			auto submesh_name = fmt::format("'{}' mesh, primitive #{}", gltf_mesh.name, i_primitive);
-			auto submesh      = std::make_unique<sg::SubMesh>(std::move(submesh_name));
+			//auto submesh_name = fmt::format("'{}' mesh, primitive #{}", gltf_mesh.name, i_primitive);
+			//auto submesh      = std::make_unique<sg::SubMesh>(std::move(submesh_name));
 
 			for (auto &attribute : gltf_primitive.attributes)
 			{
-				std::string attrib_name = attribute.first;
-				std::transform(attrib_name.begin(), attrib_name.end(), attrib_name.begin(), ::tolower);
+				VertexAttributeData attrib_data;
+				attrib_data.name = attribute.first;
+				std::ranges::transform(attrib_data.name, attrib_data.name.begin(), ::tolower);
 
-				auto vertex_data = get_attribute_data(&model_, attribute.second);
+				int accessor_index = attribute.second;
+				attrib_data.format = get_attribute_format(&model_, accessor_index);
+				attrib_data.stride = to_u32(get_attribute_stride(&model_, accessor_index));
+				attrib_data.data   = get_attribute_data(&model_, accessor_index);
 
-				if (attrib_name == "position")
+				primitive_data.attributes.push_back(std::move(attrib_data));
+
+				if (attrib_data.name == "position")
 				{
-					assert(attribute.second < model_.accessors.size());
-					submesh->vertex_count = to_u32(model_.accessors[attribute.second].count);
-
-					vertex_positions.resize(vertex_data.size() / sizeof(float));
-					std::memcpy(vertex_positions.data(), vertex_data.data(), vertex_data.size());
+					primitive_data.vertex_count = to_u32(model_.accessors[accessor_index].count);
 				}
-				backend::BufferBuilder buffer_builder{vertex_data.size()};
-				buffer_builder.with_usage(vk::BufferUsageFlagBits::eVertexBuffer)
-				    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-				backend::Buffer buffer{device_, buffer_builder};
-				buffer.update(vertex_data);
-				buffer.set_debug_name(fmt::format("'{}' mesh, primitive #{}: '{}' vertex buffer",
-				                                  gltf_mesh.name, i_primitive, attrib_name));
-
-				submesh->vertex_buffers.insert(std::make_pair(attrib_name, std::move(buffer)));
-
-				sg::VertexAttribute attrib;
-				attrib.format = get_attribute_format(&model_, attribute.second);
-				attrib.stride = to_u32(get_attribute_stride(&model_, attribute.second));
-
-				submesh->set_attribute(attrib_name, attrib);
 			}
 
 			if (gltf_primitive.indices >= 0)
 			{
-				submesh->index_count = to_u32(get_attribute_size(&model_, gltf_primitive.indices));
+				int accessor_index         = gltf_primitive.indices;
+				primitive_data.index_count = to_u32(get_attribute_size(&model_, accessor_index));
+				primitive_data.index_type  = get_index_type(&model_, accessor_index);
+				primitive_data.indices     = get_attribute_data(&model_, accessor_index);
 
-				auto format = get_attribute_format(&model_, gltf_primitive.indices);
-
-				auto index_data = get_attribute_data(&model_, gltf_primitive.indices);
-
-				switch (format)
+				// Handle index format conversion if necessary
+				if (primitive_data.index_type == vk::IndexType::eUint8EXT)
 				{
-					case vk::Format::eR8Uint:
-						// Converts uint8 data into uint16 data, still represented by a uint8 vector
-						index_data          = convert_underlying_data_stride(index_data, 1, 2);
-						submesh->index_type = vk::IndexType::eUint16;
-						break;
-					case vk::Format::eR16Uint:
-						submesh->index_type = vk::IndexType::eUint16;
-						/*std::vector<uint16_t> index_data16(index_data.size() / sizeof(uint16_t));
-						std::memcpy(index_data16.data(), index_data.data(), index_data.size());*/
-						
-						break;
-					case vk::Format::eR32Uint:
-						submesh->index_type = vk::IndexType::eUint32;
-						break;
-					default:
-						LOGE("gltf primitive has invalid format type");
-						break;
+					primitive_data.indices    = convert_indices_to_uint16(primitive_data.indices);
+					primitive_data.index_type = vk::IndexType::eUint16;
 				}
 
-				backend::BufferBuilder buffer_builder{index_data.size()};
-				buffer_builder.with_usage(vk::BufferUsageFlagBits::eIndexBuffer)
-				    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-				submesh->index_buffer = std::make_unique<backend::Buffer>(device_, buffer_builder);
-				submesh->index_buffer->set_debug_name(fmt::format("'{}' mesh, primitive #{}: index buffer",
-				                                                  gltf_mesh.name, i_primitive));
+			}
 
-				submesh->index_buffer->update(index_data);
-			}
-			else
-			{
-				submesh->vertex_count = to_u32(get_attribute_size(&model_, gltf_primitive.attributes.at("POSITION")));
-			}
+			auto submesh = std::make_unique<sg::SubMesh>(primitive_data, device_);
 
 			if (gltf_primitive.material < 0)
 			{
