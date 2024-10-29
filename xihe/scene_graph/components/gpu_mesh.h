@@ -2,7 +2,8 @@
 
 #include "backend/buffer.h"
 #include "backend/shader_module.h"
-#include "scene_graph/components/sub_mesh.h"
+#include "scene_graph/geometry_data.h"
+#include "scene_graph/component.h"
 
 namespace xihe::sg
 {
@@ -16,10 +17,10 @@ struct GpuMeshletVertexData
 	float padding;
 }; 
 
-class GpuMesh : public SubMesh
+class GpuMesh : public Component
 {
 public:
-	GpuMesh(const std::string &name = {});
+	GpuMesh(const MeshPrimitiveData &primitive_data, backend::Device &device);
   private:
 	
 };

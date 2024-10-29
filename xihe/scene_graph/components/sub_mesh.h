@@ -21,9 +21,9 @@ struct VertexAttribute
 class SubMesh : public Component
 {
   public:
-	SubMesh(const std::string &name = {});
+	// SubMesh(const std::string &name = {});
 
-	SubMesh(MeshPrimitiveData primitive_data, backend::Device &device);
+	SubMesh(const MeshPrimitiveData &primitive_data, backend::Device &device);
 
 	virtual ~SubMesh() = default;
 

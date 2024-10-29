@@ -156,10 +156,10 @@ bool texture_needs_srgb_colorspace(const std::string &name)
 	return false;
 }
 
-std::vector<uint8_t> get_attribute_data(const tinygltf::Model *model, uint32_t accessorId)
+std::vector<uint8_t> get_attribute_data(const tinygltf::Model *model, uint32_t accessor_id)
 {
-	assert(accessorId < model->accessors.size());
-	auto &accessor = model->accessors[accessorId];
+	assert(accessor_id < model->accessors.size());
+	auto &accessor = model->accessors[accessor_id];
 	assert(accessor.bufferView < model->bufferViews.size());
 	auto &bufferView = model->bufferViews[accessor.bufferView];
 	assert(bufferView.buffer < model->buffers.size());
@@ -172,26 +172,26 @@ std::vector<uint8_t> get_attribute_data(const tinygltf::Model *model, uint32_t a
 	return {buffer.data.begin() + startByte, buffer.data.begin() + endByte};
 };
 
-size_t get_attribute_size(const tinygltf::Model *model, uint32_t accessorId)
+size_t get_attribute_size(const tinygltf::Model *model, uint32_t accessor_id)
 {
-	assert(accessorId < model->accessors.size());
-	return model->accessors[accessorId].count;
+	assert(accessor_id < model->accessors.size());
+	return model->accessors[accessor_id].count;
 };
 
-size_t get_attribute_stride(const tinygltf::Model *model, uint32_t accessorId)
+size_t get_attribute_stride(const tinygltf::Model *model, uint32_t accessor_id)
 {
-	assert(accessorId < model->accessors.size());
-	auto &accessor = model->accessors[accessorId];
+	assert(accessor_id < model->accessors.size());
+	auto &accessor = model->accessors[accessor_id];
 	assert(accessor.bufferView < model->bufferViews.size());
 	auto &bufferView = model->bufferViews[accessor.bufferView];
 
 	return accessor.ByteStride(bufferView);
 };
 
-vk::Format get_attribute_format(const tinygltf::Model *model, uint32_t accessorId)
+vk::Format get_attribute_format(const tinygltf::Model *model, uint32_t accessor_id)
 {
-	assert(accessorId < model->accessors.size());
-	auto &accessor = model->accessors[accessorId];
+	assert(accessor_id < model->accessors.size());
+	auto &accessor = model->accessors[accessor_id];
 
 	vk::Format format;
 
@@ -702,17 +702,17 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 			for (auto &attribute : gltf_primitive.attributes)
 			{
 				VertexAttributeData attrib_data;
-				attrib_data.name = attribute.first;
-				std::ranges::transform(attrib_data.name, attrib_data.name.begin(), ::tolower);
+				std::string attrib_name = attribute.first;
+				std::ranges::transform(attrib_name, attrib_name.begin(), ::tolower);
 
 				int accessor_index = attribute.second;
 				attrib_data.format = get_attribute_format(&model_, accessor_index);
 				attrib_data.stride = to_u32(get_attribute_stride(&model_, accessor_index));
 				attrib_data.data   = get_attribute_data(&model_, accessor_index);
 
-				primitive_data.attributes.push_back(std::move(attrib_data));
+				primitive_data.attributes[attrib_name] = std::move(attrib_data);
 
-				if (attrib_data.name == "position")
+				if (attrib_name == "position")
 				{
 					primitive_data.vertex_count = to_u32(model_.accessors[accessor_index].count);
 				}
