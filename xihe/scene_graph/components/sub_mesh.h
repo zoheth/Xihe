@@ -9,15 +9,6 @@ namespace xihe::sg
 {
 class Material;
 
-struct VertexAttribute
-{
-	vk::Format format = vk::Format::eUndefined;
-
-	std::uint32_t stride = 0;
-
-	std::uint32_t offset = 0;
-};
-
 class SubMesh : public Component
 {
   public:

@@ -5,6 +5,14 @@
 
 namespace xihe
 {
+
+struct VertexAttribute
+{
+	vk::Format format = vk::Format::eUndefined;
+	std::uint32_t stride = 0;
+	std::uint32_t offset = 0;
+};
+
 struct VertexAttributeData
 {
 	// std::string          name;
