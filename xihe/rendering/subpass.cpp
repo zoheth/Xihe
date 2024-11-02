@@ -27,7 +27,7 @@ Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_s
     fragment_shader_{std::move(fragment_shader)}
 {}
 
-Subpass::Subpass(RenderContext &render_context, backend::ShaderSource &&task_shader, backend::ShaderSource &&mesh_shader, backend::ShaderSource &&fragment_shader) :
+Subpass::Subpass(RenderContext &render_context, std::optional<backend::ShaderSource> task_shader, backend::ShaderSource &&mesh_shader, backend::ShaderSource &&fragment_shader) :
     render_context_{render_context},
     task_shader_{std::move(task_shader)},
     mesh_shader_{std::move(mesh_shader)},

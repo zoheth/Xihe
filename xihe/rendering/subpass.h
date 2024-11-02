@@ -41,7 +41,7 @@ class Subpass
 	Subpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader);
 
 	Subpass(RenderContext          &render_context,
-	        backend::ShaderSource &&task_shader,
+	        std::optional<backend::ShaderSource> task_shader,
 	        backend::ShaderSource &&mesh_shader,
 	        backend::ShaderSource &&fragment_shader);
 
