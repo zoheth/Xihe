@@ -22,6 +22,7 @@
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
 #include "scene_graph/components/mesh.h"
+#include "scene_graph/components/mshader_mesh.h"
 #include "scene_graph/components/sampler.h"
 #include "scene_graph/components/sub_mesh.h"
 #include "scene_graph/components/texture.h"
@@ -749,6 +750,10 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 			mesh->add_submesh(*submesh);
 
 			scene.add_component(std::move(submesh));
+
+			// todo
+			auto mshader_mesh = std::make_unique<sg::MshaderMesh>(primitive_data, device_);
+			scene.add_component(std::move(mshader_mesh));
 		}
 
 		scene.add_component(std::move(mesh));

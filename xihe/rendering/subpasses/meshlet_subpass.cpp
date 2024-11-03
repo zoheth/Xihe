@@ -2,6 +2,8 @@
 
 #include "scene_graph/components/camera.h"
 #include "rendering/render_context.h"
+#include "scene_graph/scene.h"
+#include "shared_uniform.h"
 
 namespace xihe::rendering
 {
@@ -10,6 +12,8 @@ MeshletSubpass::MeshletSubpass(rendering::RenderContext &render_context, std::op
 	camera_{camera},
 	scene_{scene}
 {
+	mshader_mesh_ = scene.get_components<sg::MshaderMesh>()[0];
+	assert(mshader_mesh_);
 }
 
 void MeshletSubpass::prepare()
@@ -18,19 +22,36 @@ void MeshletSubpass::prepare()
 void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 {
 	command_buffer.set_has_mesh_shader();
+
+	update_uniform(command_buffer, 0);
+
+	auto &mesh_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader());
+	auto &frag_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
+
+	std::vector<backend::ShaderModule *> shader_modules{&mesh_shader_module, &frag_shader_module};
+
+	auto &pipeline_layout = command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules);
+	command_buffer.bind_pipeline_layout(pipeline_layout);
+
+	command_buffer.bind_buffer(mshader_mesh_->get_meshlet_buffer(), 0, mshader_mesh_->get_meshlet_buffer().get_size(), 0, 3, 0);
+	command_buffer.bind_buffer(mshader_mesh_->get_vertex_buffer(), 0, mshader_mesh_->get_vertex_buffer().get_size(), 0, 4, 0);
+
+	uint32_t num_workgroups_x = mshader_mesh_->get_meshlet_count();        // meshlets count
+	uint32_t num_workgroups_y = 1;
+	uint32_t num_workgroups_z = 1;
+	command_buffer.draw_mesh_tasks(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 }
 void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, size_t thread_index) const
 {
-	UBOVS ubo{};
-	ubo.proj  = camera_.get_projection();
-	ubo.view  = camera_.get_view();
-	ubo.model = glm::mat4(1.f);
-	ubo.model = glm::rotate(ubo.model, glm::pi<float>(), glm::vec3(0, 0, 1));
+	SceneUniform global_uniform{};
+	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
+
+	global_uniform.camera_position = glm::vec3((glm::inverse(camera_.get_view())[3]));
 
 	auto &render_frame = render_context_.get_active_frame();
-	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(UBOVS), thread_index);
+	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
 
-	allocation.update(ubo);
+	allocation.update(global_uniform);
 
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 }

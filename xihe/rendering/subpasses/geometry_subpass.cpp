@@ -145,7 +145,7 @@ void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::S
 
 	for (auto &input_resource : vertex_input_resources)
 	{
-		sg::VertexAttribute attribute;
+		VertexAttribute attribute;
 
 		if (!sub_mesh.get_attribute(input_resource.name, attribute))
 		{

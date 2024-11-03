@@ -26,7 +26,7 @@ SubMesh::SubMesh(const MeshPrimitiveData &primitive_data, backend::Device &devic
 
 		vertex_buffers.insert(std::make_pair(name, std::move(buffer)));
 
-		sg::VertexAttribute vertex_attrib;
+		VertexAttribute vertex_attrib;
 		vertex_attrib.format = attrib.format;
 		vertex_attrib.stride = attrib.stride;
 

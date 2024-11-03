@@ -1,32 +1,14 @@
-/* Copyright (c) 2023, Mobica Limited
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 the "License";
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 #version 450
 #extension GL_EXT_mesh_shader : require
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-layout(lines, max_vertices = 64, max_primitives = 126) out;
+layout(triangles, max_vertices = 126, max_primitives = 42) out;
 
-layout(std140, binding = 2) uniform UniformBufferObject 
-{
+layout(set = 0, binding = 2) uniform GlobalUniform {
     mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo;
-
+    mat4 view_proj;
+    vec3 camera_position;
+} global_uniform;
 
 struct s_vertex
 {
@@ -38,7 +20,6 @@ layout (std430, binding = 4) buffer _vertices
 {
   s_vertex vertices[];
 } vb;
-
 
 struct s_meshlet
 {
@@ -53,56 +34,54 @@ layout (std430, binding = 3) buffer _meshlets
   s_meshlet meshlets[];
 } mbuf;
 
-
 layout (location = 0) out PerVertexData
 {
   vec4 color;
 } v_out[];
 
+uint find_local_index(uint global_index, uint vertex_count, uint vi_array[64]) {
+    for (uint j = 0; j < vertex_count; ++j) {
+        if (vi_array[j] == global_index)
+            return j;
+    }
+    // Handle error case if not found
+    return 0;
+}
 
 void main(void)
 {
-  uint meshlet_index = gl_WorkGroupID.x;
-  uint thread_id = gl_LocalInvocationID.x;
-  uint vertex_count = mbuf.meshlets[meshlet_index].vertex_count;
-  uint index_count = mbuf.meshlets[meshlet_index].index_count;
-  uint primitive_count = index_count/3;
-  SetMeshOutputsEXT( primitive_count * 2, primitive_count);
+    uint meshlet_index = gl_WorkGroupID.x;
+    uint vertex_count = mbuf.meshlets[meshlet_index].vertex_count;
+    uint index_count = mbuf.meshlets[meshlet_index].index_count;
+    uint primitive_count = index_count / 3;
 
-  float normalLength = 0.1f;
+    SetMeshOutputsEXT(vertex_count, primitive_count);
 
-  mat4 MVP = ubo.proj * ubo.view * ubo.model;
+    mat4 MVP = global_uniform.view_proj * global_uniform.model;
 
-  uint j = 0;
-  uint k = 0;
-  for (uint i = 0; i < primitive_count; ++i)
-  {
-    //triangle indices
-    uint vi1 = mbuf.meshlets[meshlet_index].indices[j];
-    uint vi2 = mbuf.meshlets[meshlet_index].indices[j + 1];
-    uint vi3 = mbuf.meshlets[meshlet_index].indices[j + 2];
+    // Array to store global vertex indices for mapping
+    uint vi_array[64];
 
-    //middle point of triangle
-    vec3 pos = (vb.vertices[vi1].position.xyz + vb.vertices[vi2].position.xyz + vb.vertices[vi3].position.xyz)/3.0f;
-    vec3 normal = vb.vertices[vi1].normal.xyz;
-   
-    //line vertices
-    gl_MeshVerticesEXT[k].gl_Position = MVP * vec4(pos ,1.0f);
-    v_out[k].color = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+    // Output each vertex's position and color
+    for (uint i = 0; i < vertex_count; ++i)
+    {
+        uint vi = mbuf.meshlets[meshlet_index].vertices[i];
+        vi_array[i] = vi; // Store for mapping
+        gl_MeshVerticesEXT[i].gl_Position = MVP * vb.vertices[vi].position;
+        v_out[i].color = vec4(1.0, 1.0, 1.0, 1.0); // Set color to white
+    }
 
-    gl_MeshVerticesEXT[k + 1].gl_Position = MVP * vec4(pos + normal * normalLength, 1.0f);
-    v_out[k + 1].color = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+    // Set each triangle's vertex indices
+    for (uint i = 0; i < primitive_count; ++i)
+    {
+        uint idx0 = mbuf.meshlets[meshlet_index].indices[i * 3 + 0];
+        uint idx1 = mbuf.meshlets[meshlet_index].indices[i * 3 + 1];
+        uint idx2 = mbuf.meshlets[meshlet_index].indices[i * 3 + 2];
 
-    k = k + 2;
-    j= j + 3;
-  }
+        uint local_idx0 = find_local_index(idx0, vertex_count, vi_array);
+        uint local_idx1 = find_local_index(idx1, vertex_count, vi_array);
+        uint local_idx2 = find_local_index(idx2, vertex_count, vi_array);
 
-  //indices for line vertices
-  k = 0;
-  for (uint i = 0; i < primitive_count; i++)
-  {
-    gl_PrimitiveLineIndicesEXT[i] =  uvec2(k,k+1);
-    k = k + 2;
-  }
-
+        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(local_idx0, local_idx1, local_idx2);
+    }
 }

@@ -2,6 +2,8 @@
 
 #include "rendering/subpass.h"
 
+#include "scene_graph/components/mshader_mesh.h"
+
 namespace xihe
 {
 
@@ -37,9 +39,9 @@ class MeshletSubpass : public rendering::Subpass
   private:
 	sg::Camera &camera_;
 
-	std::vector<sg::Mesh *> meshes_;
-
 	sg::Scene &scene_;
+
+	sg::MshaderMesh *mshader_mesh_{nullptr};
 };
 
 }        // namespace rendering

@@ -1,8 +1,9 @@
 #include "gpu_scene.h"
 
 #include "meshoptimizer.h"
-
 #include <variant>
+
+#include "rendering/subpass.h"
 
 namespace xihe::sg
 {

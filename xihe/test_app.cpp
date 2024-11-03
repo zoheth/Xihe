@@ -174,7 +174,7 @@ void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	XiheApp::request_gpu_features(gpu);
 }
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::TestApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::TestApp>();
+//}
