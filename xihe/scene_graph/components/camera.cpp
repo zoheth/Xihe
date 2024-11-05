@@ -99,7 +99,7 @@ glm::mat4 PerspectiveCamera::get_projection()
 	return glm::perspective(fov_, aspect_ratio_, far_plane_, near_plane_);
 }
 
-Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent)
+Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent, float speed)
 {
 	auto camera_node = scene.find_node(node_name);
 
@@ -123,6 +123,8 @@ Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D e
 	auto free_camera_script = std::make_unique<sg::FreeCamera>(*camera_node);
 
 	free_camera_script->resize(extent.width, extent.height);
+
+	free_camera_script->set_speed_multiplier(speed);
 
 	scene.add_component(std::move(free_camera_script), *camera_node);
 

@@ -753,6 +753,7 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 			// todo
 			auto mshader_mesh = std::make_unique<sg::MshaderMesh>(primitive_data, device_);
+			mesh->add_mshader_mesh(*mshader_mesh);
 			scene.add_component(std::move(mshader_mesh));
 		}
 

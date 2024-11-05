@@ -41,6 +41,7 @@ class MeshletSubpass : public rendering::Subpass
 
 	sg::Scene &scene_;
 
+	sg::Mesh *mesh_{nullptr};
 	sg::MshaderMesh *mshader_mesh_{nullptr};
 };
 

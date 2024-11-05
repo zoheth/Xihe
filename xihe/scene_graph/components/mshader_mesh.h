@@ -33,10 +33,13 @@ class MshaderMesh : public Component
 
 	virtual std::type_index get_type() override;
 
-	backend::Buffer &get_vertex_buffer();
-	backend::Buffer &get_meshlet_buffer();
+	backend::Buffer &get_vertex_buffer() const;
+	backend::Buffer &get_meshlet_buffer() const;
 
 	uint32_t get_meshlet_count() const;
+
+	const backend::ShaderVariant &get_shader_variant() const;
+	backend::ShaderVariant &get_mut_shader_variant();
 
   private:
 	void prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data);
@@ -45,5 +48,7 @@ class MshaderMesh : public Component
 
 	std::unique_ptr<backend::Buffer> vertex_buffer_;
 	std::unique_ptr<backend::Buffer> meshlet_buffer_;
+
+	backend::ShaderVariant shader_variant_;
 };
 }        // namespace xihe::sg

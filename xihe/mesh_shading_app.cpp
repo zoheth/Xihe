@@ -2,6 +2,8 @@
 
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/subpasses/meshlet_subpass.h"
+#include "scene_graph/scripts/free_camera.h"
+#include "scene_graph/scene.h"
 
 xihe::MeshShadingApp::MeshShadingApp()
 {
@@ -23,17 +25,19 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 	load_scene("scenes/bunny.gltf");
 	assert(scene_ && "Scene not loaded");
 
-	auto &camera_node = xihe::sg::add_free_camera(*scene_, "Camera", get_render_context().get_surface_extent());
+	auto &camera_node = xihe::sg::add_free_camera(*scene_, "Camera", get_render_context().get_surface_extent(), 0.03f);
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
-	auto subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"mesh_shading/gshader_to_mshader.mesh"}, backend::ShaderSource{"mesh_shading/gshader_to_mshader_mesh.frag"}, *scene_, *camera);
+	auto subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"mesh_shading/mshader_test.mesh"}, backend::ShaderSource{"mesh_shading/mshader_test.frag"}, *scene_, *camera);
 
 	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
 	subpasses.push_back(std::move(subpass));
 
 	rendering::PassInfo pass_info{};
 	pass_info.outputs = {
-	    {rendering::RdgResourceType::kSwapchain, "swapchain"}};
+	    {rendering::RdgResourceType::kSwapchain, "swapchain"},
+	    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())}
+	};
 
 	rdg_builder_->add_raster_pass("mesh_shader_meshlet", std::move(pass_info), std::move(subpasses));
 

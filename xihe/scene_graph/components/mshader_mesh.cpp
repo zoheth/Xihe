@@ -79,11 +79,11 @@ std::type_index MshaderMesh::get_type()
 {
 	return typeid(MshaderMesh);
 }
-backend::Buffer &MshaderMesh::get_vertex_buffer()
+backend::Buffer &MshaderMesh::get_vertex_buffer() const
 {
 	return *vertex_buffer_;
 }
-backend::Buffer &MshaderMesh::get_meshlet_buffer()
+backend::Buffer &MshaderMesh::get_meshlet_buffer() const
 {
 	return *meshlet_buffer_;
 }
@@ -91,6 +91,17 @@ uint32_t MshaderMesh::get_meshlet_count() const
 {
 	return meshlet_count_;
 }
+
+const backend::ShaderVariant & MshaderMesh::get_shader_variant() const
+{
+	return shader_variant_;
+}
+
+backend::ShaderVariant & MshaderMesh::get_mut_shader_variant()
+{
+	return shader_variant_;
+}
+
 void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data)
 {
 	Meshlet meshlet;

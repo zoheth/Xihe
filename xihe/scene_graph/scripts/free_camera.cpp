@@ -30,85 +30,85 @@ void FreeCamera::update(float delta_time)
 	glm::vec3 delta_translation(0.0f, 0.0f, 0.0f);
 	glm::vec3 delta_rotation(0.0f, 0.0f, 0.0f);
 
-	float mul_translation = speed_multiplier;
+	float mul_translation = speed_multiplier_;
 
-	if (key_pressed[KeyCode::W])
+	if (key_pressed_[KeyCode::W])
 	{
 		delta_translation.z -= TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::S])
+	if (key_pressed_[KeyCode::S])
 	{
 		delta_translation.z += TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::A])
+	if (key_pressed_[KeyCode::A])
 	{
 		delta_translation.x -= TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::D])
+	if (key_pressed_[KeyCode::D])
 	{
 		delta_translation.x += TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::Q])
+	if (key_pressed_[KeyCode::Q])
 	{
 		delta_translation.y -= TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::E])
+	if (key_pressed_[KeyCode::E])
 	{
 		delta_translation.y += TRANSLATION_MOVE_STEP;
 	}
-	if (key_pressed[KeyCode::LeftControl])
+	if (key_pressed_[KeyCode::LeftControl])
 	{
 		mul_translation *= (1.0f * TRANSLATION_MOVE_SPEED);
 	}
-	if (key_pressed[KeyCode::LeftShift])
+	if (key_pressed_[KeyCode::LeftShift])
 	{
 		mul_translation *= (1.0f / TRANSLATION_MOVE_SPEED);
 	}
 
-	if (key_pressed[KeyCode::I])
+	if (key_pressed_[KeyCode::I])
 	{
 		delta_rotation.x += KEY_ROTATION_MOVE_WEIGHT;
 	}
-	if (key_pressed[KeyCode::K])
+	if (key_pressed_[KeyCode::K])
 	{
 		delta_rotation.x -= KEY_ROTATION_MOVE_WEIGHT;
 	}
-	if (key_pressed[KeyCode::J])
+	if (key_pressed_[KeyCode::J])
 	{
 		delta_rotation.y += KEY_ROTATION_MOVE_WEIGHT;
 	}
-	if (key_pressed[KeyCode::L])
+	if (key_pressed_[KeyCode::L])
 	{
 		delta_rotation.y -= KEY_ROTATION_MOVE_WEIGHT;
 	}
 
-	if (mouse_button_pressed[MouseButton::Left] && mouse_button_pressed[MouseButton::Right])
+	if (mouse_button_pressed_[MouseButton::Left] && mouse_button_pressed_[MouseButton::Right])
 	{
-		delta_rotation.z += TRANSLATION_MOVE_WEIGHT * mouse_move_delta.x;
+		delta_rotation.z += TRANSLATION_MOVE_WEIGHT * mouse_move_delta_.x;
 	}
-	else if (mouse_button_pressed[MouseButton::Right])
+	else if (mouse_button_pressed_[MouseButton::Right])
 	{
-		delta_rotation.x -= ROTATION_MOVE_WEIGHT * mouse_move_delta.y;
-		delta_rotation.y -= ROTATION_MOVE_WEIGHT * mouse_move_delta.x;
+		delta_rotation.x -= ROTATION_MOVE_WEIGHT * mouse_move_delta_.y;
+		delta_rotation.y -= ROTATION_MOVE_WEIGHT * mouse_move_delta_.x;
 	}
-	else if (mouse_button_pressed[MouseButton::Left])
+	else if (mouse_button_pressed_[MouseButton::Left])
 	{
-		delta_translation.x += TRANSLATION_MOVE_WEIGHT * mouse_move_delta.x;
-		delta_translation.y += TRANSLATION_MOVE_WEIGHT * -mouse_move_delta.y;
+		delta_translation.x += TRANSLATION_MOVE_WEIGHT * mouse_move_delta_.x;
+		delta_translation.y += TRANSLATION_MOVE_WEIGHT * -mouse_move_delta_.y;
 	}
 
-	if (touch_pointer_pressed[0])
+	if (touch_pointer_pressed_[0])
 	{
-		delta_rotation.x -= ROTATION_MOVE_WEIGHT * touch_move_delta.y;
-		delta_rotation.y -= ROTATION_MOVE_WEIGHT * touch_move_delta.x;
+		delta_rotation.x -= ROTATION_MOVE_WEIGHT * touch_move_delta_.y;
+		delta_rotation.y -= ROTATION_MOVE_WEIGHT * touch_move_delta_.x;
 
-		if (touch_pointer_time > TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME)
+		if (touch_pointer_time_ > TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME)
 		{
 			delta_translation.z -= TRANSLATION_MOVE_STEP;
 		}
 		else
 		{
-			touch_pointer_time += delta_time;
+			touch_pointer_time_ += delta_time;
 		}
 	}
 
@@ -129,8 +129,8 @@ void FreeCamera::update(float delta_time)
 		transform.set_rotation(orientation);
 	}
 
-	mouse_move_delta = {};
-	touch_move_delta = {};
+	mouse_move_delta_ = {};
+	touch_move_delta_ = {};
 }
 
 void FreeCamera::input_event(const InputEvent &input_event)
@@ -142,11 +142,11 @@ void FreeCamera::input_event(const InputEvent &input_event)
 		if (key_event.get_action() == KeyAction::Down ||
 		    key_event.get_action() == KeyAction::Repeat)
 		{
-			key_pressed[key_event.get_code()] = true;
+			key_pressed_[key_event.get_code()] = true;
 		}
 		else
 		{
-			key_pressed[key_event.get_code()] = false;
+			key_pressed_[key_event.get_code()] = false;
 		}
 	}
 	else if (input_event.get_source() == EventSource::Mouse)
@@ -157,19 +157,19 @@ void FreeCamera::input_event(const InputEvent &input_event)
 
 		if (mouse_button.get_action() == MouseAction::Down)
 		{
-			mouse_button_pressed[mouse_button.get_button()] = true;
+			mouse_button_pressed_[mouse_button.get_button()] = true;
 		}
 
 		if (mouse_button.get_action() == MouseAction::Up)
 		{
-			mouse_button_pressed[mouse_button.get_button()] = false;
+			mouse_button_pressed_[mouse_button.get_button()] = false;
 		}
 
 		if (mouse_button.get_action() == MouseAction::Move)
 		{
-			mouse_move_delta = mouse_pos - mouse_last_pos;
+			mouse_move_delta_ = mouse_pos - mouse_last_pos_;
 
-			mouse_last_pos = mouse_pos;
+			mouse_last_pos_ = mouse_pos;
 		}
 	}
 	else if (input_event.get_source() == EventSource::Touchscreen)
@@ -180,23 +180,23 @@ void FreeCamera::input_event(const InputEvent &input_event)
 
 		if (touch_event.get_action() == TouchAction::Down)
 		{
-			touch_pointer_pressed[touch_event.get_pointer_id()] = true;
+			touch_pointer_pressed_[touch_event.get_pointer_id()] = true;
 
-			touch_last_pos = touch_pos;
+			touch_last_pos_ = touch_pos;
 		}
 
 		if (touch_event.get_action() == TouchAction::Up)
 		{
-			touch_pointer_pressed[touch_event.get_pointer_id()] = false;
+			touch_pointer_pressed_[touch_event.get_pointer_id()] = false;
 
-			touch_pointer_time = 0.0f;
+			touch_pointer_time_ = 0.0f;
 		}
 
 		if (touch_event.get_action() == TouchAction::Move && touch_event.get_pointer_id() == 0)
 		{
-			touch_move_delta = touch_pos - touch_last_pos;
+			touch_move_delta_ = touch_pos - touch_last_pos_;
 
-			touch_last_pos = touch_pos;
+			touch_last_pos_ = touch_pos;
 		}
 	}
 }
@@ -212,5 +212,10 @@ void FreeCamera::resize(uint32_t width, uint32_t height)
 			camera->set_aspect_ratio(static_cast<float>(width) / height);
 		}
 	}
+}
+
+void FreeCamera::set_speed_multiplier(float speed_multiplier)
+{
+	speed_multiplier_ = speed_multiplier;
 }
 }

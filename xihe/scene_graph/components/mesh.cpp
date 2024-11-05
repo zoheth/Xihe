@@ -26,9 +26,19 @@ void Mesh::add_submesh(SubMesh &submesh)
 	submeshes.push_back(&submesh);
 }
 
+void Mesh::add_mshader_mesh(MshaderMesh &mshader_mesh)
+{
+	mshader_meshes.push_back(&mshader_mesh);
+}
+
 const std::vector<SubMesh *> &Mesh::get_submeshes() const
 {
 	return submeshes;
+}
+
+const std::vector<MshaderMesh *> &Mesh::get_mshader_meshes() const
+{
+	return mshader_meshes;
 }
 
 void Mesh::add_node(Node &node)

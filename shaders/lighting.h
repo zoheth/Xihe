@@ -28,7 +28,7 @@ vec3 apply_directional_light(Light light, vec3 normal)
 	vec3 world_to_light = -light.direction.xyz;
 	world_to_light      = normalize(world_to_light);
 	float ndotl         = clamp(dot(normal, world_to_light), 0.0, 1.0);
-	light.color.w       = 15.f;
+	// light.color.w       = 15.f;
 	return ndotl * light.color.w * light.color.rgb;
 }
 
