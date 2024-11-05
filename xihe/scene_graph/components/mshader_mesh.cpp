@@ -1,6 +1,8 @@
 #include "mshader_mesh.h"
 
 #include <glm/glm.hpp>
+#include "meshoptimizer.h"
+
 #include "rendering/subpass.h"
 
 namespace
@@ -104,14 +106,6 @@ backend::ShaderVariant & MshaderMesh::get_mut_shader_variant()
 
 void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data)
 {
-	Meshlet meshlet;
-	meshlet.vertex_count = 0;
-	meshlet.index_count  = 0;
-
-
-	std::set<uint32_t> vertices;        // set for unique vertices
-	uint32_t           triangle_check = 0;
-
 	std::vector<uint32_t> index_data_32;
 	if (primitive_data.index_type == vk::IndexType::eUint16)
 	{
@@ -128,45 +122,58 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 		                                      reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
 	}
 
-	for (uint32_t i = 0; i < index_data_32.size(); i++)
+	// Use meshoptimizer to generate meshlets
+	constexpr size_t max_vertices  = 64;
+	constexpr size_t max_triangles = 124;
+	constexpr float  cone_weight   = 0.0f;
+
+	const size_t max_meshlets = meshopt_buildMeshletsBound(index_data_32.size(), max_vertices, max_triangles);
+
+	std::vector<meshopt_Meshlet> local_meshlets(max_meshlets);
+	std::vector<uint32_t>        meshlet_vertex_indices(max_meshlets * max_vertices);
+	std::vector<uint8_t>         meshlet_triangle_indices(max_meshlets * max_triangles * 3);
+
+	auto vertex_positions = reinterpret_cast<const float *>(primitive_data.attributes.at("position").data.data());
+
+	size_t meshlet_count = meshopt_buildMeshlets(
+	    local_meshlets.data(),
+	    meshlet_vertex_indices.data(),
+	    meshlet_triangle_indices.data(),
+	    index_data_32.data(),
+	    index_data_32.size(),
+	    vertex_positions,
+	    primitive_data.vertex_count,
+	    sizeof(float) * 3,
+	    max_vertices,
+	    max_triangles,
+	    cone_weight);
+
+	local_meshlets.resize(meshlet_count);
+
+	// Convert meshopt_Meshlet to our Meshlet structure
+	for (size_t i = 0; i < meshlet_count; ++i)
 	{
-		// index_data is unsigned char type, casting to uint32_t* will give proper value
-		meshlet.indices[meshlet.index_count] = index_data_32[i];
+		const meshopt_Meshlet &local_meshlet = local_meshlets[i];
 
-		if (vertices.insert(meshlet.indices[meshlet.index_count]).second)
+		Meshlet meshlet;
+		meshlet.vertex_count = static_cast<uint32_t>(local_meshlet.vertex_count);
+		meshlet.index_count  = static_cast<uint32_t>(local_meshlet.triangle_count * 3);        // 3 indices per triangle
+
+		// Copy vertices
+		for (size_t j = 0; j < local_meshlet.vertex_count; ++j)
 		{
-			++meshlet.vertex_count;
+			meshlet.vertices[j] = meshlet_vertex_indices[local_meshlet.vertex_offset + j];
 		}
 
-		meshlet.index_count++;
-		triangle_check = triangle_check < 3 ? ++triangle_check : 1;
-
-		// 96 because for each traingle we draw a line in a mesh shader sample, 32 triangles/lines per meshlet = 64 vertices on output
-		if (meshlet.vertex_count == 64 || meshlet.index_count == 96 || i == index_data_32.size() - 1)
+		// Copy indices
+		for (size_t j = 0; j < meshlet.index_count; ++j)
 		{
-			if (i == index_data_32.size() - 1)
-			{
-				assert(triangle_check == 3);
-			}
-
-			uint32_t counter = 0;
-			for (auto v : vertices)
-			{
-				meshlet.vertices[counter++] = v;
-			}
-			if (triangle_check != 3)
-			{
-				meshlet.index_count -= triangle_check;
-				i -= triangle_check;
-				triangle_check = 0;
-			}
-
-			meshlets.push_back(meshlet);
-			meshlet.vertex_count = 0;
-			meshlet.index_count  = 0;
-			vertices.clear();
+			meshlet.indices[j] = meshlet_triangle_indices[local_meshlet.triangle_offset + j];
 		}
+
+		meshlets.push_back(meshlet);
 	}
+
 	meshlet_count_ = meshlets.size();
 }
 }        // namespace xihe::sg

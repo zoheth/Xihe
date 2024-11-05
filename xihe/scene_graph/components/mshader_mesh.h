@@ -18,7 +18,7 @@ struct AlignedVertex
 struct Meshlet
 {
 	uint32_t vertices[64];
-	uint32_t indices[126];
+	uint32_t indices[372];
 	uint32_t vertex_count;
 	uint32_t index_count;
 };
