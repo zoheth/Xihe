@@ -2,7 +2,7 @@
 #extension GL_EXT_mesh_shader : require
 
 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
-layout(triangles, max_vertices = 126, max_primitives = 42) out;
+layout(triangles, max_vertices = 64, max_primitives = 124) out;
 
 layout(set = 0, binding = 2) uniform GlobalUniform {
     mat4 model;
@@ -10,23 +10,19 @@ layout(set = 0, binding = 2) uniform GlobalUniform {
     vec3 camera_position;
 } global_uniform;
 
+
+struct s_meshlet
+{
+    uint vertex_offset;
+    uint triangle_offset;
+    uint vertex_count;
+    uint triangle_count;
+};
+
 struct s_vertex
 {
 	vec4 position;
 	vec4 normal;
-};
-
-layout (std430, binding = 4) buffer _vertices
-{
-  s_vertex vertices[];
-} vb;
-
-struct s_meshlet
-{
-  uint vertices[64];
-  uint indices[372];
-  uint vertex_count;
-  uint index_count;
 };
 
 layout (std430, binding = 3) buffer _meshlets
@@ -34,56 +30,64 @@ layout (std430, binding = 3) buffer _meshlets
   s_meshlet meshlets[];
 } mbuf;
 
+layout (std430, binding = 4) buffer _vertices
+{
+  s_vertex vertices[];
+} vb;
+
+layout (std430, binding = 5) buffer _meshlet_vertices
+{
+    uint meshlet_vertices[]; // All per-meshlet vertex indices
+} mvb;
+
+layout (std430, binding = 6) buffer _meshlet_triangles
+{
+    uint meshlet_triangles[];  // All packed per-meshlet triangles
+} mtb;
+
 layout (location = 0) out PerVertexData
 {
   vec4 color;
   vec3 normal;
 } v_out[];
 
-uint find_local_index(uint global_index, uint vertex_count, uint vi_array[64]) {
-    for (uint j = 0; j < vertex_count; ++j) {
-        if (vi_array[j] == global_index)
-            return j;
-    }
-    // Handle error case if not found
-    return 0;
-}
-
 void main(void)
 {
     uint meshlet_index = gl_WorkGroupID.x;
-    uint vertex_count = mbuf.meshlets[meshlet_index].vertex_count;
-    uint index_count = mbuf.meshlets[meshlet_index].index_count;
-    uint primitive_count = index_count / 3;
+    s_meshlet meshlet = mbuf.meshlets[meshlet_index];
+    uint vertex_count = meshlet.vertex_count;
+    uint triangle_count = meshlet.triangle_count;
 
-    SetMeshOutputsEXT(vertex_count, primitive_count);
+    SetMeshOutputsEXT(vertex_count, triangle_count);
 
     mat4 MVP = global_uniform.view_proj * global_uniform.model;
 
+    float min_value = 0.1;
     vec4 meshlet_color = vec4(
-        float((meshlet_index * 37) % 255) / 255.0, // R component
-        float((meshlet_index * 73) % 255) / 255.0, // G component
-        float((meshlet_index * 151) % 255) / 255.0, // B component
-        1.0 // Alpha component
+        max(float((meshlet_index * 37) % 255) / 255.0, min_value),
+        max(float((meshlet_index * 73) % 255) / 255.0, min_value),
+        max(float((meshlet_index * 151) % 255) / 255.0, min_value),
+        1.0
     );
 
     // Output each vertex's position and color
     for (uint i = 0; i < vertex_count; ++i)
     {
-        // Directly use local indices for vertex access
-        uint local_vi = mbuf.meshlets[meshlet_index].vertices[i];
-        gl_MeshVerticesEXT[i].gl_Position = MVP * vb.vertices[local_vi].position;
+        // Fetch per-meshlet vertex index
+        uint global_vertex_index = mvb.meshlet_vertices[meshlet.vertex_offset + i];
+        gl_MeshVerticesEXT[i].gl_Position = MVP * vb.vertices[global_vertex_index].position;
         v_out[i].color = meshlet_color;
-        v_out[i].normal = normalize(mat3(global_uniform.model) * vb.vertices[local_vi].normal.xyz);
+        v_out[i].normal = normalize(mat3(global_uniform.model) * vb.vertices[global_vertex_index].normal.xyz);
     }
 
-    // Set each triangle's vertex indices using local indices
-    for (uint i = 0; i < primitive_count; ++i)
+    // Set each triangle's vertex indices using per-meshlet triangles
+    for (uint i = 0; i < triangle_count; ++i)
     {
-        uint local_idx0 = mbuf.meshlets[meshlet_index].indices[i * 3 + 0];
-        uint local_idx1 = mbuf.meshlets[meshlet_index].indices[i * 3 + 1];
-        uint local_idx2 = mbuf.meshlets[meshlet_index].indices[i * 3 + 2];
+        uint packed_triangle = mtb.meshlet_triangles[meshlet.triangle_offset + i];
+        uint idx0 = (packed_triangle >> 0) & 0xFFu;
+        uint idx1 = (packed_triangle >> 8) & 0xFFu;
+        uint idx2 = (packed_triangle >> 16) & 0xFFu;
 
-        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(local_idx0, local_idx1, local_idx2);
+        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(idx0, idx1, idx2);
     }
 }

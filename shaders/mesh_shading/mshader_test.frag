@@ -23,7 +23,7 @@ layout (location = 0) out vec4 color;
 
 #include "lighting.h"
 
-layout(set = 0, binding = 5) uniform LightsInfo
+layout(set = 1, binding = 0) uniform LightsInfo
 {
 	Light directional_lights[MAX_LIGHT_COUNT];
 	Light point_lights[MAX_LIGHT_COUNT];

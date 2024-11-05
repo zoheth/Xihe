@@ -17,16 +17,17 @@ struct AlignedVertex
 
 struct Meshlet
 {
-	uint32_t vertices[64];
-	uint32_t indices[372];
+	uint32_t vertex_offset;
+	uint32_t triangle_offset;
+
+	/* number of vertices and triangles used in the meshlet; data is stored in consecutive range defined by offset and count */
 	uint32_t vertex_count;
-	uint32_t index_count;
+	uint32_t triangle_count;
 };
 
 class MshaderMesh : public Component
 {
   public:
-
 	MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Device &device);
 
 	virtual ~MshaderMesh() = default;
@@ -35,19 +36,24 @@ class MshaderMesh : public Component
 
 	backend::Buffer &get_vertex_buffer() const;
 	backend::Buffer &get_meshlet_buffer() const;
+	backend::Buffer &get_meshlet_vertices_buffer() const;
+	backend::Buffer &get_packed_meshlet_indices_buffer() const;
 
 	uint32_t get_meshlet_count() const;
 
 	const backend::ShaderVariant &get_shader_variant() const;
-	backend::ShaderVariant &get_mut_shader_variant();
+	backend::ShaderVariant       &get_mut_shader_variant();
 
   private:
-	void prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data);
+	void prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data, backend::Device &device);
 
 	uint32_t meshlet_count_{0};
 
-	std::unique_ptr<backend::Buffer> vertex_buffer_;
+	std::unique_ptr<backend::Buffer> vertex_data_buffer_;
 	std::unique_ptr<backend::Buffer> meshlet_buffer_;
+
+	std::unique_ptr<backend::Buffer> meshlet_vertices_buffer_;
+	std::unique_ptr<backend::Buffer> packed_meshlet_indices_buffer_;
 
 	backend::ShaderVariant shader_variant_;
 };

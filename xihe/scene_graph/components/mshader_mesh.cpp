@@ -57,13 +57,13 @@ MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Devic
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 
-		vertex_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
-		vertex_buffer_->set_debug_name(fmt::format("{}: vertex buffer", primitive_data.name));
-		vertex_buffer_->update(aligned_vertex_data);
+		vertex_data_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		vertex_data_buffer_->set_debug_name(fmt::format("{}: vertex buffer", primitive_data.name));
+		vertex_data_buffer_->update(aligned_vertex_data);
 	}
 
 	std::vector<Meshlet> meshlets;
-	prepare_meshlets(meshlets, primitive_data);
+	prepare_meshlets(meshlets, primitive_data, device);
 
 	{
 		backend::BufferBuilder buffer_builder{meshlets.size() * sizeof(Meshlet)};
@@ -83,12 +83,23 @@ std::type_index MshaderMesh::get_type()
 }
 backend::Buffer &MshaderMesh::get_vertex_buffer() const
 {
-	return *vertex_buffer_;
+	return *vertex_data_buffer_;
 }
 backend::Buffer &MshaderMesh::get_meshlet_buffer() const
 {
 	return *meshlet_buffer_;
 }
+
+backend::Buffer & MshaderMesh::get_meshlet_vertices_buffer() const
+{
+	return *meshlet_vertices_buffer_;
+}
+
+backend::Buffer & MshaderMesh::get_packed_meshlet_indices_buffer() const
+{
+	return *packed_meshlet_indices_buffer_;
+}
+
 uint32_t MshaderMesh::get_meshlet_count() const
 {
 	return meshlet_count_;
@@ -104,7 +115,7 @@ backend::ShaderVariant & MshaderMesh::get_mut_shader_variant()
 	return shader_variant_;
 }
 
-void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data)
+void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data, backend::Device &device)
 {
 	std::vector<uint32_t> index_data_32;
 	if (primitive_data.index_type == vk::IndexType::eUint16)
@@ -118,8 +129,9 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 	}
 	else if (primitive_data.index_type == vk::IndexType::eUint32)
 	{
-		index_data_32 = std::vector<uint32_t>(reinterpret_cast<const uint32_t *>(primitive_data.indices.data()),
-		                                      reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
+		index_data_32.assign(
+            reinterpret_cast<const uint32_t *>(primitive_data.indices.data()),
+            reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
 	}
 
 	// Use meshoptimizer to generate meshlets
@@ -150,28 +162,57 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 
 	local_meshlets.resize(meshlet_count);
 
+	std::vector<uint32_t> meshlet_vertices;
+	std::vector<uint32_t> meshlet_triangles;
+
 	// Convert meshopt_Meshlet to our Meshlet structure
 	for (size_t i = 0; i < meshlet_count; ++i)
 	{
 		const meshopt_Meshlet &local_meshlet = local_meshlets[i];
 
 		Meshlet meshlet;
-		meshlet.vertex_count = static_cast<uint32_t>(local_meshlet.vertex_count);
-		meshlet.index_count  = static_cast<uint32_t>(local_meshlet.triangle_count * 3);        // 3 indices per triangle
+		meshlet.vertex_offset   = static_cast<uint32_t>(meshlet_vertices.size());
+		meshlet.triangle_offset = static_cast<uint32_t>(meshlet_triangles.size());
+		meshlet.vertex_count    = static_cast<uint32_t>(local_meshlet.vertex_count);
+		meshlet.triangle_count  = static_cast<uint32_t>(local_meshlet.triangle_count);
 
-		// Copy vertices
 		for (size_t j = 0; j < local_meshlet.vertex_count; ++j)
 		{
-			meshlet.vertices[j] = meshlet_vertex_indices[local_meshlet.vertex_offset + j];
+			uint32_t vertex_index = meshlet_vertex_indices[local_meshlet.vertex_offset + j];
+			meshlet_vertices.push_back(vertex_index);
 		}
 
-		// Copy indices
-		for (size_t j = 0; j < meshlet.index_count; ++j)
+		size_t triangle_count = local_meshlet.triangle_count;
+		size_t triangle_base  = local_meshlet.triangle_offset;
+
+		for (size_t j = 0; j < triangle_count; ++j)
 		{
-			meshlet.indices[j] = meshlet_triangle_indices[local_meshlet.triangle_offset + j];
+			uint8_t idx0 = meshlet_triangle_indices[triangle_base + j * 3 + 0];
+			uint8_t idx1 = meshlet_triangle_indices[triangle_base + j * 3 + 1];
+			uint8_t idx2 = meshlet_triangle_indices[triangle_base + j * 3 + 2];
+
+			// Pack three uint8_t indices into one uint32_t
+			uint32_t packed_triangle = idx0 | (idx1 << 8) | (idx2 << 16);
+			meshlet_triangles.push_back(packed_triangle);
 		}
 
 		meshlets.push_back(meshlet);
+	}
+
+	{
+		backend::BufferBuilder buffer_builder{meshlet_vertices.size() * 4};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		meshlet_vertices_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		meshlet_vertices_buffer_->update(meshlet_vertices);
+	}
+
+	{
+		backend::BufferBuilder buffer_builder{meshlet_triangles.size() * 4};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		packed_meshlet_indices_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		packed_meshlet_indices_buffer_->update(meshlet_triangles);
 	}
 
 	meshlet_count_ = meshlets.size();

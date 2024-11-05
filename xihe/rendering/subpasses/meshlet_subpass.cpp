@@ -39,7 +39,7 @@ void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 	//command_buffer.set_rasterization_state(rasterization_state);
 
 	allocate_lights<ForwardLights>(scene_.get_components<sg::Light>(), kMaxForwardLightCount);
-	command_buffer.bind_lighting(get_lighting_state(), 0, 5);
+	command_buffer.bind_lighting(get_lighting_state(), 1, 0);
 
 	command_buffer.set_has_mesh_shader();
 
@@ -55,6 +55,8 @@ void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 
 	command_buffer.bind_buffer(mshader_mesh_->get_meshlet_buffer(), 0, mshader_mesh_->get_meshlet_buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(mshader_mesh_->get_vertex_buffer(), 0, mshader_mesh_->get_vertex_buffer().get_size(), 0, 4, 0);
+	command_buffer.bind_buffer(mshader_mesh_->get_meshlet_vertices_buffer(), 0, mshader_mesh_->get_meshlet_vertices_buffer().get_size(), 0, 5, 0);
+	command_buffer.bind_buffer(mshader_mesh_->get_packed_meshlet_indices_buffer(), 0, mshader_mesh_->get_packed_meshlet_indices_buffer().get_size(), 0, 6, 0);
 
 	uint32_t num_workgroups_x = mshader_mesh_->get_meshlet_count();        // meshlets count
 	uint32_t num_workgroups_y = 1;
