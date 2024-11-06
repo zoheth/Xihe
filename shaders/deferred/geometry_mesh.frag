@@ -22,7 +22,7 @@ precision highp float;
 
 layout (location = 0) in PerVertexData
 {
-  vec3 pos;
+  vec4 pos;
   vec3 normal;
   vec2 uv;
 } v_in;
@@ -44,8 +44,6 @@ layout(push_constant, std430) uniform PBRMaterialUniform {
 } pbr_material_uniform;
 
 void main(void)
-
-void main()
 {
 	vec3 normal = normalize(v_in.normal);
 	// Transform normals from [-1, 1] to [0, 1]
@@ -58,4 +56,5 @@ void main()
     base_color = pbr_material_uniform.base_color_factor;
 #endif
     o_albedo = base_color;
+    //o_albedo = v_in.pos;
 }

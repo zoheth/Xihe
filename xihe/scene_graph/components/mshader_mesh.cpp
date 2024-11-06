@@ -4,6 +4,7 @@
 #include "meshoptimizer.h"
 
 #include "rendering/subpass.h"
+#include "scene_graph/components/material.h"
 
 namespace
 {
@@ -105,6 +106,17 @@ backend::Buffer & MshaderMesh::get_packed_meshlet_indices_buffer() const
 	return *packed_meshlet_indices_buffer_;
 }
 
+void MshaderMesh::set_material(const Material &material)
+{
+	material_ = &material;
+	compute_shader_variant();
+}
+
+const Material * MshaderMesh::get_material() const
+{
+	return material_;
+}
+
 uint32_t MshaderMesh::get_meshlet_count() const
 {
 	return meshlet_count_;
@@ -118,6 +130,22 @@ const backend::ShaderVariant & MshaderMesh::get_shader_variant() const
 backend::ShaderVariant & MshaderMesh::get_mut_shader_variant()
 {
 	return shader_variant_;
+}
+
+void MshaderMesh::compute_shader_variant()
+{
+	shader_variant_.clear();
+
+	if (material_ != nullptr)
+	{
+		for (auto &texture : material_->textures)
+		{
+			std::string tex_name = texture.first;
+			std::ranges::transform(tex_name, tex_name.begin(), ::toupper);
+
+			shader_variant_.add_define("HAS_" + tex_name);
+		}
+	}
 }
 
 void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPrimitiveData &primitive_data, backend::Device &device)

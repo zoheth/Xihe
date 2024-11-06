@@ -37,7 +37,10 @@ class MeshletSubpass : public rendering::Subpass
 	void update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index) const;
 
   private:
-	void draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh) const;
+
+	backend::PipelineLayout &prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules);
+
+	void draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh);
 
 	  void get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &opaque_nodes,
 	                      std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &transparent_nodes) const;

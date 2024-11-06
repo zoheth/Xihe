@@ -13,7 +13,7 @@ void MeshShadingTestSubpass::prepare()
 
 void MeshShadingTestSubpass::draw(backend::CommandBuffer &command_buffer)
 {
-	command_buffer.set_has_mesh_shader();
+	command_buffer.set_has_mesh_shader(true);
 
 	RasterizationState rasterization_state{};
 	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
@@ -35,6 +35,8 @@ void MeshShadingTestSubpass::draw(backend::CommandBuffer &command_buffer)
 	uint32_t group_count_y = N;
 
 	command_buffer.draw_mesh_tasks(group_count_x, group_count_y, 1);
+
+	command_buffer.set_has_mesh_shader(false);
 }
 
 void MeshShadingTestSubpass::update_uniform(backend::CommandBuffer &command_buffer, size_t thread_index) const

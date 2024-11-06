@@ -10,6 +10,7 @@
 #include "rendering/subpasses/composite_subpass.h"
 #include "rendering/subpasses/forward_subpass.h"
 #include "rendering/subpasses/lighting_subpass.h"
+#include "rendering/subpasses/meshlet_subpass.h"
 #include "rendering/subpasses/shadow_subpass.h"
 #include "scene_graph/components/camera.h"
 
@@ -92,9 +93,10 @@ bool xihe::TestApp::prepare(Window *window)
 		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, rt_usage_flags},
 		};
 
-		auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
+		/*auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
 		auto geometry_fs   = backend::ShaderSource{"deferred/geometry.frag"};
-		auto scene_subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, std::move(geometry_vs), std::move(geometry_fs), *scene_, *camera);
+		auto scene_subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, std::move(geometry_vs), std::move(geometry_fs), *scene_, *camera);*/
+		auto scene_subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"deferred/geometry_mesh.mesh"}, backend::ShaderSource{"deferred/geometry_mesh.frag"}, *scene_, *camera);
 
 		// Outputs are depth, albedo, and normal
 		scene_subpass->set_output_attachments({1, 2, 3});
@@ -172,9 +174,13 @@ void xihe::TestApp::update(float delta_time)
 void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	XiheApp::request_gpu_features(gpu);
+
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShader);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
 }
 
-//std::unique_ptr<xihe::Application> create_application()
-//{
-//	return std::make_unique<xihe::TestApp>();
-//}
+std::unique_ptr<xihe::Application> create_application()
+{
+	return std::make_unique<xihe::TestApp>();
+}

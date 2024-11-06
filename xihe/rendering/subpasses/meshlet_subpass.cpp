@@ -6,6 +6,9 @@
 #include "rendering/render_context.h"
 #include "scene_graph/scene.h"
 #include "shared_uniform.h"
+#include "scene_graph/components/material.h"
+#include "scene_graph/components/texture.h"
+#include "scene_graph/components/image.h"
 
 #include <ranges>
 
@@ -33,8 +36,8 @@ void MeshletSubpass::prepare()
 		for (auto &mshader_mesh : mesh->get_mshader_meshes())
 		{
 			auto &variant = mshader_mesh->get_mut_shader_variant();
-			variant.add_definitions({"MAX_LIGHT_COUNT " + std::to_string(kMaxForwardLightCount)});
-			variant.add_definitions(kLightTypeDefinitions);
+			//variant.add_definitions({"MAX_LIGHT_COUNT " + std::to_string(kMaxForwardLightCount)});
+			//variant.add_definitions(kLightTypeDefinitions);
 			auto &mesh_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
 			auto &frag_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
 		}
@@ -47,10 +50,7 @@ void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 
 	get_sorted_nodes(opaque_nodes, transparent_nodes);
 
-	allocate_lights<ForwardLights>(scene_.get_components<sg::Light>(), kMaxForwardLightCount);
-	command_buffer.bind_lighting(get_lighting_state(), 1, 0);
-
-	command_buffer.set_has_mesh_shader();
+	command_buffer.set_has_mesh_shader(true);
 
 	{
 		backend::ScopedDebugLabel label{command_buffer, "Opaque objects"};
@@ -61,6 +61,8 @@ void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 			draw_mshader_mesh(command_buffer, *mshader_mesh);
 		}
 	}
+
+	command_buffer.set_has_mesh_shader(false);
 }
 void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index) const
 {
@@ -79,15 +81,55 @@ void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 }
 
-void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh) const
+backend::PipelineLayout & MeshletSubpass::prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules)
+{
+	for (auto &shader_module : shader_modules)
+	{
+		for (auto &[name, mode] : resource_mode_map_)
+		{
+			shader_module->set_resource_mode(name, mode);
+		}
+	}
+	return command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
+}
+
+void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh)
 {
 	auto &mesh_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), mshader_mesh.get_shader_variant());
 	auto &frag_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), mshader_mesh.get_shader_variant());
 
 	std::vector<backend::ShaderModule *> shader_modules{&mesh_shader_module, &frag_shader_module};
 
-	auto &pipeline_layout = command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules);
+	auto &pipeline_layout = prepare_pipeline_layout(command_buffer, shader_modules);
 	command_buffer.bind_pipeline_layout(pipeline_layout);
+
+	if (pipeline_layout.get_push_constant_range_stage(sizeof(PBRMaterialUniform)))
+	{
+		const auto pbr_material = dynamic_cast<const sg::PbrMaterial *>(mshader_mesh.get_material());
+
+		PBRMaterialUniform pbr_material_uniform;
+		pbr_material_uniform.texture_indices   = pbr_material->texture_indices;
+		pbr_material_uniform.base_color_factor = pbr_material->base_color_factor;
+		pbr_material_uniform.metallic_factor   = pbr_material->metallic_factor;
+		pbr_material_uniform.roughness_factor  = pbr_material->roughness_factor;
+
+		if (const auto data = to_bytes(pbr_material_uniform); !data.empty())
+		{
+			command_buffer.push_constants(data);
+		}
+	}
+
+	const backend::DescriptorSetLayout &descriptor_set_layout = pipeline_layout.get_descriptor_set_layout(0);
+
+	for (auto &[name, texture] : mshader_mesh.get_material()->textures)
+	{
+		if (const auto layout_binding = descriptor_set_layout.get_layout_binding(name))
+		{
+			command_buffer.bind_image(texture->get_image()->get_vk_image_view(),
+			                          texture->get_sampler()->vk_sampler_,
+			                          0, layout_binding->binding, 0);
+		}
+	}
 
 	command_buffer.bind_buffer(mshader_mesh.get_meshlet_buffer(), 0, mshader_mesh.get_meshlet_buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_vertex_buffer(), 0, mshader_mesh.get_vertex_buffer().get_size(), 0, 4, 0);

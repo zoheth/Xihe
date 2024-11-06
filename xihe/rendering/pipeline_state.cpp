@@ -257,9 +257,9 @@ void PipelineState::set_subpass_index(uint32_t subpass_index)
 
 }
 
-void PipelineState::set_has_mesh_shader()
+void PipelineState::set_has_mesh_shader(bool has_mesh_shader)
 {
-	has_mesh_shader_ = true;
+	has_mesh_shader_ = has_mesh_shader;
 }
 
 const backend::PipelineLayout &PipelineState::get_pipeline_layout() const

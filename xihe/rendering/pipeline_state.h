@@ -140,7 +140,7 @@ class PipelineState
 
 	void set_subpass_index(uint32_t subpass_index);
 
-	void set_has_mesh_shader();
+	void set_has_mesh_shader(bool has_mesh_shader);
 
 	const backend::PipelineLayout &get_pipeline_layout() const;
 

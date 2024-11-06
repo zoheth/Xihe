@@ -25,10 +25,12 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 	load_scene("scenes/sponza/Sponza01.gltf");
 	assert(scene_ && "Scene not loaded");
 
+	update_bindless_descriptor_sets();
+
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", get_render_context().get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
-	auto subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"mesh_shading/mshader_test.mesh"}, backend::ShaderSource{"mesh_shading/mshader_test.frag"}, *scene_, *camera);
+	auto subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"deferred/geometry_mesh.mesh"}, backend::ShaderSource{"deferred/geometry_mesh.frag"}, *scene_, *camera);
 
 	std::vector<std::unique_ptr<rendering::Subpass>> subpasses{};
 	subpasses.push_back(std::move(subpass));
@@ -36,7 +38,8 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 	rendering::PassInfo pass_info{};
 	pass_info.outputs = {
 	    {rendering::RdgResourceType::kSwapchain, "swapchain"},
-	    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())}
+	    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())},
+		{rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32},
 	};
 
 	rdg_builder_->add_raster_pass("mesh_shader_meshlet", std::move(pass_info), std::move(subpasses));
@@ -66,8 +69,8 @@ void xihe::MeshShadingApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	}
 }
 
-
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::MeshShadingApp>();
-}
+//
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::MeshShadingApp>();
+//}

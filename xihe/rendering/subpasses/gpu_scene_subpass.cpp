@@ -6,7 +6,7 @@ namespace xihe::rendering
 {
 void GpuSceneSubpass::draw(backend::CommandBuffer &command_buffer)
 {
-	command_buffer.set_has_mesh_shader();
+	command_buffer.set_has_mesh_shader(true);
 
 	auto &task_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader());
 	auto &mesh_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader());
@@ -19,5 +19,7 @@ void GpuSceneSubpass::draw(backend::CommandBuffer &command_buffer)
 
 
 	command_buffer.draw_mesh_tasks(1, 1, 1);
+
+	command_buffer.set_has_mesh_shader(false);
 }
 }
