@@ -2,7 +2,7 @@
 
 羲和是按照《Mastering Graphics Programming with Vulkan》一书（作者：Marco Castorina 和 Gabriel Assone）的思路开发，整合了最先进技术的现代渲染引擎。
 
-Xi He is developed based on the ideas presented in the book *Mastering Graphics Programming with Vulkan* by Marco Castorina and Gabriel Assone. It is a modern rendering engine that integrates cutting-edge techniques.
+Xi He is developed based on the ideas presented in the book *Mastering Graphics Programming with Vulkan* by Marco Castorina and Gabriel Assone. It is a modern rendering engine that integrates state-of-the-art techniques.
 
 ## 基础框架 (Foundation Framework)
 
