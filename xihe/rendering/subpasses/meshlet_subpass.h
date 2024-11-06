@@ -34,15 +34,21 @@ class MeshletSubpass : public rendering::Subpass
 
 	void draw(backend::CommandBuffer &command_buffer) override;
 
-	void update_uniform(backend::CommandBuffer &command_buffer, size_t thread_index) const;
+	void update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index) const;
 
   private:
+	void draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh) const;
+
+	  void get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &opaque_nodes,
+	                      std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &transparent_nodes) const;
+
 	sg::Camera &camera_;
 
 	sg::Scene &scene_;
 
-	sg::Mesh *mesh_{nullptr};
-	sg::MshaderMesh *mshader_mesh_{nullptr};
+	std::vector<sg::Mesh *> meshes_;
+
+	// sg::MshaderMesh *mshader_mesh_{nullptr};
 };
 
 }        // namespace rendering

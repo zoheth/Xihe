@@ -22,10 +22,10 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 		return false;
 	}
 
-	load_scene("scenes/bunny.gltf");
+	load_scene("scenes/sponza/Sponza01.gltf");
 	assert(scene_ && "Scene not loaded");
 
-	auto &camera_node = xihe::sg::add_free_camera(*scene_, "Camera", get_render_context().get_surface_extent(), 0.03f);
+	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", get_render_context().get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 
 	auto subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"mesh_shading/mshader_test.mesh"}, backend::ShaderSource{"mesh_shading/mshader_test.frag"}, *scene_, *camera);
