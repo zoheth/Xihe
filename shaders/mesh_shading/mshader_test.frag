@@ -16,8 +16,12 @@
  */
 #version 450
 
-layout (location = 0) in vec4 in_color;
-layout(location = 1) in vec3 in_normal;
+layout (location = 0) in PerVertexData
+{
+  vec4 color;
+  vec3 normal;
+  vec2 uv;
+} v_in;
 
 layout (location = 0) out vec4 color;
 
@@ -37,7 +41,7 @@ layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;
 
 void main()
 {
-	vec3 normal = normalize(in_normal);
+	vec3 normal = normalize(v_in.normal);
 
 	vec3 light_contribution = vec3(0.0);
 
@@ -46,7 +50,7 @@ void main()
 		light_contribution += apply_directional_light(lights_info.directional_lights[i], normal);
 	}
 
-	vec3 ambient_color = vec3(0.2) * in_color.xyz;
+	vec3 ambient_color = vec3(0.2) * v_in.color.xyz;
 
-	color = vec4(ambient_color + light_contribution * in_color.xyz, in_color.w);
+	color = vec4(ambient_color + light_contribution * v_in.color.xyz, v_in.color.w);
 }

@@ -47,7 +47,7 @@ layout (std430, binding = 6) buffer _meshlet_triangles
 
 layout (location = 0) out PerVertexData
 {
-  vec4 color;
+  vec3 pos;
   vec3 normal;
   vec2 uv;
 } v_out[];
@@ -71,14 +71,18 @@ void main(void)
         1.0
     );
 
-    // Output each vertex's position and color
+
     for (uint i = 0; i < vertex_count; ++i)
     {
-        // Fetch per-meshlet vertex index
+
         uint global_vertex_index = mvb.meshlet_vertices[meshlet.vertex_offset + i];
-        gl_MeshVerticesEXT[i].gl_Position = MVP * vec4(vb.vertices[global_vertex_index].position.xyz, 1.0f);
-        v_out[i].color = meshlet_color;
-        v_out[i].normal = normalize(mat3(global_uniform.model) * vb.vertices[global_vertex_index].normal.xyz);
+
+        v_out[i].pos = global_uniform.model * vec4(vb.vertices[global_vertex_index].position.xyz, 1.0);
+        gl_MeshVerticesEXT[i].gl_Position = global_uniform.view_proj * v_out[i].pos
+
+        v_out[i].normal = mat3(global_uniform.model) * vb.vertices[global_vertex_index].normal.xyz;
+
+        v_out[i].uv = vec2(vb.vertices[global_vertex_index].position.w, vb.vertices[global_vertex_index].normal.w);
     }
 
     // Set each triangle's vertex indices using per-meshlet triangles

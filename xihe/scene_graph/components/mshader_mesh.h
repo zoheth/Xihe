@@ -9,7 +9,7 @@ namespace xihe::sg
 {
 class Material;
 
-struct AlignedVertex
+struct PackedVertex
 {
 	glm::vec4 pos;
 	glm::vec4 normal;

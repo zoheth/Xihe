@@ -7,7 +7,7 @@
 
 namespace
 {
-glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset)
+glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset, float padding = 1.0f)
 {
 	if (data.size() < offset + 3 * sizeof(float))
 		throw std::runtime_error("Data size is too small for conversion to vec4.");
@@ -17,49 +17,54 @@ glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset)
 	std::memcpy(&y, &data[offset + sizeof(float)], sizeof(float));
 	std::memcpy(&z, &data[offset + 2 * sizeof(float)], sizeof(float));
 
-	return glm::vec4(x, y, z, 1.0f);        // Set w to 1.0f for position
+	return glm::vec4(x, y, z, padding);
 }
 }
 namespace xihe::sg
 {
 MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Device &device)
 {
-	std::vector<AlignedVertex> aligned_vertex_data;
-
 	auto pos_it    = primitive_data.attributes.find("position");
 	auto normal_it = primitive_data.attributes.find("normal");
+	auto uv_it     = primitive_data.attributes.find("texcoord_0");
 
-	if (pos_it == primitive_data.attributes.end() || normal_it == primitive_data.attributes.end())
+	if (pos_it == primitive_data.attributes.end() || normal_it == primitive_data.attributes.end() || uv_it == primitive_data.attributes.end())
 	{
-		throw std::runtime_error("Position or Normal attribute not found.");
+		throw std::runtime_error("Position, Normal or UV attribute not found.");
 	}
 
 	const VertexAttributeData &pos_attr    = pos_it->second;
 	const VertexAttributeData &normal_attr = normal_it->second;
+	const VertexAttributeData &uv_attr     = uv_it->second;
 
 	if (pos_attr.stride == 0 || normal_attr.stride == 0)
 	{
 		throw std::runtime_error("Stride for position or normal attribute is zero.");
 	}
 	uint32_t vertex_count = primitive_data.vertex_count;
-	aligned_vertex_data.reserve(vertex_count);
+	std::vector<PackedVertex> packed_vertex_data;
+	packed_vertex_data.reserve(vertex_count);
 
 	for (size_t i = 0; i < vertex_count; i++)
 	{
 		uint32_t  pos_offset    = i * pos_attr.stride;
 		uint32_t  normal_offset = i * normal_attr.stride;
-		glm::vec4 pos           = convert_to_vec4(pos_attr.data, pos_offset);
-		glm::vec4 normal        = convert_to_vec4(normal_attr.data, normal_offset);
-		aligned_vertex_data.push_back({pos, normal});
+		uint32_t uv_offset     = i * uv_attr.stride;
+		float     u, v;
+		std::memcpy(&u, &uv_attr.data[uv_offset], sizeof(float));
+		std::memcpy(&v, &uv_attr.data[uv_offset + sizeof(float)], sizeof(float));
+		glm::vec4 pos           = convert_to_vec4(pos_attr.data, pos_offset, u);
+		glm::vec4 normal        = convert_to_vec4(normal_attr.data, normal_offset, v);
+		packed_vertex_data.push_back({pos, normal});
 	}
 	{
-		backend::BufferBuilder buffer_builder{aligned_vertex_data.size() * sizeof(AlignedVertex)};
+		backend::BufferBuilder buffer_builder{packed_vertex_data.size() * sizeof(PackedVertex)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 
 		vertex_data_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
 		vertex_data_buffer_->set_debug_name(fmt::format("{}: vertex buffer", primitive_data.name));
-		vertex_data_buffer_->update(aligned_vertex_data);
+		vertex_data_buffer_->update(packed_vertex_data);
 	}
 
 	std::vector<Meshlet> meshlets;
