@@ -46,3 +46,6 @@
 [submodule "third_party/meshoptimizer"]
 	path = third_party/meshoptimizer
 	url = https://github.com/zeux/meshoptimizer
+[submodule "third_party/imgui"]
+	path = third_party/imgui
+	url = https://github.com/ocornut/imgui

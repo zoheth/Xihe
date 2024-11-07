@@ -144,6 +144,28 @@ set_target_properties(spirv-cross-msl PROPERTIES FOLDER "ThirdParty" POSITION_IN
 set_target_properties(spirv-cross-reflect PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
 set_target_properties(spirv-cross-util PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
 
+
+# imgui
+set(IMGUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
+set(IMGUI_FILES
+    "${IMGUI_DIR}/imgui.cpp"
+    "${IMGUI_DIR}/imgui_demo.cpp"
+    "${IMGUI_DIR}/imgui_draw.cpp"
+    "${IMGUI_DIR}/imgui_tables.cpp"
+    "${IMGUI_DIR}/imgui_widgets.cpp"
+    "${IMGUI_DIR}/imconfig.h"
+    "${IMGUI_DIR}/imgui.h"
+    "${IMGUI_DIR}/imgui_internal.h"
+    "${IMGUI_DIR}/imstb_rectpack.h"
+    "${IMGUI_DIR}/imstb_textedit.h"
+    "${IMGUI_DIR}/imstb_truetype.h")
+
+add_library(imgui STATIC ${IMGUI_FILES})
+
+target_include_directories(imgui SYSTEM PUBLIC ${IMGUI_DIR})
+
+set_target_properties(imgui PROPERTIES FOLDER "ThirdParty" POSITION_INDEPENDENT_CODE ON)
+
 # libktx
 set(KTX_DIR ${CMAKE_CURRENT_SOURCE_DIR}/ktx)
 
