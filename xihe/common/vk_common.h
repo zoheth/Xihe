@@ -30,10 +30,10 @@ struct ImageMemoryBarrier
 	vk::PipelineStageFlags2 dst_stage_mask = vk::PipelineStageFlagBits2::eTopOfPipe;
 	vk::AccessFlags2        src_access_mask;
 	vk::AccessFlags2        dst_access_mask;
-	vk::ImageLayout        old_layout       = vk::ImageLayout::eUndefined;
-	vk::ImageLayout        new_layout       = vk::ImageLayout::eUndefined;
-	uint32_t               old_queue_family = VK_QUEUE_FAMILY_IGNORED;
-	uint32_t               new_queue_family = VK_QUEUE_FAMILY_IGNORED;
+	vk::ImageLayout         old_layout       = vk::ImageLayout::eUndefined;
+	vk::ImageLayout         new_layout       = vk::ImageLayout::eUndefined;
+	uint32_t                old_queue_family = VK_QUEUE_FAMILY_IGNORED;
+	uint32_t                new_queue_family = VK_QUEUE_FAMILY_IGNORED;
 };
 
 struct LoadStoreInfo
@@ -59,7 +59,7 @@ inline bool is_depth_format(vk::Format format)
 
 inline bool is_dynamic_buffer_descriptor_type(vk::DescriptorType type)
 {
-		return type == vk::DescriptorType::eUniformBufferDynamic || type == vk::DescriptorType::eStorageBufferDynamic;
+	return type == vk::DescriptorType::eUniformBufferDynamic || type == vk::DescriptorType::eStorageBufferDynamic;
 }
 
 inline bool is_buffer_descriptor_type(vk::DescriptorType descriptor_type)
@@ -99,8 +99,14 @@ inline vk::Format get_suitable_depth_format(vk::PhysicalDevice             physi
 	return depth_format;
 }
 
-void image_layout_transition(vk::CommandBuffer                command_buffer,
-                             vk::Image                        image,
+void image_layout_transition(vk::CommandBuffer                 command_buffer,
+                             vk::Image                         image,
                              common::ImageMemoryBarrier const &image_memory_barrier,
-                             vk::ImageSubresourceRange const &subresource_range);
-}        // namespace xihe
+                             vk::ImageSubresourceRange const  &subresource_range);
+
+/**
+ * \brief Helper function to check support for linear filtering and adjust its parameters if required
+ */
+void make_filters_valid(vk::PhysicalDevice physical_device, vk::Format format, vk::Filter *filter, vk::SamplerMipmapMode *mipmap_mode = nullptr);
+
+}        // namespace xihe::common

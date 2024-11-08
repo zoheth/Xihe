@@ -1,5 +1,6 @@
 #include "rdg_pass.h"
 
+#include "gui.h"
 #include "render_context.h"
 #include "rendering/subpass.h"
 
@@ -319,6 +320,11 @@ void RasterRdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_ind
 	subpasses_[subpass_index]->set_thread_index(thread_index);
 }
 
+void RasterRdgPass::set_gui(Gui *gui)
+{
+	gui_ = gui;
+}
+
 void RasterRdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents)
 {
 	RdgPass::begin_draw(command_buffer, render_target, contents);
@@ -341,6 +347,11 @@ void RasterRdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTar
 
 void RasterRdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
 {
+	if (gui_)
+	{
+		gui_->draw(command_buffer);
+	
+	}
 	command_buffer.end_render_pass();
 
 	if (use_swapchain_image_)

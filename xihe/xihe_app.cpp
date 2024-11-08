@@ -42,6 +42,8 @@ XiheApp::~XiheApp()
 
 	rdg_builder_.reset();
 
+	gui_.reset();
+
 	render_context_.reset();
 
 	device_.reset();
@@ -161,6 +163,14 @@ bool XiheApp::prepare(Window *window)
 void XiheApp::update(float delta_time)
 {
 	update_scene(delta_time);
+	if (gui_)
+	{
+		gui_->new_frame();
+
+		draw_gui();
+
+		gui_->update(delta_time);
+	}
 
 	for (const auto &callback : post_scene_update_callbacks_)
 	{
@@ -349,6 +359,9 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceSynchronization2FeaturesKHR, synchronization2);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceTimelineSemaphoreFeatures, timelineSemaphore);
 }
+
+void XiheApp::draw_gui()
+{}
 
 void XiheApp::create_render_context()
 {

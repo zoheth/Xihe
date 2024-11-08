@@ -32,6 +32,8 @@ bool xihe::TestApp::prepare(Window *window)
 		return false;
 	}
 
+	gui_ = std::make_unique<Gui>(*this, *window);
+
 	get_render_context().update_swapchain(
 	    {vk::ImageUsageFlagBits::eColorAttachment,
 	     vk::ImageUsageFlagBits::eInputAttachment});
@@ -152,7 +154,7 @@ bool xihe::TestApp::prepare(Window *window)
 		auto                                             subpass      = std::make_unique<rendering::CompositeSubpass>(*render_context_, std::move(composite_vs), std::move(composite_fs));
 		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
 		subpasses.push_back(std::move(subpass));
-		rdg_builder_->add_raster_pass("composite_pass", std::move(pass_info), std::move(subpasses));
+		rdg_builder_->add_raster_pass("composite_pass", std::move(pass_info), std::move(subpasses), gui_.get());
 	}
 
 	/*rdg_builder_->add_pass<rendering::ShadowPass>("shadow_pass", rendering::RdgPassType::kRaster, *scene_, *p_cascade_script);
@@ -178,6 +180,11 @@ void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShader);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
+}
+
+void xihe::TestApp::draw_gui()
+{
+	gui_->show_simple_window(get_name(), 6000, []() {});
 }
 
 std::unique_ptr<xihe::Application> create_application()

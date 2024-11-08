@@ -46,7 +46,7 @@ class RdgBuilder
 	/*template <typename T, typename... Args>
 	void add_pass(std::string name, Args &&...args);*/
 
-	void add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses);
+	void add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses, Gui *gui=nullptr);
 
 	void add_compute_pass(const std::string &name, PassInfo &&pass_info, const std::vector<backend::ShaderSource> &shader_sources, ComputeRdgPass::ComputeFunction &&compute_function);
 

@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "gui.h"
+
 #include <memory>
 #include <unordered_map>
 
@@ -48,6 +50,12 @@ class XiheApp : public Application
 	void add_post_scene_update_callback(const PostSceneUpdateCallback &callback);
 
   protected:
+	/**
+	 * @brief Request features from the gpu based on what is supported
+	 */
+	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
+
+	virtual void draw_gui();
 
 	void load_scene(const std::string &path);
 
@@ -62,11 +70,6 @@ class XiheApp : public Application
 	void add_instance_extension(const char *extension, bool optional = false);
 	void add_device_extension(const char *extension, bool optional = false);
 
-	/**
-	 * @brief Request features from the gpu based on what is supported
-	 */
-	virtual void request_gpu_features(backend::PhysicalDevice &gpu);
-
 	void create_render_context();
 
   protected:
@@ -79,6 +82,8 @@ class XiheApp : public Application
 	std::unique_ptr<rendering::RdgBuilder> rdg_builder_;
 
 	std::unique_ptr<sg::Scene> scene_;
+
+	std::unique_ptr<Gui> gui_;
 
 	std::string name_{};
 

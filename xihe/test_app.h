@@ -19,7 +19,9 @@ class TestApp : public XiheApp
 	void update(float delta_time) override;
 
 	void request_gpu_features(backend::PhysicalDevice &gpu) override;
+
 private:
+	void draw_gui() override;
 
 	xihe::sg::Camera *camera_{nullptr};
 

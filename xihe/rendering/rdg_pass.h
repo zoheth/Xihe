@@ -16,6 +16,7 @@
 
 namespace xihe
 {
+class Gui;
 namespace rendering
 {
 class RenderPipeline;
@@ -170,6 +171,8 @@ class RasterRdgPass : public RdgPass
 	 */
 	void set_thread_index(uint32_t subpass_index, uint32_t thread_index);
 
+	void set_gui(Gui *gui);
+
   protected:
 	void begin_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target, vk::SubpassContents contents) override;
 
@@ -182,6 +185,8 @@ class RasterRdgPass : public RdgPass
 
 	backend::RenderPass  *render_pass_{nullptr};
 	backend::Framebuffer *framebuffer_{nullptr};
+
+	Gui *gui_{nullptr};
 };
 
 class ComputeRdgPass : public RdgPass

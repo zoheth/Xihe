@@ -32,7 +32,7 @@ RdgBuilder::RdgBuilder(RenderContext &render_context) :
 {
 }
 
-void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses)
+void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, std::vector<std::unique_ptr<Subpass>> &&subpasses, Gui *gui)
 {
 	/*if (rdg_passes_.contains(name))
 	{
@@ -40,6 +40,10 @@ void RdgBuilder::add_raster_pass(const std::string &name, PassInfo &&pass_info, 
 	}*/
 
 	rdg_passes_.push_back(std::make_unique<RasterRdgPass>(name, render_context_, std::move(pass_info), std::move(subpasses)));
+	if (gui)
+	{
+		dynamic_cast<RasterRdgPass *>(rdg_passes_.back().get())->set_gui(gui);
+	}
 
 	render_context_.register_rdg_render_target(name, rdg_passes_.back().get());
 }
