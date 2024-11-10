@@ -97,6 +97,32 @@ void ShaderVariant::add_define(const std::string &def)
 	update_id();
 }
 
+void ShaderVariant::remove_define(const std::string &def)
+{
+	auto it = std::ranges::find(processes_, "D" + def);
+	if (it != processes_.end())
+	{
+		processes_.erase(it);
+	}
+
+	std::string tmp_def   = def;
+	size_t      pos_equal = tmp_def.find_first_of("=");
+	if (pos_equal != std::string::npos)
+	{
+		tmp_def[pos_equal] = ' ';
+	}
+
+	std::string define_line = "#define " + tmp_def + "\n";
+
+	size_t pos = preamble_.find(define_line);
+	if (pos != std::string::npos)
+	{
+		preamble_.erase(pos, define_line.length());
+	}
+
+	update_id();
+}
+
 void ShaderVariant::add_undefine(const std::string &undef)
 {
 	processes_.push_back("U" + undef);

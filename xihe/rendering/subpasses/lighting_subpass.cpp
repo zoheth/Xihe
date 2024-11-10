@@ -29,13 +29,19 @@ LightingSubpass::LightingSubpass(RenderContext &render_context, backend::ShaderS
 void LightingSubpass::prepare()
 {
 	shader_variant_.add_define({"MAX_LIGHT_COUNT " + std::to_string(MAX_DEFERRED_LIGHT_COUNT)});
+	shader_variant_cascade_.add_define({"MAX_LIGHT_COUNT " + std::to_string(MAX_DEFERRED_LIGHT_COUNT)});
 
 	shader_variant_.add_definitions(kLightTypeDefinitions);
+	shader_variant_cascade_.add_definitions(kLightTypeDefinitions);
 
 	auto &resource_cache = render_context_.get_device().get_resource_cache();
 
 	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
 	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
+
+	shader_variant_cascade_.add_define("SHOW_CASCADE_VIEW");
+	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_cascade_);
+	resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_cascade_);
 }
 
 void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
@@ -45,10 +51,19 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 
 	auto &resource_cache = render_context_.get_device().get_resource_cache();
 
-	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
-
-	std::vector shader_modules = {&vert_shader_module, &frag_shader_module};
+	std::vector<backend::ShaderModule *> shader_modules;
+	if (show_cascade_view_)
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_cascade_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_cascade_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
+	else
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
 
 	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
 	command_buffer.bind_pipeline_layout(pipeline_layout);
@@ -106,5 +121,10 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.bind_image(shadow_render_target.get_views()[2], *shadowmap_sampler_, 0, 8, 0);*/
 
 	command_buffer.draw(3, 1, 0, 0);
+}
+
+void LightingSubpass::show_cascade_view(bool show)
+{
+	show_cascade_view_ = show;
 }
 }        // namespace xihe::rendering

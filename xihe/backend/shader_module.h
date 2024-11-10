@@ -80,6 +80,8 @@ class ShaderVariant
 
 	void add_define(const std::string &def);
 
+	void remove_define(const std::string &def);
+
 	void add_undefine(const std::string &undef);
 
 	void add_runtime_array_size(const std::string &runtime_array_name, size_t size);

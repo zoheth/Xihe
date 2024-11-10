@@ -430,14 +430,91 @@ void Gui::draw(backend::CommandBuffer &command_buffer)
 
 bool Gui::input_event(const InputEvent &input_event)
 {
-	return true;
+	auto &io                 = ImGui::GetIO();
+	auto  capture_move_event = false;
+
+	if (input_event.get_source() == EventSource::Keyboard)
+	{
+		const auto &key_event = static_cast<const KeyInputEvent &>(input_event);
+
+		if (key_event.get_action() == KeyAction::Down)
+		{
+			io.KeysDown[static_cast<int>(key_event.get_code())] = true;
+		}
+		else if (key_event.get_action() == KeyAction::Up)
+		{
+			io.KeysDown[static_cast<int>(key_event.get_code())] = false;
+		}
+	}
+	else if (input_event.get_source() == EventSource::Mouse)
+	{
+		const auto &mouse_button = static_cast<const MouseButtonInputEvent &>(input_event);
+
+		io.MousePos = ImVec2{mouse_button.get_pos_x() * content_scale_factor_,
+		                     mouse_button.get_pos_y() * content_scale_factor_};
+
+		auto button_id = static_cast<int>(mouse_button.get_button());
+
+		if (mouse_button.get_action() == MouseAction::Down)
+		{
+			io.MouseDown[button_id] = true;
+		}
+		else if (mouse_button.get_action() == MouseAction::Up)
+		{
+			io.MouseDown[button_id] = false;
+		}
+		else if (mouse_button.get_action() == MouseAction::Move)
+		{
+			capture_move_event = io.WantCaptureMouse;
+		}
+	}
+	else if (input_event.get_source() == EventSource::Touchscreen)
+	{
+		const auto &touch_event = static_cast<const TouchInputEvent &>(input_event);
+
+		io.MousePos = ImVec2{touch_event.get_pos_x(), touch_event.get_pos_y()};
+
+		if (touch_event.get_action() == TouchAction::Down)
+		{
+			io.MouseDown[touch_event.get_pointer_id()] = true;
+		}
+		else if (touch_event.get_action() == TouchAction::Up)
+		{
+			io.MouseDown[touch_event.get_pointer_id()] = false;
+		}
+		else if (touch_event.get_action() == TouchAction::Move)
+		{
+			capture_move_event = io.WantCaptureMouse;
+		}
+	}
+
+	// Toggle GUI elements when tap or clicking outside the GUI windows
+	if (!io.WantCaptureMouse)
+	{
+		bool press_down = (input_event.get_source() == EventSource::Mouse && static_cast<const MouseButtonInputEvent &>(input_event).get_action() == MouseAction::Down) || (input_event.get_source() == EventSource::Touchscreen && static_cast<const TouchInputEvent &>(input_event).get_action() == TouchAction::Down);
+		bool press_up   = (input_event.get_source() == EventSource::Mouse && static_cast<const MouseButtonInputEvent &>(input_event).get_action() == MouseAction::Up) || (input_event.get_source() == EventSource::Touchscreen && static_cast<const TouchInputEvent &>(input_event).get_action() == TouchAction::Up);
+
+		if (press_down)
+		{
+			timer_.start();
+			if (input_event.get_source() == EventSource::Touchscreen)
+			{
+				const auto &touch_event = static_cast<const TouchInputEvent &>(input_event);
+				/*if (touch_event.get_touch_points() == 2)
+				{
+					two_finger_tap_ = true;
+				}*/
+			}
+		}
+	}
+
+	return capture_move_event;
 }
 
 void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body)
 {
 	ImGuiIO &io = ImGui::GetIO();
 
-	ImGui::NewFrame();
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_FirstUseEver);
@@ -456,9 +533,26 @@ void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const s
 	ImGui::PopStyleVar();
 }
 
+void Gui::show_views_window(std::function<void()> body, const uint32_t lines) const
+{
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
+	ImGui::SetNextWindowPos(ImVec2(10, 10));
+	ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_FirstUseEver);
+	ImGui::Begin("切换视图", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+	ImGui::PushItemWidth(110.0f * dpi_factor_);
+
+	body();
+
+	ImGui::PopItemWidth();
+
+	ImGui::End();
+	ImGui::PopStyleVar();
+}
+
 void Gui::new_frame()
 {
-	//ImGui::NewFrame();
+	ImGui::NewFrame();
 }
 
 Font & Gui::get_font(const std::string &font_name)

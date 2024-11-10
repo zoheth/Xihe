@@ -170,6 +170,8 @@ bool xihe::TestApp::prepare(Window *window)
 
 void xihe::TestApp::update(float delta_time)
 {
+	rendering::MeshletSubpass::show_meshlet_view(show_meshlet_view_, *scene_);
+	rendering::LightingSubpass::show_cascade_view(show_cascade_view_);
 	XiheApp::update(delta_time);
 }
 
@@ -184,7 +186,13 @@ void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 void xihe::TestApp::draw_gui()
 {
-	gui_->show_simple_window("羲和", 6000, []() {});
+	gui_->show_views_window(
+	    /* body = */ [this]() {
+
+		    ImGui::Checkbox("Meshlet", &show_meshlet_view_);
+		    ImGui::Checkbox("级联阴影", &show_cascade_view_);
+	    },
+	    /* lines = */ 2);
 }
 
 std::unique_ptr<xihe::Application> create_application()

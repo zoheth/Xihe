@@ -71,6 +71,8 @@ class Gui
 
 	void show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body);
 
+	void show_views_window(std::function<void()> body, const uint32_t lines) const;
+
 	static void new_frame();
 
 	Font &get_font(const std::string &font_name = Gui::default_font_);

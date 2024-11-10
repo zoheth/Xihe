@@ -1,14 +1,14 @@
 #include "meshlet_subpass.h"
 
 #include "forward_subpass.h"
-#include "scene_graph/components/camera.h"
-#include "scene_graph/components/mesh.h"
 #include "rendering/render_context.h"
+#include "scene_graph/components/camera.h"
+#include "scene_graph/components/image.h"
+#include "scene_graph/components/material.h"
+#include "scene_graph/components/mesh.h"
+#include "scene_graph/components/texture.h"
 #include "scene_graph/scene.h"
 #include "shared_uniform.h"
-#include "scene_graph/components/material.h"
-#include "scene_graph/components/texture.h"
-#include "scene_graph/components/image.h"
 
 #include <ranges>
 
@@ -18,8 +18,8 @@ namespace xihe::rendering
 {
 MeshletSubpass::MeshletSubpass(rendering::RenderContext &render_context, std::optional<backend::ShaderSource> task_shader, backend::ShaderSource &&mesh_shader, backend::ShaderSource &&fragment_shader, sg::Scene &scene, sg::Camera &camera) :
     Subpass{render_context, std::move(task_shader), std::move(mesh_shader), std::move(fragment_shader)},
-	camera_{camera},
-	scene_{scene},
+    camera_{camera},
+    scene_{scene},
     meshes_{scene.get_components<sg::Mesh>()}
 {
 	/*mesh_         = scene.get_components<sg::Mesh>()[0];
@@ -29,17 +29,22 @@ MeshletSubpass::MeshletSubpass(rendering::RenderContext &render_context, std::op
 
 void MeshletSubpass::prepare()
 {
-	auto &device  = get_render_context().get_device();
+	auto &device = get_render_context().get_device();
 
 	for (auto &mesh : meshes_)
 	{
 		for (auto &mshader_mesh : mesh->get_mshader_meshes())
 		{
 			auto &variant = mshader_mesh->get_mut_shader_variant();
-			//variant.add_definitions({"MAX_LIGHT_COUNT " + std::to_string(kMaxForwardLightCount)});
-			//variant.add_definitions(kLightTypeDefinitions);
-			auto &mesh_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
-			auto &frag_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
+			// variant.add_definitions({"MAX_LIGHT_COUNT " + std::to_string(kMaxForwardLightCount)});
+			// variant.add_definitions(kLightTypeDefinitions);
+			variant.add_define("SHOW_MESHLET_VIEW");
+			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
+			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
+
+			variant.remove_define("SHOW_MESHLET_VIEW");
+			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
+			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
 		}
 	}
 }
@@ -81,7 +86,28 @@ void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 }
 
-backend::PipelineLayout & MeshletSubpass::prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules)
+void MeshletSubpass::show_meshlet_view(bool show, sg::Scene &scene)
+{
+	if (show == show_debug_view_)
+	{
+		return;
+	}
+	show_debug_view_ = show;
+	for (auto mshader_mesh : scene.get_components<sg::MshaderMesh>())
+	{
+		auto &variant = mshader_mesh->get_mut_shader_variant();
+		if (show)
+		{
+			variant.add_define("SHOW_MESHLET_VIEW");
+		}
+		else
+		{
+			variant.remove_define("SHOW_MESHLET_VIEW");
+		}
+	}
+}
+
+backend::PipelineLayout &MeshletSubpass::prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules)
 {
 	for (auto &shader_module : shader_modules)
 	{
@@ -163,7 +189,6 @@ void MeshletSubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *,
 			{
 				// todo  handle transparent objects
 				opaque_nodes.emplace(distance, std::make_pair(node, mshader_mesh_mesh));
-				
 			}
 		}
 	}

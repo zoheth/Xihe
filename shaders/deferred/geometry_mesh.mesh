@@ -83,8 +83,9 @@ void main(void)
         v_out[i].normal = mat3(global_uniform.model) * vb.vertices[global_vertex_index].normal.xyz;
 
         v_out[i].uv = vec2(vb.vertices[global_vertex_index].position.w, vb.vertices[global_vertex_index].normal.w);
-
-        // v_out[i].pos = meshlet_color;
+#ifdef SHOW_MESHLET_VIEW
+        v_out[i].pos = meshlet_color;
+#endif
     }
 
     // Set each triangle's vertex indices using per-meshlet triangles

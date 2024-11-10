@@ -50,6 +50,8 @@ class LightingSubpass : public Subpass
 
 	void draw(backend::CommandBuffer &command_buffer) override;
 
+	static void show_cascade_view(bool show);
+
   private:
 	sg::Camera &camera_;
 
@@ -59,7 +61,11 @@ class LightingSubpass : public Subpass
 
 	backend::ShaderVariant shader_variant_;
 
+	backend::ShaderVariant shader_variant_cascade_;
+
 	std::unique_ptr<backend::Sampler> shadowmap_sampler_{};
+
+	inline static bool show_cascade_view_{false};
 };
 
 }        // namespace rendering

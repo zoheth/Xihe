@@ -36,6 +36,8 @@ class MeshletSubpass : public rendering::Subpass
 
 	void update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index) const;
 
+	static void show_meshlet_view(bool show, sg::Scene &scene);
+
   private:
 
 	backend::PipelineLayout &prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules);
@@ -50,6 +52,8 @@ class MeshletSubpass : public rendering::Subpass
 	sg::Scene &scene_;
 
 	std::vector<sg::Mesh *> meshes_;
+
+	inline static bool show_debug_view_{false};
 
 	// sg::MshaderMesh *mshader_mesh_{nullptr};
 };

@@ -196,13 +196,23 @@ void XiheApp::input_event(const InputEvent &input_event)
 {
 	Application::input_event(input_event);
 
-	if (scene_ && scene_->has_component<sg::Script>())
-	{
-		const auto scripts = scene_->get_components<sg::Script>();
+	bool gui_captures_event = false;
 
-		for (const auto script : scripts)
+	if (gui_)
+	{
+		gui_captures_event = gui_->input_event(input_event);
+	}
+
+	if (!gui_captures_event)
+	{
+		if (scene_ && scene_->has_component<sg::Script>())
 		{
-			script->input_event(input_event);
+			const auto scripts = scene_->get_components<sg::Script>();
+
+			for (const auto script : scripts)
+			{
+				script->input_event(input_event);
+			}
 		}
 	}
 }
@@ -247,7 +257,7 @@ std::unique_ptr<backend::Instance> const &XiheApp::get_instance() const
 	return instance_;
 }
 
-rendering::RenderContext & XiheApp::get_render_context()
+rendering::RenderContext &XiheApp::get_render_context()
 {
 	if (has_render_context())
 	{
@@ -259,7 +269,7 @@ rendering::RenderContext & XiheApp::get_render_context()
 	}
 }
 
-rendering::RenderContext const & XiheApp::get_render_context() const
+rendering::RenderContext const &XiheApp::get_render_context() const
 {
 	if (has_render_context())
 	{

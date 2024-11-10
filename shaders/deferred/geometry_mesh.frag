@@ -56,5 +56,7 @@ void main(void)
     base_color = pbr_material_uniform.base_color_factor;
 #endif
     o_albedo = base_color;
-    //o_albedo = v_in.pos;
+#ifdef SHOW_MESHLET_VIEW
+    o_albedo = v_in.pos;
+#endif
 }
