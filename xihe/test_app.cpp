@@ -184,7 +184,7 @@ void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 void xihe::TestApp::draw_gui()
 {
-	gui_->show_simple_window(get_name(), 6000, []() {});
+	gui_->show_simple_window("羲和", 6000, []() {});
 }
 
 std::unique_ptr<xihe::Application> create_application()

@@ -2,8 +2,8 @@
 
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/subpasses/meshlet_subpass.h"
-#include "scene_graph/scripts/free_camera.h"
 #include "scene_graph/scene.h"
+#include "scene_graph/scripts/free_camera.h"
 
 xihe::MeshShadingApp::MeshShadingApp()
 {
@@ -39,13 +39,12 @@ bool xihe::MeshShadingApp::prepare(Window *window)
 	pass_info.outputs = {
 	    {rendering::RdgResourceType::kSwapchain, "swapchain"},
 	    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle())},
-		{rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32},
+	    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32},
 	};
 
 	rdg_builder_->add_raster_pass("mesh_shader_meshlet", std::move(pass_info), std::move(subpasses));
 
 	return true;
-
 }
 
 void xihe::MeshShadingApp::update(float delta_time)
@@ -70,7 +69,7 @@ void xihe::MeshShadingApp::request_gpu_features(backend::PhysicalDevice &gpu)
 }
 
 //
-//std::unique_ptr<xihe::Application> create_application()
+// std::unique_ptr<xihe::Application> create_application()
 //{
 //	return std::make_unique<xihe::MeshShadingApp>();
 //}

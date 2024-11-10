@@ -42,7 +42,7 @@ struct Font
 		}
 
 		ImGuiIO &io = ImGui::GetIO();
-		handle      = io.Fonts->AddFontFromMemoryTTF(data.data(), static_cast<int>(data.size()), size, &font_config);
+		handle      = io.Fonts->AddFontFromMemoryTTF(data.data(), static_cast<int>(data.size()), size, &font_config, io.Fonts->GetGlyphRangesChineseFull());
 	}
 
 	ImFont *handle{nullptr};
@@ -69,9 +69,11 @@ class Gui
 
 	bool input_event(const InputEvent &input_event);
 
-	void show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body) const;
+	void show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body);
 
 	static void new_frame();
+
+	Font &get_font(const std::string &font_name = Gui::default_font_);
 
   public:
 	static const std::string default_font_;

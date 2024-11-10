@@ -23,7 +23,7 @@ void upload_draw_data(const ImDrawData *draw_data, uint8_t *vertex_data, uint8_t
 }
 }        // namespace
 
-const std::string Gui::default_font_ = "Roboto-Regular";
+const std::string Gui::default_font_ = "msyh";
 bool              Gui::visible_      = true;
 
 Gui::Gui(XiheApp &app, Window &window, const float font_size, bool explicit_update) :
@@ -239,7 +239,7 @@ void Gui::prepare(vk::PipelineCache pipeline_cache, vk::RenderPass render_pass, 
 	};
 	device.get_handle().updateDescriptorSets(write_descriptor_sets, {});
 
-	vk::PipelineInputAssemblyStateCreateInfo input_assembly_state{{}, vk::PrimitiveTopology::eTriangleList, VK_FALSE};
+	/*vk::PipelineInputAssemblyStateCreateInfo input_assembly_state{{}, vk::PrimitiveTopology::eTriangleList, VK_FALSE};
 
 	vk::PipelineRasterizationStateCreateInfo rasterization_state{};
 	rasterization_state.polygonMode = vk::PolygonMode::eFill;
@@ -296,7 +296,7 @@ void Gui::prepare(vk::PipelineCache pipeline_cache, vk::RenderPass render_pass, 
 	};
 	vk::PipelineVertexInputStateCreateInfo vertex_input_state{{}, vertex_input_bindings, vertex_input_attributes};
 
-	pipeline_info.pVertexInputState = &vertex_input_state;
+	pipeline_info.pVertexInputState = &vertex_input_state;*/
 
 	/*result = device.get_handle().createGraphicsPipelines(pipeline_cache, 1, &pipeline_info, nullptr, &pipeline_);
 	if (result != vk::Result::eSuccess)
@@ -373,7 +373,13 @@ void Gui::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.bind_pipeline_layout(*pipeline_layout_);
 	command_buffer.bind_image(*font_image_view_, *sampler_, 0, 0, 0);
 
-	command_buffer.push_constants(glm::mat4(1.0f));
+	auto &io             = ImGui::GetIO();
+	auto push_transform = glm::mat4(1.0f);
+	// GUI coordinate space to screen space
+	push_transform = glm::translate(push_transform, glm::vec3(-1.0f, -1.0f, 0.0f));
+	push_transform = glm::scale(push_transform, glm::vec3(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y, 0.0f));
+
+	command_buffer.push_constants(push_transform);
 
 	if (!explicit_update_)
 	{
@@ -427,7 +433,7 @@ bool Gui::input_event(const InputEvent &input_event)
 	return true;
 }
 
-void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body) const
+void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body)
 {
 	ImGuiIO &io = ImGui::GetIO();
 
@@ -435,7 +441,8 @@ void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const s
 	ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0);
 	ImGui::SetNextWindowPos(ImVec2(10, 10));
 	ImGui::SetNextWindowSize(ImVec2(0, 0), ImGuiCond_FirstUseEver);
-	ImGui::Begin("Vulkan Example", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+	ImGui::Begin("测试窗口", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
 	ImGui::TextUnformatted(name.c_str());
 	//ImGui::TextUnformatted(std::string(app_.get_render_context().get_device().get_gpu().get_properties().deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / last_fps), last_fps);
@@ -444,6 +451,7 @@ void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const s
 	body();
 
 	ImGui::PopItemWidth();
+
 	ImGui::End();
 	ImGui::PopStyleVar();
 }
@@ -453,12 +461,29 @@ void Gui::new_frame()
 	//ImGui::NewFrame();
 }
 
+Font & Gui::get_font(const std::string &font_name)
+{
+	assert(!fonts_.empty() && "No fonts exist");
+
+	const auto it = std::ranges::find_if(fonts_, [&font_name](const Font &font) { return font.name == font_name; });
+
+	if (it != fonts_.end())
+	{
+		return *it;
+	}
+	else
+	{
+		LOGW("Couldn't find font with name {}", font_name);
+		return *fonts_.begin();
+	}
+}
+
 void Gui::update_buffers(backend::CommandBuffer &command_buffer) const
 {
 	ImDrawData             *draw_data    = ImGui::GetDrawData();
 	rendering::RenderFrame &render_frame = app_.get_render_context().get_active_frame();
 
-	if (!draw_data || draw_data->TotalIdxCount == 0 || draw_data->TotalVtxCount)
+	if (!draw_data || draw_data->TotalIdxCount == 0 || draw_data->TotalVtxCount == 0)
 	{
 		return;
 	}

@@ -1,4 +1,4 @@
-﻿#include "xihe_app.h"
+#include "xihe_app.h"
 
 #include "scene_graph/components/texture.h"
 #include "scene_graph/gltf_loader.h"

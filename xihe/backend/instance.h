@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
+#define XH_VALIDATION_LAYERS
+
 namespace xihe::backend
 {
 

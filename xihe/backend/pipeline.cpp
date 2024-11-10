@@ -261,27 +261,26 @@ GraphicsPipeline::GraphicsPipeline(Device &device, vk::PipelineCache pipeline_ca
 	                                           pipeline_state.get_render_pass()->get_handle(),
 	                                           pipeline_state.get_subpass_index()};
 
+	vk::PipelineVertexInputStateCreateInfo vertex_input_state_create_info{
+	    vk::PipelineVertexInputStateCreateFlags{},
+	    to_u32(pipeline_state.get_vertex_input_state().bindings.size()),
+	    pipeline_state.get_vertex_input_state().bindings.data(),
+	    to_u32(pipeline_state.get_vertex_input_state().attributes.size()),
+	    pipeline_state.get_vertex_input_state().attributes.data()};
 
+	vk::PipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{
+	    vk::PipelineInputAssemblyStateCreateFlags{},
+	    pipeline_state.get_input_assembly_state().topology,
+	    pipeline_state.get_input_assembly_state().primitive_restart_enable};
 
 	if (!pipeline_state.has_mesh_shader())
 	{
-		vk::PipelineVertexInputStateCreateInfo vertex_input_state_create_info{
-		    vk::PipelineVertexInputStateCreateFlags{},
-		    to_u32(pipeline_state.get_vertex_input_state().bindings.size()),
-		    pipeline_state.get_vertex_input_state().bindings.data(),
-		    to_u32(pipeline_state.get_vertex_input_state().attributes.size()),
-		    pipeline_state.get_vertex_input_state().attributes.data()};
-
-		vk::PipelineInputAssemblyStateCreateInfo input_assembly_state_create_info{
-		    vk::PipelineInputAssemblyStateCreateFlags{},
-		    pipeline_state.get_input_assembly_state().topology,
-		    pipeline_state.get_input_assembly_state().primitive_restart_enable};
-
 		create_info.pVertexInputState = &vertex_input_state_create_info;
 		create_info.pInputAssemblyState = &input_assembly_state_create_info;
 	}
-
 	vk::Result result = device_.get_handle().createGraphicsPipelines(pipeline_cache, 1, &create_info, nullptr, &handle_);
+
+
 
 	if (result != vk::Result::eSuccess)
 	{
