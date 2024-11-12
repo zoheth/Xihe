@@ -10,10 +10,11 @@
 #include "backend/buffer.h"
 #include "backend/command_buffer.h"
 #include "backend/sampler.h"
+#include "common/timer.h"
 #include "platform/filesystem.h"
 #include "platform/input_events.h"
 #include "rendering/render_context.h"
-#include "common/timer.h"
+#include "stats/stats.h"
 
 namespace xihe
 {
@@ -57,7 +58,22 @@ struct Font
 class Gui
 {
   public:
-	Gui(XiheApp &app, Window &window, const float font_size = 21.0f, bool explicit_update = false);
+	struct StatsView
+	{
+		StatsView(const stats::Stats *stats);
+
+		void reset_max_values();
+
+		void reset_max_values(const stats::StatIndex index);
+
+		std::map<stats::StatIndex, stats::StatGraphData> graph_map;
+
+		float graph_height{50.0f};
+
+		float top_padding{1.1f};
+	};
+
+	Gui(XiheApp &app, Window &window, const stats::Stats *stats = nullptr, const float font_size = 21.0f, bool explicit_update = false);
 
 	~Gui();
 
@@ -72,6 +88,8 @@ class Gui
 	void show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body);
 
 	void show_views_window(std::function<void()> body, const uint32_t lines) const;
+
+	void show_stats(const stats::Stats &stats);
 
 	static void new_frame();
 
@@ -111,10 +129,12 @@ class Gui
 
 	backend::PipelineLayout *pipeline_layout_{nullptr};
 
-	vk::DescriptorPool descriptor_pool_{VK_NULL_HANDLE};
+	vk::DescriptorPool      descriptor_pool_{VK_NULL_HANDLE};
 	vk::DescriptorSetLayout descriptor_set_layout_{VK_NULL_HANDLE};
-	vk::DescriptorSet descriptor_set_{VK_NULL_HANDLE};
-	vk::Pipeline pipeline_{VK_NULL_HANDLE};
+	vk::DescriptorSet       descriptor_set_{VK_NULL_HANDLE};
+	vk::Pipeline            pipeline_{VK_NULL_HANDLE};
+
+	StatsView stats_view_;
 
 	Timer timer_;
 

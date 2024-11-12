@@ -1,7 +1,9 @@
 #include "gui.h"
 
-#include "xihe_app.h"
 #include "rendering/pipeline_state.h"
+#include "xihe_app.h"
+
+#include <numeric>
 
 namespace xihe
 {
@@ -21,14 +23,25 @@ void upload_draw_data(const ImDrawData *draw_data, uint8_t *vertex_data, uint8_t
 		idx_dst += cmd_list->IdxBuffer.Size;
 	}
 }
+
+void reset_graph_max_value(stats::StatGraphData &graph_data)
+{
+	// If it does not have a fixed max
+	if (!graph_data.has_fixed_max)
+	{
+		// Reset it
+		graph_data.max_value = 0.0f;
+	}
+}
 }        // namespace
 
 const std::string Gui::default_font_ = "msyh";
 bool              Gui::visible_      = true;
 
-Gui::Gui(XiheApp &app, Window &window, const float font_size, bool explicit_update) :
+Gui::Gui(XiheApp &app, Window &window, const stats::Stats *stats, const float font_size, bool explicit_update) :
     app_{app},
-    explicit_update_{explicit_update}
+    explicit_update_{explicit_update},
+    stats_view_{stats}
 {
 	ImGui::CreateContext();
 
@@ -194,6 +207,37 @@ Gui::Gui(XiheApp &app, Window &window, const float font_size, bool explicit_upda
 	}
 }
 
+Gui::StatsView::StatsView(const stats::Stats *stats)
+{
+	if (stats == nullptr)
+	{
+		return;
+	}
+
+	const std::set<stats::StatIndex> &requested_stats = stats->get_requested_stats();
+
+	for (stats::StatIndex index : requested_stats)
+	{
+		graph_map[index] = stats->get_graph_data(index);
+	}
+}
+
+void Gui::StatsView::reset_max_values()
+{
+	// For every entry in the map
+	std::ranges::for_each(graph_map,
+	                      [](auto &pr) { reset_graph_max_value(pr.second); });
+}
+
+void Gui::StatsView::reset_max_values(const stats::StatIndex index)
+{
+	auto it = graph_map.find(index);
+	if (it != graph_map.end())
+	{
+		reset_graph_max_value(it->second);
+	}
+}
+
 Gui::~Gui()
 {
 	app_.get_render_context().get_device().get_handle().destroyDescriptorPool(descriptor_pool_);
@@ -238,71 +282,6 @@ void Gui::prepare(vk::PipelineCache pipeline_cache, vk::RenderPass render_pass, 
 	    {descriptor_set_, 0, 0, 1, vk::DescriptorType::eCombinedImageSampler, &font_image_info},
 	};
 	device.get_handle().updateDescriptorSets(write_descriptor_sets, {});
-
-	/*vk::PipelineInputAssemblyStateCreateInfo input_assembly_state{{}, vk::PrimitiveTopology::eTriangleList, VK_FALSE};
-
-	vk::PipelineRasterizationStateCreateInfo rasterization_state{};
-	rasterization_state.polygonMode = vk::PolygonMode::eFill;
-	rasterization_state.cullMode    = vk::CullModeFlagBits::eNone;
-	rasterization_state.frontFace   = vk::FrontFace::eCounterClockwise;
-
-	vk::PipelineColorBlendAttachmentState color_blend_attachment{};
-	color_blend_attachment.blendEnable         = VK_TRUE;
-	color_blend_attachment.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
-	color_blend_attachment.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-	color_blend_attachment.colorBlendOp        = vk::BlendOp::eAdd;
-	color_blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
-	color_blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
-	color_blend_attachment.alphaBlendOp        = vk::BlendOp::eAdd;
-	color_blend_attachment.colorWriteMask      = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
-
-	vk::PipelineColorBlendStateCreateInfo color_blend_state{};
-	color_blend_state.attachmentCount = 1;
-	color_blend_state.pAttachments    = &color_blend_attachment;
-
-	vk::PipelineDepthStencilStateCreateInfo depth_stencil_state{};
-	depth_stencil_state.depthTestEnable  = VK_FALSE;
-	depth_stencil_state.depthWriteEnable = VK_FALSE;
-
-	vk::PipelineViewportStateCreateInfo viewport_state{{}, 1, nullptr, 1, nullptr};
-
-	vk::PipelineMultisampleStateCreateInfo multisample_state{};
-	multisample_state.rasterizationSamples = vk::SampleCountFlagBits::e1;
-
-	std::vector<vk::DynamicState> dynamic_states = {
-	    vk::DynamicState::eViewport,
-	    vk::DynamicState::eScissor,
-	};
-	vk::PipelineDynamicStateCreateInfo dynamic_state{{}, dynamic_states};
-
-	vk::GraphicsPipelineCreateInfo pipeline_info{};
-	pipeline_info.stageCount          = to_u32(shader_stages.size());
-	pipeline_info.pStages             = shader_stages.data();
-	pipeline_info.pInputAssemblyState = &input_assembly_state;
-	pipeline_info.pRasterizationState = &rasterization_state;
-	pipeline_info.pColorBlendState    = &color_blend_state;
-	pipeline_info.pDepthStencilState  = &depth_stencil_state;
-	pipeline_info.pViewportState      = &viewport_state;
-	pipeline_info.pMultisampleState   = &multisample_state;
-	pipeline_info.pDynamicState       = &dynamic_state;
-
-	std::vector<vk::VertexInputBindingDescription> vertex_input_bindings = {
-	    {0, sizeof(ImDrawVert), vk::VertexInputRate::eVertex},
-	};
-	std::vector<vk::VertexInputAttributeDescription> vertex_input_attributes = {
-	    {0, 0, vk::Format::eR32G32Sfloat, offsetof(ImDrawVert, pos)},
-	    {1, 0, vk::Format::eR32G32Sfloat, offsetof(ImDrawVert, uv)},
-	    {2, 0, vk::Format::eR8G8B8A8Unorm, offsetof(ImDrawVert, col)},
-	};
-	vk::PipelineVertexInputStateCreateInfo vertex_input_state{{}, vertex_input_bindings, vertex_input_attributes};
-
-	pipeline_info.pVertexInputState = &vertex_input_state;*/
-
-	/*result = device.get_handle().createGraphicsPipelines(pipeline_cache, 1, &pipeline_info, nullptr, &pipeline_);
-	if (result != vk::Result::eSuccess)
-	{
-		throw VulkanException{result, "Cannot create graphics pipeline"};
-	}*/
 }
 
 void Gui::update(const float delta_time)
@@ -366,7 +345,7 @@ void Gui::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.set_rasterization_state(rasterization_state);
 
 	DepthStencilState depth_stencil_state{};
-	depth_stencil_state.depth_test_enable = VK_FALSE;
+	depth_stencil_state.depth_test_enable  = VK_FALSE;
 	depth_stencil_state.depth_write_enable = VK_FALSE;
 	command_buffer.set_depth_stencil_state(depth_stencil_state);
 
@@ -374,7 +353,7 @@ void Gui::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.bind_image(*font_image_view_, *sampler_, 0, 0, 0);
 
 	auto &io             = ImGui::GetIO();
-	auto push_transform = glm::mat4(1.0f);
+	auto  push_transform = glm::mat4(1.0f);
 	// GUI coordinate space to screen space
 	push_transform = glm::translate(push_transform, glm::vec3(-1.0f, -1.0f, 0.0f));
 	push_transform = glm::scale(push_transform, glm::vec3(2.0f / io.DisplaySize.x, 2.0f / io.DisplaySize.y, 0.0f));
@@ -502,7 +481,7 @@ bool Gui::input_event(const InputEvent &input_event)
 				const auto &touch_event = static_cast<const TouchInputEvent &>(input_event);
 				/*if (touch_event.get_touch_points() == 2)
 				{
-					two_finger_tap_ = true;
+				    two_finger_tap_ = true;
 				}*/
 			}
 		}
@@ -521,7 +500,7 @@ void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const s
 	ImGui::Begin("测试窗口", nullptr, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
 	ImGui::TextUnformatted(name.c_str());
-	//ImGui::TextUnformatted(std::string(app_.get_render_context().get_device().get_gpu().get_properties().deviceName).c_str());
+	// ImGui::TextUnformatted(std::string(app_.get_render_context().get_device().get_gpu().get_properties().deviceName).c_str());
 	ImGui::Text("%.2f ms/frame (%.1d fps)", (1000.0f / last_fps), last_fps);
 	ImGui::PushItemWidth(110.0f * dpi_factor_);
 
@@ -550,12 +529,64 @@ void Gui::show_views_window(std::function<void()> body, const uint32_t lines) co
 	ImGui::PopStyleVar();
 }
 
+void Gui::show_stats(const stats::Stats &stats)
+{
+	ImGuiIO &io = ImGui::GetIO();
+	ImVec2 pos = ImVec2(io.DisplaySize.x - 200, 10);
+	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+
+	ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+
+	for (const auto &stat_index : stats.get_requested_stats())
+	{
+		auto it = stats_view_.graph_map.find(stat_index);
+
+		assert(it != stats_view_.graph_map.end() && "StatIndex not implemented in gui graph_map");
+
+		auto       &graph_data     = it->second;
+		const auto &graph_elements = stats.get_data(stat_index);
+		float       graph_min      = 0.0f;
+		float      &graph_max      = graph_data.max_value;
+
+		if (!graph_data.has_fixed_max)
+		{
+			auto new_max = *std::max_element(graph_elements.begin(), graph_elements.end()) * stats_view_.top_padding;
+			if (new_max > graph_max)
+			{
+				graph_max = new_max;
+			}
+		}
+
+		ImVec2 graph_size = ImVec2(io.DisplaySize.x - pos.x - 10, stats_view_.graph_height * dpi_factor_);
+
+
+
+		std::stringstream graph_label;
+		float             avg = std::accumulate(graph_elements.begin(), graph_elements.end(), 0.0f) / graph_elements.size();
+
+		if (stats.is_available(stat_index))
+		{
+			graph_label << graph_data.name << ": " << graph_data.format;
+			ImGui::PlotLines(graph_label.str().c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
+
+			ImGui::Text(graph_label.str().c_str(), avg * graph_data.scale_factor);
+			ImGui::Separator(); 
+		}
+		else
+		{
+			graph_label << graph_data.name << ": not available";
+			ImGui::Text("%s", graph_label.str().c_str());
+		}
+	}
+	ImGui::End();
+}
+
 void Gui::new_frame()
 {
 	ImGui::NewFrame();
 }
 
-Font & Gui::get_font(const std::string &font_name)
+Font &Gui::get_font(const std::string &font_name)
 {
 	assert(!fonts_.empty() && "No fonts exist");
 

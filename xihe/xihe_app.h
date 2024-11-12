@@ -19,6 +19,12 @@
 namespace xihe
 {
 
+namespace stats
+{
+class Stats;
+}
+
+
 class XiheApp : public Application
 {
   public:
@@ -84,6 +90,8 @@ class XiheApp : public Application
 	std::unique_ptr<sg::Scene> scene_;
 
 	std::unique_ptr<Gui> gui_;
+
+	std::unique_ptr<stats::Stats> stats_;
 
 	std::string name_{};
 

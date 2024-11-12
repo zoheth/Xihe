@@ -32,7 +32,10 @@ bool xihe::TestApp::prepare(Window *window)
 		return false;
 	}
 
-	gui_ = std::make_unique<Gui>(*this, *window);
+	stats_ = std::make_unique<stats::Stats>(*render_context_);
+	stats_->request_stats({stats::StatIndex::kFrameTimes});
+
+	gui_ = std::make_unique<Gui>(*this, *window, stats_.get());
 
 	get_render_context().update_swapchain(
 	    {vk::ImageUsageFlagBits::eColorAttachment,
@@ -186,6 +189,8 @@ void xihe::TestApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 void xihe::TestApp::draw_gui()
 {
+	gui_->show_stats(*stats_);
+
 	gui_->show_views_window(
 	    /* body = */ [this]() {
 

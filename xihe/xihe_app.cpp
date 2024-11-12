@@ -14,6 +14,7 @@ VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 #include "common/error.h"
 #include "common/logging.h"
 #include "rendering/render_frame.h"
+#include "stats/stats.h"
 
 namespace xihe
 {
@@ -41,7 +42,7 @@ XiheApp::~XiheApp()
 	scene_.reset();
 
 	rdg_builder_.reset();
-
+	stats_.reset();
 	gui_.reset();
 
 	render_context_.reset();
@@ -170,6 +171,14 @@ void XiheApp::update(float delta_time)
 		draw_gui();
 
 		gui_->update(delta_time);
+	}
+
+	if (stats_)
+	{
+		stats_->update(delta_time);
+		static float stats_view_count = 0.0f;
+		stats_view_count += delta_time;
+
 	}
 
 	for (const auto &callback : post_scene_update_callbacks_)
