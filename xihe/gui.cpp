@@ -2,6 +2,7 @@
 
 #include "rendering/pipeline_state.h"
 #include "xihe_app.h"
+#include "fmt/format.h"
 
 #include <numeric>
 
@@ -567,9 +568,10 @@ void Gui::show_stats(const stats::Stats &stats)
 		if (stats.is_available(stat_index))
 		{
 			graph_label << graph_data.name << ": " << graph_data.format;
-			ImGui::PlotLines(graph_label.str().c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
+			std::string text = fmt::format(fmt::runtime(graph_label.str()), avg * graph_data.scale_factor);
+			ImGui::PlotLines(text.c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
 
-			ImGui::Text(graph_label.str().c_str(), avg * graph_data.scale_factor);
+			ImGui::Text(text.c_str());
 			ImGui::Separator(); 
 		}
 		else

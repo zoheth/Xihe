@@ -23,7 +23,7 @@ public:
 	{
 		Counters res;
 		// frame_times comes directly from delta_time
-		res[StatIndex::kFrameTimes].result = delta_time;
+		res[StatIndex::kFrameTimes].result = delta_time * 1000.f;
 		return res;
 	}
 };

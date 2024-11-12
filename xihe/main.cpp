@@ -1,6 +1,7 @@
 #include <Windows.h>
 
 #include "platform/windows/windows_platform.h"
+#include "platform/window.h"
 #include <fstream>
 #include <iostream>
 
@@ -23,6 +24,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PSTR lpCmdLin
 	xihe::WindowsPlatform platform{};
 	xihe::Window::OptionalProperties properties{};
 	properties.title = "Xi He";
+	properties.vsync = xihe::Window::Vsync::OFF;
 	platform.set_window_properties(properties);
 
 	const auto code = platform.initialize();

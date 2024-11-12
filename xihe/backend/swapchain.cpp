@@ -264,6 +264,14 @@ Swapchain::Swapchain(Device                                  &device,
 		LOGI("  \t{}", vk::to_string(surface_format.format) + ", " + vk::to_string(surface_format.colorSpace));
 	}
 
+	present_modes_ = device.get_gpu().get_handle().getSurfacePresentModesKHR(surface);
+	LOGI("Surface supports the following present modes:");
+	for (auto &present_mode : present_modes_)
+	{
+		LOGI("  \t{}", to_string(present_mode));
+	}
+
+
 	// Choose the best properties based on surface capabilities
 	vk::SurfaceCapabilitiesKHR const surface_capabilities = device_.get_gpu().get_handle().getSurfaceCapabilitiesKHR(surface);
 

@@ -5,7 +5,7 @@ namespace xihe::stats
 std::map<StatIndex, StatGraphData> StatsProvider::default_graph_map_{
     // clang-format off
 	// StatIndex                        Name shown in graph                            Format           Scale                         Fixed_max Max_value
-	{StatIndex::kFrameTimes,           {"Frame Times",                                 "{:3.1f} ms",    1000.0f}},
+	{StatIndex::kFrameTimes,           {"Frame Times",                                 "{:3.1f} ms",    1.0f}},
 	{StatIndex::kCpuCycles,            {"CPU Cycles",                                  "{:4.1f} M/s",   static_cast<float>(1e-6)}},
 	{StatIndex::kCpuInstructions,      {"CPU Instructions",                            "{:4.1f} M/s",   static_cast<float>(1e-6)}},
 	{StatIndex::kCpuCacheMissRatio,    {"Cache Miss Ratio",                            "{:3.1f}%",      100.0f,                       true,     100.0f}},
