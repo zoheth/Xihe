@@ -972,6 +972,8 @@ std::unique_ptr<sg::PbrMaterial> GltfLoader::parse_material(const tinygltf::Mate
 {
 	auto material = std::make_unique<sg::PbrMaterial>(gltf_material.name);
 
+	material->base_color_factor = glm::vec4(1.0f);
+
 	for (auto &gltf_value : gltf_material.values)
 	{
 		if (gltf_value.first == "baseColorFactor")

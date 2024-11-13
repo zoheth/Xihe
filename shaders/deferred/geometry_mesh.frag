@@ -30,9 +30,7 @@ layout (location = 0) in PerVertexData
 layout (location = 0) out vec4 o_albedo;
 layout (location = 1) out vec4 o_normal;
 
-#ifdef HAS_BASE_COLOR_TEXTURE
 layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
-#endif
 
 layout(push_constant, std430) uniform PBRMaterialUniform {
     // x = diffuse index, y = roughness index, z = normal index, w = occlusion index.

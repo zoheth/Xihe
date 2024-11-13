@@ -47,6 +47,7 @@ void MeshletSubpass::prepare()
 			auto &variant = mshader_mesh->get_mut_shader_variant();
 			// variant.add_definitions({"MAX_LIGHT_COUNT " + std::to_string(kMaxForwardLightCount)});
 			// variant.add_definitions(kLightTypeDefinitions);
+
 			variant.add_define("SHOW_MESHLET_VIEW");
 			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
 			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
@@ -54,6 +55,8 @@ void MeshletSubpass::prepare()
 			variant.remove_define("SHOW_MESHLET_VIEW");
 			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), variant);
 			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
+
+			device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader(), variant);
 		}
 	}
 }
@@ -97,7 +100,7 @@ void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::
 	global_uniform.frustum_planes[5] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[2]);        // z - w < 0
 
 	auto &render_frame = render_context_.get_active_frame();
-	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
+	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(MeshletSceneUniform), thread_index);
 
 	allocation.update(global_uniform);
 
@@ -139,10 +142,11 @@ backend::PipelineLayout &MeshletSubpass::prepare_pipeline_layout(backend::Comman
 
 void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh)
 {
+	auto &task_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader(), mshader_mesh.get_shader_variant());
 	auto &mesh_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), mshader_mesh.get_shader_variant());
 	auto &frag_shader_module = command_buffer.get_device().get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), mshader_mesh.get_shader_variant());
 
-	std::vector<backend::ShaderModule *> shader_modules{&mesh_shader_module, &frag_shader_module};
+	std::vector<backend::ShaderModule *> shader_modules{&task_shader_module, & mesh_shader_module, &frag_shader_module};
 
 	auto &pipeline_layout = prepare_pipeline_layout(command_buffer, shader_modules);
 	command_buffer.bind_pipeline_layout(pipeline_layout);
@@ -181,10 +185,11 @@ void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, s
 	command_buffer.bind_buffer(mshader_mesh.get_packed_meshlet_indices_buffer(), 0, mshader_mesh.get_packed_meshlet_indices_buffer().get_size(), 0, 6, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_mesh_draw_counts_buffer(), 0, mshader_mesh.get_mesh_draw_counts_buffer().get_size(), 0, 7, 0);
 
-	uint32_t num_workgroups_x = mshader_mesh.get_meshlet_count();        // meshlets count
+	uint32_t num_workgroups_x = (mshader_mesh.get_meshlet_count()+31)/32;        // meshlets count
+
 	uint32_t num_workgroups_y = 1;
 	uint32_t num_workgroups_z = 1;
-	command_buffer.draw_mesh_tasks(32, num_workgroups_y, num_workgroups_z);
+	command_buffer.draw_mesh_tasks(num_workgroups_x, num_workgroups_y, num_workgroups_z);
 }
 
 void MeshletSubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &opaque_nodes, std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &transparent_nodes) const

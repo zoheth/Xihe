@@ -266,13 +266,13 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 
 	meshlet_count_ = meshlets.size();
 	{
-		MeshDrawCounts mesh_draw_counts{meshlet_count_};
+		std::vector<MeshDrawCounts> counts = {{meshlet_count_}};
 		backend::BufferBuilder    buffer_builder{sizeof(MeshDrawCounts)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 		mesh_draw_counts_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
 
-		mesh_draw_counts_buffer_->update(&mesh_draw_counts, sizeof(mesh_draw_counts));
+		mesh_draw_counts_buffer_->update(counts);
 	}
 }
 }        // namespace xihe::sg
