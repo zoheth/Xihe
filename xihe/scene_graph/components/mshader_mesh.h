@@ -23,6 +23,16 @@ struct Meshlet
 	/* number of vertices and triangles used in the meshlet; data is stored in consecutive range defined by offset and count */
 	uint32_t vertex_count;
 	uint32_t triangle_count;
+
+	glm::vec3 center;
+	float     radius;
+	glm::vec3 cone_axis;
+	float     cone_cutoff;
+};
+
+struct MeshDrawCounts
+{
+	uint32_t meshlet_count;
 };
 
 class MshaderMesh : public Component
@@ -38,6 +48,7 @@ class MshaderMesh : public Component
 	backend::Buffer &get_meshlet_buffer() const;
 	backend::Buffer &get_meshlet_vertices_buffer() const;
 	backend::Buffer &get_packed_meshlet_indices_buffer() const;
+	backend::Buffer &get_mesh_draw_counts_buffer() const;
 
 	void set_material(const Material &material);
 
@@ -60,6 +71,8 @@ class MshaderMesh : public Component
 
 	std::unique_ptr<backend::Buffer> meshlet_vertices_buffer_;
 	std::unique_ptr<backend::Buffer> packed_meshlet_indices_buffer_;
+
+	std::unique_ptr<backend::Buffer> mesh_draw_counts_buffer_;
 
 	const Material *material_{nullptr};
 

@@ -18,11 +18,15 @@ class Camera;
 
 namespace rendering
 {
-struct UBOVS
+struct alignas(16) MeshletSceneUniform
 {
 	glm::mat4 model;
-	glm::mat4 view;
-	glm::mat4 proj;
+
+	glm::mat4 camera_view_proj;
+
+	glm::vec3 camera_position;
+
+	glm::vec3 frustum_planes[6];
 };
 
 class MeshletSubpass : public rendering::Subpass

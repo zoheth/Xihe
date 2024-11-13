@@ -1,9 +1,10 @@
 #include "mshader_mesh.h"
 
-#include <glm/glm.hpp>
 #include "meshoptimizer.h"
+#include <glm/glm.hpp>
 
 #include "rendering/subpass.h"
+#include "rendering/subpasses/meshlet_subpass.h"
 #include "scene_graph/components/material.h"
 
 namespace
@@ -20,7 +21,7 @@ glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset, flo
 
 	return glm::vec4(x, y, z, padding);
 }
-}
+}        // namespace
 namespace xihe::sg
 {
 MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Device &device)
@@ -42,20 +43,20 @@ MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Devic
 	{
 		throw std::runtime_error("Stride for position or normal attribute is zero.");
 	}
-	uint32_t vertex_count = primitive_data.vertex_count;
+	uint32_t                  vertex_count = primitive_data.vertex_count;
 	std::vector<PackedVertex> packed_vertex_data;
 	packed_vertex_data.reserve(vertex_count);
 
 	for (size_t i = 0; i < vertex_count; i++)
 	{
-		uint32_t  pos_offset    = i * pos_attr.stride;
-		uint32_t  normal_offset = i * normal_attr.stride;
+		uint32_t pos_offset    = i * pos_attr.stride;
+		uint32_t normal_offset = i * normal_attr.stride;
 		uint32_t uv_offset     = i * uv_attr.stride;
-		float     u, v;
+		float    u, v;
 		std::memcpy(&u, &uv_attr.data[uv_offset], sizeof(float));
 		std::memcpy(&v, &uv_attr.data[uv_offset + sizeof(float)], sizeof(float));
-		glm::vec4 pos           = convert_to_vec4(pos_attr.data, pos_offset, u);
-		glm::vec4 normal        = convert_to_vec4(normal_attr.data, normal_offset, v);
+		glm::vec4 pos    = convert_to_vec4(pos_attr.data, pos_offset, u);
+		glm::vec4 normal = convert_to_vec4(normal_attr.data, normal_offset, v);
 		packed_vertex_data.push_back({pos, normal});
 	}
 	{
@@ -81,7 +82,6 @@ MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Devic
 
 		meshlet_buffer_->update(meshlets);
 	}
-
 }
 std::type_index MshaderMesh::get_type()
 {
@@ -96,14 +96,19 @@ backend::Buffer &MshaderMesh::get_meshlet_buffer() const
 	return *meshlet_buffer_;
 }
 
-backend::Buffer & MshaderMesh::get_meshlet_vertices_buffer() const
+backend::Buffer &MshaderMesh::get_meshlet_vertices_buffer() const
 {
 	return *meshlet_vertices_buffer_;
 }
 
-backend::Buffer & MshaderMesh::get_packed_meshlet_indices_buffer() const
+backend::Buffer &MshaderMesh::get_packed_meshlet_indices_buffer() const
 {
 	return *packed_meshlet_indices_buffer_;
+}
+
+backend::Buffer & MshaderMesh::get_mesh_draw_counts_buffer() const
+{
+	return *mesh_draw_counts_buffer_;
 }
 
 void MshaderMesh::set_material(const Material &material)
@@ -112,7 +117,7 @@ void MshaderMesh::set_material(const Material &material)
 	compute_shader_variant();
 }
 
-const Material * MshaderMesh::get_material() const
+const Material *MshaderMesh::get_material() const
 {
 	return material_;
 }
@@ -122,12 +127,12 @@ uint32_t MshaderMesh::get_meshlet_count() const
 	return meshlet_count_;
 }
 
-const backend::ShaderVariant & MshaderMesh::get_shader_variant() const
+const backend::ShaderVariant &MshaderMesh::get_shader_variant() const
 {
 	return shader_variant_;
 }
 
-backend::ShaderVariant & MshaderMesh::get_mut_shader_variant()
+backend::ShaderVariant &MshaderMesh::get_mut_shader_variant()
 {
 	return shader_variant_;
 }
@@ -163,8 +168,8 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 	else if (primitive_data.index_type == vk::IndexType::eUint32)
 	{
 		index_data_32.assign(
-            reinterpret_cast<const uint32_t *>(primitive_data.indices.data()),
-            reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
+		    reinterpret_cast<const uint32_t *>(primitive_data.indices.data()),
+		    reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
 	}
 
 	// Use meshoptimizer to generate meshlets
@@ -229,6 +234,17 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 			meshlet_triangles.push_back(packed_triangle);
 		}
 
+		meshopt_Bounds meshlet_bounds = meshopt_computeMeshletBounds(
+		    meshlet_vertex_indices.data() + local_meshlet.vertex_offset,
+		    meshlet_triangle_indices.data() + local_meshlet.triangle_offset,
+		    local_meshlet.triangle_count, vertex_positions, primitive_data.vertex_count, sizeof(float) * 3);
+
+		meshlet.center = glm::vec3(meshlet_bounds.center[0], meshlet_bounds.center[1], meshlet_bounds.center[2]);
+		meshlet.radius = meshlet_bounds.radius;
+
+		meshlet.cone_axis   = glm::vec3(meshlet_bounds.cone_axis[0], meshlet_bounds.cone_axis[1], meshlet_bounds.cone_axis[2]);
+		meshlet.cone_cutoff = meshlet_bounds.cone_cutoff;
+
 		meshlets.push_back(meshlet);
 	}
 
@@ -249,5 +265,14 @@ void MshaderMesh::prepare_meshlets(std::vector<Meshlet> &meshlets, const MeshPri
 	}
 
 	meshlet_count_ = meshlets.size();
+	{
+		MeshDrawCounts mesh_draw_counts{meshlet_count_};
+		backend::BufferBuilder    buffer_builder{sizeof(MeshDrawCounts)};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		mesh_draw_counts_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+
+		mesh_draw_counts_buffer_->update(&mesh_draw_counts, sizeof(mesh_draw_counts));
+	}
 }
 }        // namespace xihe::sg

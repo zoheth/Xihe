@@ -16,6 +16,15 @@ constexpr uint32_t kMaxForwardLightCount = 4;
 
 namespace xihe::rendering
 {
+namespace 
+{
+glm::vec4 normalize_plane(const glm::vec4 &plane)
+{
+	float length = glm::length(glm::vec3(plane.x, plane.y, plane.z));
+	return plane / length;
+}
+}
+
 MeshletSubpass::MeshletSubpass(rendering::RenderContext &render_context, std::optional<backend::ShaderSource> task_shader, backend::ShaderSource &&mesh_shader, backend::ShaderSource &&fragment_shader, sg::Scene &scene, sg::Camera &camera) :
     Subpass{render_context, std::move(task_shader), std::move(mesh_shader), std::move(fragment_shader)},
     camera_{camera},
@@ -71,12 +80,21 @@ void MeshletSubpass::draw(backend::CommandBuffer &command_buffer)
 }
 void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index) const
 {
-	SceneUniform global_uniform{};
+	MeshletSceneUniform global_uniform{};
 	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
 
 	global_uniform.camera_position = glm::vec3((glm::inverse(camera_.get_view())[3]));
 
 	global_uniform.model = node.get_transform().get_world_matrix();
+
+	glm::mat4 view_proj_transpose = glm::transpose(global_uniform.camera_view_proj);
+
+	global_uniform.frustum_planes[0] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[0]);        // x + w < 0
+	global_uniform.frustum_planes[1] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[0]);        // x - w < 0
+	global_uniform.frustum_planes[2] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[1]);        // y + w < 0
+	global_uniform.frustum_planes[3] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[1]);        // y - w < 0
+	global_uniform.frustum_planes[4] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[2]);        // z + w < 0
+	global_uniform.frustum_planes[5] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[2]);        // z - w < 0
 
 	auto &render_frame = render_context_.get_active_frame();
 	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
@@ -161,11 +179,12 @@ void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, s
 	command_buffer.bind_buffer(mshader_mesh.get_vertex_buffer(), 0, mshader_mesh.get_vertex_buffer().get_size(), 0, 4, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_meshlet_vertices_buffer(), 0, mshader_mesh.get_meshlet_vertices_buffer().get_size(), 0, 5, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_packed_meshlet_indices_buffer(), 0, mshader_mesh.get_packed_meshlet_indices_buffer().get_size(), 0, 6, 0);
+	command_buffer.bind_buffer(mshader_mesh.get_mesh_draw_counts_buffer(), 0, mshader_mesh.get_mesh_draw_counts_buffer().get_size(), 0, 7, 0);
 
 	uint32_t num_workgroups_x = mshader_mesh.get_meshlet_count();        // meshlets count
 	uint32_t num_workgroups_y = 1;
 	uint32_t num_workgroups_z = 1;
-	command_buffer.draw_mesh_tasks(num_workgroups_x, num_workgroups_y, num_workgroups_z);
+	command_buffer.draw_mesh_tasks(32, num_workgroups_y, num_workgroups_z);
 }
 
 void MeshletSubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &opaque_nodes, std::multimap<float, std::pair<sg::Node *, sg::MshaderMesh *>> &transparent_nodes) const

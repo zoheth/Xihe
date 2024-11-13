@@ -101,7 +101,7 @@ bool xihe::TestApp::prepare(Window *window)
 		/*auto geometry_vs   = backend::ShaderSource{"deferred/geometry.vert"};
 		auto geometry_fs   = backend::ShaderSource{"deferred/geometry.frag"};
 		auto scene_subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, std::move(geometry_vs), std::move(geometry_fs), *scene_, *camera);*/
-		auto scene_subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, std::nullopt, backend::ShaderSource{"deferred/geometry_mesh.mesh"}, backend::ShaderSource{"deferred/geometry_mesh.frag"}, *scene_, *camera);
+		auto scene_subpass = std::make_unique<rendering::MeshletSubpass>(*render_context_, backend::ShaderSource{"deferred/geometry_mesh.task"}, backend::ShaderSource{"deferred/geometry_mesh.mesh"}, backend::ShaderSource{"deferred/geometry_mesh.frag"}, *scene_, *camera);
 
 		// Outputs are depth, albedo, and normal
 		scene_subpass->set_output_attachments({1, 2, 3});
