@@ -44,6 +44,8 @@ class MeshletSubpass : public rendering::Subpass
 
 	static void show_meshlet_view(bool show, sg::Scene &scene);
 
+	static void freeze_frustum(bool freeze, sg::Camera *camera=nullptr);
+
   private:
 
 	backend::PipelineLayout &prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules);
@@ -60,6 +62,10 @@ class MeshletSubpass : public rendering::Subpass
 	std::vector<sg::Mesh *> meshes_;
 
 	inline static bool show_debug_view_{false};
+
+	inline static bool freeze_frustum_{false};
+	inline static glm::mat4 frozen_view_;
+	inline static glm::vec4 frozen_frustum_planes_[6];
 
 	// sg::MshaderMesh *mshader_mesh_{nullptr};
 };

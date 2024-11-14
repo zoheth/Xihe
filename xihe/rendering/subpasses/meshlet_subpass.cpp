@@ -90,16 +90,28 @@ void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::
 
 	global_uniform.model = node.get_transform().get_world_matrix();
 
-	global_uniform.view = camera_.get_view();
-
-	glm::mat4 m = glm::transpose(camera_.get_pre_rotation() * camera_.get_projection());
-
-	global_uniform.frustum_planes[0] = normalize_plane(m[3] + m[0]);
-	global_uniform.frustum_planes[1] = normalize_plane(m[3] - m[0]);
-	global_uniform.frustum_planes[2] = normalize_plane(m[3] + m[1]);
-	global_uniform.frustum_planes[3] = normalize_plane(m[3] - m[1]);
-	global_uniform.frustum_planes[4] = normalize_plane(m[3] + m[2]);
-	global_uniform.frustum_planes[5] = normalize_plane(m[3] - m[2]);
+	if (freeze_frustum_)
+	{
+		global_uniform.view              = frozen_view_;
+		global_uniform.frustum_planes[0] = frozen_frustum_planes_[0];
+		global_uniform.frustum_planes[1] = frozen_frustum_planes_[1];
+		global_uniform.frustum_planes[2] = frozen_frustum_planes_[2];
+		global_uniform.frustum_planes[3] = frozen_frustum_planes_[3];
+		global_uniform.frustum_planes[4] = frozen_frustum_planes_[4];
+		global_uniform.frustum_planes[5] = frozen_frustum_planes_[5];
+	
+	}
+	else
+	{
+		global_uniform.view              = camera_.get_view();
+		glm::mat4 m                      = glm::transpose(camera_.get_pre_rotation() * camera_.get_projection());
+		global_uniform.frustum_planes[0] = normalize_plane(m[3] + m[0]);
+		global_uniform.frustum_planes[1] = normalize_plane(m[3] - m[0]);
+		global_uniform.frustum_planes[2] = normalize_plane(m[3] + m[1]);
+		global_uniform.frustum_planes[3] = normalize_plane(m[3] - m[1]);
+		global_uniform.frustum_planes[4] = normalize_plane(m[3] + m[2]);
+		global_uniform.frustum_planes[5] = normalize_plane(m[3] - m[2]);	
+	}
 
 	auto &render_frame = render_context_.get_active_frame();
 	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(MeshletSceneUniform), thread_index);
@@ -127,6 +139,26 @@ void MeshletSubpass::show_meshlet_view(bool show, sg::Scene &scene)
 		{
 			variant.remove_define("SHOW_MESHLET_VIEW");
 		}
+	}
+}
+
+void MeshletSubpass::freeze_frustum(bool freeze, sg::Camera *camera)
+{
+	if (freeze==freeze_frustum_)
+	{
+		return;
+	}
+	freeze_frustum_ = freeze;
+	if (freeze)
+	{
+		frozen_view_= camera->get_view();
+		glm::mat4 m  = glm::transpose(camera->get_pre_rotation() * camera->get_projection());
+		frozen_frustum_planes_[0] = normalize_plane(m[3] + m[0]);
+		frozen_frustum_planes_[1] = normalize_plane(m[3] - m[0]);
+		frozen_frustum_planes_[2] = normalize_plane(m[3] + m[1]);
+		frozen_frustum_planes_[3] = normalize_plane(m[3] - m[1]);
+		frozen_frustum_planes_[4] = normalize_plane(m[3] + m[2]);
+		frozen_frustum_planes_[5] = normalize_plane(m[3] - m[2]);
 	}
 }
 

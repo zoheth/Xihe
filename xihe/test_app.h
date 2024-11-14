@@ -34,6 +34,7 @@ private:
 	std::unique_ptr<rendering::RenderPipeline> shadow_render_pipeline_{nullptr};
 
 	bool show_meshlet_view_{false};
+	bool freeze_frustum_{false};
 	bool show_cascade_view_{false};
 
 };

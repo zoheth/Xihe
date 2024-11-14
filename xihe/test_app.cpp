@@ -49,6 +49,7 @@ bool xihe::TestApp::prepare(Window *window)
 
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
+	camera_           = camera;
 
 	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
 	auto *p_cascade_script = cascade_script.get();
@@ -175,6 +176,7 @@ void xihe::TestApp::update(float delta_time)
 {
 	rendering::MeshletSubpass::show_meshlet_view(show_meshlet_view_, *scene_);
 	rendering::LightingSubpass::show_cascade_view(show_cascade_view_);
+	rendering::MeshletSubpass::freeze_frustum(freeze_frustum_, camera_);
 	XiheApp::update(delta_time);
 }
 
@@ -195,6 +197,7 @@ void xihe::TestApp::draw_gui()
 	    /* body = */ [this]() {
 
 		    ImGui::Checkbox("Meshlet", &show_meshlet_view_);
+		    ImGui::Checkbox("视域静留", &freeze_frustum_);
 		    ImGui::Checkbox("级联阴影", &show_cascade_view_);
 	    },
 	    /* lines = */ 2);
