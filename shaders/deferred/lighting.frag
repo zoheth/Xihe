@@ -49,7 +49,36 @@ float calculate_shadow(highp vec3 pos, uint i)
 	projected_coord /= projected_coord.w;
 	projected_coord.xy = 0.5 * projected_coord.xy + 0.5;
 
-	return texture(global_textures[nonuniformEXT(shadow_uniform.shadowmap_first_index+i)], vec3(projected_coord.xy, projected_coord.z));
+	if (projected_coord.x < 0.0 || projected_coord.x > 1.0 ||
+        projected_coord.y < 0.0 || projected_coord.y > 1.0)
+    {
+        return 1.0;
+    }
+
+	float shadow = 0.0;
+    int samples = 0;
+
+    const int kernel_size = 5;
+    const float shadow_map_resolution = 2048.0;
+    const float texel_size = 1.0 / shadow_map_resolution;
+    const float offset = texel_size;
+
+	const float bias = 0.005;
+
+    for(int x = -kernel_size / 2; x <= kernel_size / 2; x++) {
+        for(int y = -kernel_size / 2; y <= kernel_size / 2; y++) {
+            vec2 tex_offset = vec2(float(x), float(y)) * offset;
+            float shadow_sample = texture(
+                global_textures[nonuniformEXT(shadow_uniform.shadowmap_first_index + i)],
+                vec3(projected_coord.xy + tex_offset, projected_coord.z - bias)
+            );
+            shadow += shadow_sample;
+            samples++;
+        }
+    }
+
+    shadow /= float(samples);
+    return shadow;
 }
 
 void main()

@@ -6,6 +6,9 @@
 
 namespace xihe::rendering
 {
+
+constexpr uint32_t kShadowmapResolution = 2048;
+
 std::unique_ptr<backend::Sampler> get_shadowmap_sampler(backend::Device &device);
 
 class ShadowSubpass : public Subpass

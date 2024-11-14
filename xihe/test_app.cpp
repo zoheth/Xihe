@@ -76,7 +76,7 @@ bool xihe::TestApp::prepare(Window *window)
 
 			pass_info.outputs.back().set_sampler(shadowmap_sampler_.get());
 
-			pass_info.outputs.back().override_resolution = vk::Extent3D{2048, 2048, 1};
+			pass_info.outputs.back().override_resolution = vk::Extent3D{rendering::kShadowmapResolution, rendering::kShadowmapResolution, 1};
 		}
 
 		rdg_builder_->add_raster_pass("shadow_pass", std::move(pass_info), std::move(subpasses));
