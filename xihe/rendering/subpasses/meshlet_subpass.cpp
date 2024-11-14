@@ -90,14 +90,16 @@ void MeshletSubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::
 
 	global_uniform.model = node.get_transform().get_world_matrix();
 
-	glm::mat4 view_proj_transpose = glm::transpose(global_uniform.camera_view_proj);
+	global_uniform.view = camera_.get_view();
 
-	global_uniform.frustum_planes[0] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[0]);        // x + w < 0
-	global_uniform.frustum_planes[1] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[0]);        // x - w < 0
-	global_uniform.frustum_planes[2] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[1]);        // y + w < 0
-	global_uniform.frustum_planes[3] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[1]);        // y - w < 0
-	global_uniform.frustum_planes[4] = normalize_plane(view_proj_transpose[3] + view_proj_transpose[2]);        // z + w < 0
-	global_uniform.frustum_planes[5] = normalize_plane(view_proj_transpose[3] - view_proj_transpose[2]);        // z - w < 0
+	glm::mat4 m = glm::transpose(camera_.get_pre_rotation() * camera_.get_projection());
+
+	global_uniform.frustum_planes[0] = normalize_plane(m[3] + m[0]);
+	global_uniform.frustum_planes[1] = normalize_plane(m[3] - m[0]);
+	global_uniform.frustum_planes[2] = normalize_plane(m[3] + m[1]);
+	global_uniform.frustum_planes[3] = normalize_plane(m[3] - m[1]);
+	global_uniform.frustum_planes[4] = normalize_plane(m[3] + m[2]);
+	global_uniform.frustum_planes[5] = normalize_plane(m[3] - m[2]);
 
 	auto &render_frame = render_context_.get_active_frame();
 	auto  allocation   = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(MeshletSceneUniform), thread_index);
@@ -184,6 +186,7 @@ void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, s
 	command_buffer.bind_buffer(mshader_mesh.get_meshlet_vertices_buffer(), 0, mshader_mesh.get_meshlet_vertices_buffer().get_size(), 0, 5, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_packed_meshlet_indices_buffer(), 0, mshader_mesh.get_packed_meshlet_indices_buffer().get_size(), 0, 6, 0);
 	command_buffer.bind_buffer(mshader_mesh.get_mesh_draw_counts_buffer(), 0, mshader_mesh.get_mesh_draw_counts_buffer().get_size(), 0, 7, 0);
+	command_buffer.bind_buffer(mshader_mesh.get_meshlet_buffer(), 0, mshader_mesh.get_meshlet_buffer().get_size(), 0, 8, 0);
 
 	uint32_t num_workgroups_x = (mshader_mesh.get_meshlet_count()+31)/32;        // meshlets count
 

@@ -6,9 +6,10 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 layout(set = 0, binding = 2) uniform GlobalUniform {
     mat4 model;
+    mat4 view;
     mat4 view_proj;
+    vec4 frustum_planes[6]; // Frustum planes in view space
     vec3 camera_position;
-    vec3 frustum_planes[6]; // Frustum planes in world space
 } global_uniform;
 
 struct s_meshlet {
@@ -22,7 +23,7 @@ struct s_meshlet {
     float cone_cutoff;
 };
 
-layout(std430, binding = 3) buffer Meshlets {
+layout(std430, binding = 8) buffer Meshlets {
     s_meshlet meshlets[];
 } mbuf;
 
@@ -39,14 +40,15 @@ taskPayloadSharedEXT TaskData taskData;
 
 // Cone culling function
 bool coneCull(vec3 center, float radius, vec3 cone_axis, float cone_cutoff, vec3 camera_position) {
-    vec3 to_center = normalize(center - camera_position);
-    return dot(to_center, cone_axis) >= cone_cutoff;
+    vec3 to_center = center - camera_position;
+    float dist = length(to_center);
+    return dot(to_center, cone_axis) >= cone_cutoff * dist + radius;
 }
 
 // Frustum culling function
-bool frustumCull(vec3 center, float radius) {
-    for (int i = 0; i < 6; ++i) {
-        if (dot(global_uniform.frustum_planes[i], center) < -radius) {
+bool frustumCull(vec3 center_view_space, float radius) {
+    for (int i = 5; i < 6; ++i) {
+        if (dot(global_uniform.frustum_planes[i], vec4(center_view_space, 1.0)) < -radius) {
             return false;
         }
     }
@@ -67,11 +69,14 @@ void main()
 
     // Transform bounding sphere to world space
     vec4 world_center = global_uniform.model * vec4(meshlet.center, 1.0);
-    float scale = length(global_uniform.model[0].xyz); // Assuming uniform scaling
+    float scale = length(global_uniform.model[0]); // Assuming uniform scaling
     float radius = meshlet.radius * scale * 1.1; // Slightly inflate the radius
 
+    // Transform center to view space for frustum culling
+    vec3 center_view_space = (global_uniform.view * world_center).xyz;
+
     // Perform frustum culling
-    bool frustum_visible = frustumCull(world_center.xyz, radius);
+    bool frustum_visible = frustumCull(center_view_space, radius);
 
     // Perform cone culling
     vec3 cone_axis_world = normalize(mat3(global_uniform.model) * meshlet.cone_axis);

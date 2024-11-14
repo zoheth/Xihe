@@ -20,6 +20,7 @@ The foundation framework of the Xihe Rendering Engine is based on the [KhronosGr
 - **异步计算** / Async compute
 - **级联阴影映射** / Cascaded shadow mapping
 - **Mesh shader 几何管线** (生成 meshlet) / Mesh shader geometry pipeline (meshlet generation)
+- **GPU 剔除** / GPU culling
 
 其中，自动化管线和管线缓存功能来自于 [KhronosGroup/Vulkan-Samples](https://github.com/KhronosGroup/Vulkan-Samples) 的 framework。
 
@@ -27,7 +28,6 @@ The automation pipeline and pipeline cache are based on the framework provided b
 
 ## 待实现功能 (Features to be Implemented)
 
-- **GPU 剔除** / GPU culling
 - **聚簇延迟渲染** / Clustered Deferred Rendering
 - **Mesh shader 阴影** / Mesh shader shadows
 - **可变速率着色** / Variable Rate Shading (VRS)

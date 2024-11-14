@@ -11,9 +11,10 @@ layout(triangles, max_vertices = 64, max_primitives = 124) out;
 
 layout(set = 0, binding = 2) uniform GlobalUniform {
     mat4 model;
+    mat4 view;
     mat4 view_proj;
+    vec4 frustum_planes[6]; // Frustum planes in view space
     vec3 camera_position;
-    vec3 frustum_planes[6]; 
 } global_uniform;
 
 
