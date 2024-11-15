@@ -47,7 +47,7 @@ bool coneCull(vec3 center, float radius, vec3 cone_axis, float cone_cutoff, vec3
 
 // Frustum culling function
 bool frustumCull(vec3 center_view_space, float radius) {
-    for (int i = 5; i < 6; ++i) {
+    for (int i = 0; i < 6; ++i) {
         if (dot(global_uniform.frustum_planes[i], vec4(center_view_space, 1.0)) < -radius) {
             return false;
         }
