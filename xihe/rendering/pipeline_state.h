@@ -120,7 +120,7 @@ class PipelineState
 
 	void set_pipeline_layout(backend::PipelineLayout &pipeline_layout);
 
-	void set_render_pass(const backend::RenderPass &render_pass);
+	// void set_render_pass(const backend::RenderPass &render_pass);
 
 	void set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data);
 
@@ -144,7 +144,7 @@ class PipelineState
 
 	const backend::PipelineLayout &get_pipeline_layout() const;
 
-	const backend::RenderPass *get_render_pass() const;
+	//const backend::RenderPass *get_render_pass() const;
 
 	const SpecializationConstantState &get_specialization_constant_state() const;
 
@@ -175,7 +175,7 @@ class PipelineState
 
 	backend::PipelineLayout *pipeline_layout_{nullptr};
 
-	const backend::RenderPass *render_pass_{nullptr};
+	//const backend::RenderPass *render_pass_{nullptr};
 
 	SpecializationConstantState specialization_constant_state_{};
 	VertexInputState            vertex_input_state_{};

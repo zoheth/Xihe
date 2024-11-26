@@ -112,7 +112,7 @@ void PipelineState::reset()
 	clear_dirty();
 
 	pipeline_layout_ = nullptr;
-	render_pass_     = nullptr;
+	//render_pass_     = nullptr;
 
 	specialization_constant_state_.reset();
 
@@ -144,24 +144,24 @@ void PipelineState::set_pipeline_layout(backend::PipelineLayout &pipeline_layout
 	}
 }
 
-void PipelineState::set_render_pass(const backend::RenderPass &render_pass)
-{
-	if (render_pass_)
-	{
-		if (render_pass_->get_handle() != render_pass.get_handle())
-		{
-			render_pass_ = &render_pass;
-
-			dirty_ = true;
-		}
-	}
-	else
-	{
-		render_pass_ = &render_pass;
-
-		dirty_ = true;
-	}
-}
+//void PipelineState::set_render_pass(const backend::RenderPass &render_pass)
+//{
+//	if (render_pass_)
+//	{
+//		if (render_pass_->get_handle() != render_pass.get_handle())
+//		{
+//			render_pass_ = &render_pass;
+//
+//			dirty_ = true;
+//		}
+//	}
+//	else
+//	{
+//		render_pass_ = &render_pass;
+//
+//		dirty_ = true;
+//	}
+//}
 
 void PipelineState::set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data)
 {
@@ -268,10 +268,10 @@ const backend::PipelineLayout &PipelineState::get_pipeline_layout() const
 	return *pipeline_layout_;
 }
 
-const backend::RenderPass *PipelineState::get_render_pass() const
-{
-	return render_pass_;
-}
+//const backend::RenderPass *PipelineState::get_render_pass() const
+//{
+//	return render_pass_;
+//}
 
 const SpecializationConstantState &PipelineState::get_specialization_constant_state() const
 {

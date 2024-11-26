@@ -10,7 +10,7 @@ namespace xihe::backend
 {
 class GraphicsPipeline;
 class PipelineLayout;
-class RenderPass;
+//class RenderPass;
 class ShaderModule;
 
 enum class ResourceType
@@ -49,7 +49,7 @@ class ResourceRecord
 
 	void set_pipeline_layout(size_t index, const PipelineLayout &pipeline_layout);
 
-	void set_render_pass(size_t index, const RenderPass &render_pass);
+	//void set_render_pass(size_t index, const RenderPass &render_pass);
 
 	void set_graphics_pipeline(size_t index, const GraphicsPipeline &graphics_pipeline);
 
@@ -63,7 +63,7 @@ class ResourceRecord
 
 	std::unordered_map<const ShaderModule *, size_t>     shader_module_to_index_;
 	std::unordered_map<const PipelineLayout *, size_t>   pipeline_layout_to_index_;
-	std::unordered_map<const RenderPass *, size_t>       render_pass_to_index_;
+	//std::unordered_map<const RenderPass *, size_t>       render_pass_to_index_;
 	std::unordered_map<const GraphicsPipeline *, size_t> graphics_pipeline_to_index_;
 };
 }        // namespace xihe::backend

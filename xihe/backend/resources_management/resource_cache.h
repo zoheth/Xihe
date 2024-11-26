@@ -34,11 +34,11 @@ struct ResourceCacheState
 	std::unordered_map<std::size_t, PipelineLayout>      pipeline_layouts;
 	std::unordered_map<std::size_t, DescriptorSetLayout> descriptor_set_layouts;
 	std::unordered_map<std::size_t, DescriptorPool>      descriptor_pools;
-	std::unordered_map<std::size_t, RenderPass>          render_passes;
+	//std::unordered_map<std::size_t, RenderPass>          render_passes;
 	std::unordered_map<std::size_t, GraphicsPipeline>    graphics_pipelines;
 	std::unordered_map<std::size_t, ComputePipeline>     compute_pipelines;
 	std::unordered_map<std::size_t, DescriptorSet>       descriptor_sets;
-	std::unordered_map<std::size_t, Framebuffer>         framebuffers;
+	// std::unordered_map<std::size_t, Framebuffer>         framebuffers;
 };
 
 class ResourceCache
@@ -68,15 +68,15 @@ class ResourceCache
 	                                      const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
 	                                      const BindingMap<vk::DescriptorImageInfo>  &image_infos);
 
-	RenderPass &request_render_pass(const std::vector<rendering::Attachment> &        attachments,
+	/*RenderPass &request_render_pass(const std::vector<rendering::Attachment> &        attachments,
 	                                const std::vector<common::LoadStoreInfo>         &load_store_infos,
-	                                const std::vector<SubpassInfo>           &        subpasses);
+	                                const std::vector<SubpassInfo>           &        subpasses);*/
 
-	Framebuffer &request_framebuffer(const rendering::RenderTarget &render_target,
-	                                 const RenderPass              &render_pass);
+	/*Framebuffer &request_framebuffer(const rendering::RenderTarget &render_target,
+	                                 const RenderPass              &render_pass);*/
 
 	void clear();
-	void clear_framebuffers();
+	//void clear_framebuffers();
 	void clear_pipelines();
 
   private:

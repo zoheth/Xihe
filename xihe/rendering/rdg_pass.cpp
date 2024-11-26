@@ -251,8 +251,8 @@ RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, Pa
 
 void RasterRdgPass::prepare(backend::CommandBuffer &command_buffer)
 {
-	render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
-	framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);
+	/*render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
+	framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);*/
 }
 
 void RasterRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
@@ -279,7 +279,8 @@ void RasterRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget
 			subpasses_[i]->update_render_target_attachments(render_target);
 			if (i != 0)
 			{
-				command_buffer.next_subpass();
+				throw std::runtime_error("Subpass dependencies are not supported.");
+				// command_buffer.next_subpass();
 			}
 
 			draw_subpass(command_buffer, render_target, i);
@@ -304,15 +305,15 @@ const std::vector<common::LoadStoreInfo> &RasterRdgPass::get_load_store() const
 	return load_store_;
 }
 
-backend::RenderPass &RasterRdgPass::get_render_pass() const
-{
-	return *render_pass_;
-}
+//backend::RenderPass &RasterRdgPass::get_render_pass() const
+//{
+//	return *render_pass_;
+//}
 
-backend::Framebuffer &RasterRdgPass::get_framebuffer() const
-{
-	return *framebuffer_;
-}
+//backend::Framebuffer &RasterRdgPass::get_framebuffer() const
+//{
+//	return *framebuffer_;
+//}
 
 void RasterRdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
 {
@@ -335,14 +336,15 @@ void RasterRdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTar
 		clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
 	}
 
-	if (render_pass_ && framebuffer_)
+	/*if (render_pass_ && framebuffer_)
 	{
 		command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
 	}
 	else
 	{
 		command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
-	}
+	}*/
+	command_buffer.begin_rendering(render_target, clear_value_);
 }
 
 void RasterRdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
@@ -352,7 +354,8 @@ void RasterRdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarge
 		gui_->draw(command_buffer);
 	
 	}
-	command_buffer.end_render_pass();
+	// command_buffer.end_render_pass();
+	command_buffer.end_rendering();
 
 	if (use_swapchain_image_)
 	{

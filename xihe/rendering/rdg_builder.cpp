@@ -20,11 +20,12 @@ void SecondaryDrawTask::ExecuteRange(enki::TaskSetPartition range, uint32_t thre
 {
 	const RenderTarget *render_target = pass->get_render_target();
 
-	command_buffer->begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue, &pass->get_render_pass(), &pass->get_framebuffer(), subpass_index);
-	command_buffer->init_state(subpass_index);
-	set_viewport_and_scissor(*command_buffer, render_target->get_extent());
-	pass->draw_subpass(*command_buffer, *render_target, subpass_index);
-	command_buffer->end();
+	//todo
+	//command_buffer->begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit | vk::CommandBufferUsageFlagBits::eRenderPassContinue, &pass->get_render_pass(), &pass->get_framebuffer(), subpass_index);
+	//// command_buffer->init_state(subpass_index);
+	//set_viewport_and_scissor(*command_buffer, render_target->get_extent());
+	//pass->draw_subpass(*command_buffer, *render_target, subpass_index);
+	//command_buffer->end();
 }
 
 RdgBuilder::RdgBuilder(RenderContext &render_context) :

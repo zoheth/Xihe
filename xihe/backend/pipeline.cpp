@@ -258,8 +258,9 @@ GraphicsPipeline::GraphicsPipeline(Device &device, vk::PipelineCache pipeline_ca
 	                                           &color_blend_state_create_info,
 	                                           &dynamic_state_create_info,
 	                                           pipeline_state.get_pipeline_layout().get_handle(),
-	                                           pipeline_state.get_render_pass()->get_handle(),
-	                                           pipeline_state.get_subpass_index()};
+	                                           //pipeline_state.get_render_pass()->get_handle(),
+	                                           {},		
+												pipeline_state.get_subpass_index()};
 
 	vk::PipelineVertexInputStateCreateInfo vertex_input_state_create_info{
 	    vk::PipelineVertexInputStateCreateFlags{},

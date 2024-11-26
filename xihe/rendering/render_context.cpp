@@ -92,7 +92,7 @@ void RenderContext::recreate()
 		}
 	}
 
-	device_.get_resource_cache().clear_framebuffers();
+	//device_.get_resource_cache().clear_framebuffers();
 }
 
 void RenderContext::recreate_swapchain()
@@ -483,7 +483,7 @@ bool RenderContext::handle_surface_changes(bool force_update)
 
 void RenderContext::update_swapchain(const vk::Extent2D &extent)
 {
-	device_.get_resource_cache().clear_framebuffers();
+	//device_.get_resource_cache().clear_framebuffers();
 
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, extent);
 
@@ -494,7 +494,7 @@ void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &ima
 {
 	assert(swapchain_);
 
-	device_.get_resource_cache().clear_framebuffers();
+	//device_.get_resource_cache().clear_framebuffers();
 
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, image_usage_flags);
 

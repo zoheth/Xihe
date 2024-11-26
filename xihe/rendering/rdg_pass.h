@@ -163,8 +163,8 @@ class RasterRdgPass : public RdgPass
 
 	const std::vector<common::LoadStoreInfo> &get_load_store() const;
 
-	backend::RenderPass  &get_render_pass() const;
-	backend::Framebuffer &get_framebuffer() const;
+	/*backend::RenderPass  &get_render_pass() const;
+	backend::Framebuffer &get_framebuffer() const;*/
 
 	/**
 	 * @brief Thread index to use for allocating resources
@@ -183,8 +183,8 @@ class RasterRdgPass : public RdgPass
 
 	std::vector<std::unique_ptr<Subpass>> subpasses_;
 
-	backend::RenderPass  *render_pass_{nullptr};
-	backend::Framebuffer *framebuffer_{nullptr};
+	/*backend::RenderPass  *render_pass_{nullptr};
+	backend::Framebuffer *framebuffer_{nullptr};*/
 
 	Gui *gui_{nullptr};
 };

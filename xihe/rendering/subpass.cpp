@@ -36,8 +36,8 @@ Subpass::Subpass(RenderContext &render_context, std::optional<backend::ShaderSou
 
 void Subpass::update_render_target_attachments(RenderTarget &render_target) const
 {
-	render_target.set_input_attachments(input_attachments_);
-	render_target.set_output_attachments(output_attachments_);
+	/*render_target.set_input_attachments(input_attachments_);
+	render_target.set_output_attachments(output_attachments_);*/
 }
 
 void Subpass::set_render_target(const RenderTarget *render_target)

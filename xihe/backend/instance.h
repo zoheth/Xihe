@@ -17,7 +17,7 @@ class Instance
 	Instance(const std::string                            &application_name,
 	         const std::unordered_map<const char *, bool> &required_extensions        = {},
 	         const std::vector<const char *>              &required_validation_layers = {},
-	         uint32_t                                      api_version                = VK_API_VERSION_1_0);
+	         uint32_t                                      api_version                = VK_API_VERSION_1_3);
 	Instance(vk::Instance instance);
 
 	Instance(const Instance &) = delete;

@@ -95,7 +95,7 @@ class XiheApp : public Application
 
 	std::string name_{};
 
-	uint32_t api_version_ = VK_API_VERSION_1_1;
+	uint32_t api_version_ = VK_API_VERSION_1_3;
 
 	vk::SurfaceKHR surface_{};
 

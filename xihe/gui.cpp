@@ -248,7 +248,7 @@ Gui::~Gui()
 	ImGui::DestroyContext();
 }
 
-void Gui::prepare(vk::PipelineCache pipeline_cache, vk::RenderPass render_pass, const std::vector<vk::PipelineShaderStageCreateInfo> &shader_stages)
+void Gui::prepare(vk::PipelineCache pipeline_cache)
 {
 	backend::Device &device = app_.get_render_context().get_device();
 

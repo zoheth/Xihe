@@ -83,6 +83,8 @@ void TempApp::update(float delta_time)
 void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	XiheApp::request_gpu_features(gpu);
+
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
 }
 }
 

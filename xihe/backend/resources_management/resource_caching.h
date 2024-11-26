@@ -72,18 +72,18 @@ struct hash<xihe::backend::VulkanResource<T>>
 	}
 };
 
-template <>
-struct hash<xihe::backend::RenderPass>
-{
-	std::size_t operator()(const xihe::backend::RenderPass &render_pass) const
-	{
-		std::size_t result = 0;
-
-		hash_combine(result, render_pass.get_handle());
-
-		return result;
-	}
-};
+//template <>
+//struct hash<xihe::backend::RenderPass>
+//{
+//	std::size_t operator()(const xihe::backend::RenderPass &render_pass) const
+//	{
+//		std::size_t result = 0;
+//
+//		hash_combine(result, render_pass.get_handle());
+//
+//		return result;
+//	}
+//};
 
 template <>
 struct hash<xihe::backend::DescriptorSetLayout>
@@ -312,10 +312,10 @@ struct hash<xihe::PipelineState>
 		hash_combine(result, pipeline_state.get_pipeline_layout().get_handle());
 
 		// For graphics only
-		if (auto render_pass = pipeline_state.get_render_pass())
+		/*if (auto render_pass = pipeline_state.get_render_pass())
 		{
 			hash_combine(result, render_pass->get_handle());
-		}
+		}*/
 
 		hash_combine(result, pipeline_state.get_specialization_constant_state());
 
@@ -596,19 +596,19 @@ struct RecordHelper<PipelineLayout, A...>
 	}
 };
 
-template <class... A>
-struct RecordHelper<RenderPass, A...>
-{
-	size_t record(ResourceRecord &recorder, A &...args)
-	{
-		return recorder.register_render_pass(args...);
-	}
-
-	void index(ResourceRecord &recorder, size_t index, RenderPass &render_pass)
-	{
-		recorder.set_render_pass(index, render_pass);
-	}
-};
+//template <class... A>
+//struct RecordHelper<RenderPass, A...>
+//{
+//	size_t record(ResourceRecord &recorder, A &...args)
+//	{
+//		return recorder.register_render_pass(args...);
+//	}
+//
+//	void index(ResourceRecord &recorder, size_t index, RenderPass &render_pass)
+//	{
+//		//recorder.set_render_pass(index, render_pass);
+//	}
+//};
 
 template <class... A>
 struct RecordHelper<GraphicsPipeline, A...>

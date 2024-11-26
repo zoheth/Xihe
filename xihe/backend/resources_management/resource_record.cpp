@@ -82,12 +82,12 @@ size_t ResourceRecord::register_graphics_pipeline(VkPipelineCache pipeline_cache
 	graphics_pipeline_indices_.push_back(graphics_pipeline_indices_.size());
 
 	auto &pipeline_layout = pipeline_state.get_pipeline_layout();
-	auto render_pass = pipeline_state.get_render_pass();
+	//auto render_pass = pipeline_state.get_render_pass();
 
 	write(stream_, 
 		ResourceType::kGraphicsPipeline, 
 		pipeline_layout_to_index_.at(&pipeline_layout),
-		render_pass_to_index_.at(render_pass),
+		//render_pass_to_index_.at(render_pass),
 		pipeline_state.get_subpass_index());
 
 	auto &specialization_constant_state = pipeline_state.get_specialization_constant_state().get_specialization_constant_state();
@@ -131,10 +131,10 @@ void ResourceRecord::set_pipeline_layout(size_t index, const PipelineLayout &pip
 	pipeline_layout_to_index_[&pipeline_layout] = index;
 }
 
-void ResourceRecord::set_render_pass(size_t index, const RenderPass &render_pass)
-{
-	render_pass_to_index_[&render_pass] = index;
-}
+//void ResourceRecord::set_render_pass(size_t index, const RenderPass &render_pass)
+//{
+//	render_pass_to_index_[&render_pass] = index;
+//}
 
 void ResourceRecord::set_graphics_pipeline(size_t index, const GraphicsPipeline &graphics_pipeline)
 {

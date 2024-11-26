@@ -68,35 +68,6 @@ const std::vector<Attachment> & RenderTarget::get_attachments() const
 	return attachments_;
 }
 
-const std::vector<uint32_t> & RenderTarget::get_input_attachments() const
-{
-	return input_attachments_;
-}
-
-const std::vector<uint32_t> & RenderTarget::get_output_attachments() const
-{
-	return output_attachments_;
-}
-
-void RenderTarget::set_input_attachments(const std::vector<uint32_t> &input)
-{
-	input_attachments_ = input;
-}
-
-void RenderTarget::set_output_attachments(const std::vector<uint32_t> &output)
-{
-	output_attachments_ = output;
-}
-
-void RenderTarget::set_layout(uint32_t attachment, vk::ImageLayout layout)
-{
-	attachments_[attachment].initial_layout = layout;
-}
-
-vk::ImageLayout RenderTarget::get_layout(uint32_t attachment) const
-{
-	return attachments_[attachment].initial_layout;
-}
 
 void RenderTarget::set_first_bindless_descriptor_set_index(uint32_t index)
 {

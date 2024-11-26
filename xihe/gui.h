@@ -77,7 +77,7 @@ class Gui
 
 	~Gui();
 
-	void prepare(vk::PipelineCache pipeline_cache, vk::RenderPass render_pass, const std::vector<vk::PipelineShaderStageCreateInfo> &shader_stages);
+	void prepare(vk::PipelineCache pipeline_cache);
 
 	void update(const float delta_time);
 
