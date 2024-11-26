@@ -203,7 +203,7 @@ void xihe::TestApp::draw_gui()
 	    /* lines = */ 2);
 }
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::TestApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::TestApp>();
+//}

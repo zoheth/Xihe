@@ -102,19 +102,22 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
 
 	// shadow
-	ShadowUniform shadow_uniform{};
-
-	for (uint32_t i = 0; i < kCascadeCount; ++i)
+	if (cascade_script_)
 	{
-		auto &cascade_camera                          = cascade_script_->get_cascade_camera(i);
-		shadow_uniform.cascade_split_depth[i]         = cascade_script_->get_cascade_splits()[i];
-		shadow_uniform.shadowmap_projection_matrix[i] = vulkan_style_projection(cascade_camera.get_projection()) * cascade_camera.get_view();
+		ShadowUniform shadow_uniform{};
+
+		for (uint32_t i = 0; i < kCascadeCount; ++i)
+		{
+			auto &cascade_camera                          = cascade_script_->get_cascade_camera(i);
+			shadow_uniform.cascade_split_depth[i]         = cascade_script_->get_cascade_splits()[i];
+			shadow_uniform.shadowmap_projection_matrix[i] = vulkan_style_projection(cascade_camera.get_projection()) * cascade_camera.get_view();
+		}
+		const RenderTarget &shadow_render_target = render_frame.get_render_target("shadow_pass");
+		shadow_uniform.shadowmap_first_index     = shadow_render_target.get_first_bindless_descriptor_set_index();
+		allocation                               = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform), thread_index_);
+		allocation.update(shadow_uniform);
+		command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);	
 	}
-	const RenderTarget &shadow_render_target = render_frame.get_render_target("shadow_pass");
-	shadow_uniform.shadowmap_first_index     = shadow_render_target.get_first_bindless_descriptor_set_index();
-	allocation                               = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform), thread_index_);
-	allocation.update(shadow_uniform);
-	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
 
 	/*command_buffer.bind_image(shadow_render_target.get_views()[0], *shadowmap_sampler_, 0, 6, 0);
 	command_buffer.bind_image(shadow_render_target.get_views()[1], *shadowmap_sampler_, 0, 7, 0);
