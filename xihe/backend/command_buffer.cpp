@@ -105,9 +105,11 @@ void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target
 
 	color_attachments_.clear();
 
+	AttachmentsState attachments_state;
+
 	for (size_t i = 0; i < render_target.get_views().size(); i++)
 	{
-		if (common::is_depth_stencil_format(render_target.get_attachments()[i].format))
+		if (common::is_depth_format(render_target.get_attachments()[i].format))
 		{
 			depth_attachment_ = vk::RenderingAttachmentInfo(
 			    render_target.get_views()[i].get_handle(),
@@ -118,6 +120,7 @@ void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target
 			    vk::AttachmentLoadOp::eClear,
 			    vk::AttachmentStoreOp::eStore,
 			    i < clear_values.size() ? clear_values[i] : vk::ClearValue{});
+			attachments_state.depth_attachment_format = render_target.get_attachments()[i].format;
 		}
 		else
 		{
@@ -130,8 +133,16 @@ void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target
 			    vk::AttachmentLoadOp::eClear,
 			    vk::AttachmentStoreOp::eStore,
 			    i < clear_values.size() ? clear_values[i] : vk::ClearValue{}));
+
+			attachments_state.color_attachment_formats.push_back(render_target.get_attachments()[i].format);
 		}
 	}
+
+	set_attachments_state(attachments_state);
+
+	auto blend_state = pipeline_state_.get_color_blend_state();
+	blend_state.attachments.resize(color_attachments_.size());
+	set_color_blend_state(blend_state);
 
 	vk::RenderingInfo rendering_info(
 	    {},                                                     // flags
@@ -437,6 +448,11 @@ vk::Result CommandBuffer::reset(ResetMode reset_mode)
 void CommandBuffer::set_viewport_state(const ViewportState &state_info)
 {
 	pipeline_state_.set_viewport_state(state_info);
+}
+
+void CommandBuffer::set_attachments_state(const AttachmentsState &state_info)
+{
+	pipeline_state_.set_attachments_state(state_info);
 }
 
 void CommandBuffer::set_vertex_input_state(const VertexInputState &state_info)
@@ -764,8 +780,8 @@ void CommandBuffer::flush_push_constants()
 //	return current_render_pass_;
 //}
 
-uint32_t CommandBuffer::get_current_subpass_index() const
-{
-	return pipeline_state_.get_subpass_index();
-}
+//uint32_t CommandBuffer::get_current_subpass_index() const
+//{
+//	return pipeline_state_.get_subpass_index();
+//}
 }        // namespace xihe::backend

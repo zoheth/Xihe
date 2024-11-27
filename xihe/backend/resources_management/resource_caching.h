@@ -319,7 +319,7 @@ struct hash<xihe::PipelineState>
 
 		hash_combine(result, pipeline_state.get_specialization_constant_state());
 
-		hash_combine(result, pipeline_state.get_subpass_index());
+		//hash_combine(result, pipeline_state.get_subpass_index());
 
 		for (auto shader_module : pipeline_state.get_pipeline_layout().get_shader_modules())
 		{
@@ -337,15 +337,16 @@ struct hash<xihe::PipelineState>
 			hash_combine(result, binding);
 		}
 
-		// VkPipelineInputAssemblyStateCreateInfo
+		hash_combine(result, pipeline_state.get_attachments_state().color_attachment_formats);
+		hash_combine(result, pipeline_state.get_attachments_state().depth_attachment_format);
+		hash_combine(result, pipeline_state.get_attachments_state().stencil_attachment_format);
+
 		hash_combine(result, pipeline_state.get_input_assembly_state().primitive_restart_enable);
 		hash_combine(result, pipeline_state.get_input_assembly_state().topology);
 
-		// VkPipelineViewportStateCreateInfo
 		hash_combine(result, pipeline_state.get_viewport_state().viewport_count);
 		hash_combine(result, pipeline_state.get_viewport_state().scissor_count);
 
-		// VkPipelineRasterizationStateCreateInfo
 		hash_combine(result, pipeline_state.get_rasterization_state().cull_mode);
 		hash_combine(result, pipeline_state.get_rasterization_state().depth_bias_enable);
 		hash_combine(result, pipeline_state.get_rasterization_state().depth_clamp_enable);
@@ -353,7 +354,6 @@ struct hash<xihe::PipelineState>
 		hash_combine(result, pipeline_state.get_rasterization_state().polygon_mode);
 		hash_combine(result, pipeline_state.get_rasterization_state().rasterizer_discard_enable);
 
-		// VkPipelineMultisampleStateCreateInfo
 		hash_combine(result, pipeline_state.get_multisample_state().alpha_to_coverage_enable);
 		hash_combine(result, pipeline_state.get_multisample_state().alpha_to_one_enable);
 		hash_combine(result, pipeline_state.get_multisample_state().min_sample_shading);
@@ -361,7 +361,6 @@ struct hash<xihe::PipelineState>
 		hash_combine(result, pipeline_state.get_multisample_state().sample_shading_enable);
 		hash_combine(result, pipeline_state.get_multisample_state().sample_mask);
 
-		// VkPipelineDepthStencilStateCreateInfo
 		hash_combine(result, pipeline_state.get_depth_stencil_state().back);
 		hash_combine(result, pipeline_state.get_depth_stencil_state().depth_bounds_test_enable);
 		hash_combine(result, pipeline_state.get_depth_stencil_state().depth_compare_op);
@@ -370,7 +369,6 @@ struct hash<xihe::PipelineState>
 		hash_combine(result, pipeline_state.get_depth_stencil_state().front);
 		hash_combine(result, pipeline_state.get_depth_stencil_state().stencil_test_enable);
 
-		// VkPipelineColorBlendStateCreateInfo
 		hash_combine(result, pipeline_state.get_color_blend_state().logic_op);
 		hash_combine(result, pipeline_state.get_color_blend_state().logic_op_enable);
 

@@ -220,7 +220,7 @@ class Subpass
 
 	std::vector<uint32_t> input_attachments_{};
 
-	std::vector<uint32_t> output_attachments_{0};
+	std::vector<uint32_t> color_attachments_{0};
 
 	std::vector<uint32_t> color_resolve_attachments_{};
 

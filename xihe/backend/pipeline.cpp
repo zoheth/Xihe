@@ -259,8 +259,13 @@ GraphicsPipeline::GraphicsPipeline(Device &device, vk::PipelineCache pipeline_ca
 	                                           &dynamic_state_create_info,
 	                                           pipeline_state.get_pipeline_layout().get_handle(),
 	                                           //pipeline_state.get_render_pass()->get_handle(),
-	                                           {},		
-												pipeline_state.get_subpass_index()};
+	                                           VK_NULL_HANDLE};
+
+	vk::PipelineRenderingCreateInfo pipeline_rendering_info{{},
+	                                                        pipeline_state.get_attachments_state().color_attachment_formats,
+	                                                        pipeline_state.get_attachments_state().depth_attachment_format,
+	                                                        pipeline_state.get_attachments_state().stencil_attachment_format};
+	create_info.pNext = &pipeline_rendering_info;
 
 	vk::PipelineVertexInputStateCreateInfo vertex_input_state_create_info{
 	    vk::PipelineVertexInputStateCreateFlags{},

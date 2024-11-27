@@ -105,12 +105,12 @@ void Subpass::set_input_attachments(std::vector<uint32_t> input)
 
 const std::vector<uint32_t> &Subpass::get_output_attachments() const
 {
-	return output_attachments_;
+	return color_attachments_;
 }
 
 void Subpass::set_output_attachments(std::vector<uint32_t> output)
 {
-	output_attachments_ = std::move(output);
+	color_attachments_ = std::move(output);
 }
 
 void Subpass::set_sample_count(vk::SampleCountFlagBits sample_count)

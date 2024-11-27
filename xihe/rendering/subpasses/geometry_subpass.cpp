@@ -62,6 +62,7 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 	color_blend_attachment.src_alpha_blend_factor = vk::BlendFactor::eOneMinusSrcAlpha;
 
 	ColorBlendState color_blend_state{};
+	//todo
 	color_blend_state.attachments.resize(get_output_attachments().size());
 	for (auto &it : color_blend_state.attachments)
 	{

@@ -11,6 +11,12 @@
 
 namespace xihe
 {
+struct AttachmentsState
+{
+	std::vector<vk::Format> color_attachment_formats;
+	vk::Format              depth_attachment_format{vk::Format::eUndefined};
+	vk::Format              stencil_attachment_format{vk::Format::eUndefined};
+};
 struct VertexInputState
 {
 	std::vector<vk::VertexInputBindingDescription>   bindings;
@@ -124,6 +130,8 @@ class PipelineState
 
 	void set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data);
 
+	void set_attachments_state(const AttachmentsState &attachments_state);
+
 	void set_vertex_input_state(const VertexInputState &vertex_input_state);
 
 	void set_input_assembly_state(const InputAssemblyState &input_assembly_state);
@@ -148,6 +156,8 @@ class PipelineState
 
 	const SpecializationConstantState &get_specialization_constant_state() const;
 
+	const AttachmentsState &get_attachments_state() const;
+
 	const VertexInputState &get_vertex_input_state() const;
 
 	const InputAssemblyState &get_input_assembly_state() const;
@@ -164,7 +174,7 @@ class PipelineState
 
 	bool has_mesh_shader() const;
 
-	uint32_t get_subpass_index() const;
+	//uint32_t get_subpass_index() const;
 
 	bool is_dirty() const;
 
@@ -178,6 +188,7 @@ class PipelineState
 	//const backend::RenderPass *render_pass_{nullptr};
 
 	SpecializationConstantState specialization_constant_state_{};
+	AttachmentsState            attachments_state_{};
 	VertexInputState            vertex_input_state_{};
 	InputAssemblyState          input_assembly_state_{};
 	RasterizationState          rasterization_state_{};

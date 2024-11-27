@@ -16,6 +16,11 @@ bool operator==(const xihe::ColorBlendAttachmentState &lhs, const xihe::ColorBle
 	       std::tie(rhs.alpha_blend_op, rhs.blend_enable, rhs.color_blend_op, rhs.color_write_mask, rhs.dst_alpha_blend_factor, rhs.dst_color_blend_factor, rhs.src_alpha_blend_factor, rhs.src_color_blend_factor);
 }
 
+bool operator!=(const xihe::AttachmentsState &lhs, const xihe::AttachmentsState &rhs)
+{
+	return lhs.color_attachment_formats != rhs.color_attachment_formats || lhs.depth_attachment_format != rhs.depth_attachment_format || lhs.stencil_attachment_format != rhs.stencil_attachment_format;
+}
+
 bool operator!=(const xihe::VertexInputState &lhs, const xihe::VertexInputState &rhs)
 {
 	return lhs.attributes != rhs.attributes || lhs.bindings != rhs.bindings;
@@ -59,7 +64,6 @@ bool operator!=(const xihe::ColorBlendState &lhs, const xihe::ColorBlendState &r
 		                   return lhs == rhs;
 	                   });
 }
-
 
 namespace xihe
 {
@@ -112,7 +116,7 @@ void PipelineState::reset()
 	clear_dirty();
 
 	pipeline_layout_ = nullptr;
-	//render_pass_     = nullptr;
+	// render_pass_     = nullptr;
 
 	specialization_constant_state_.reset();
 
@@ -144,7 +148,7 @@ void PipelineState::set_pipeline_layout(backend::PipelineLayout &pipeline_layout
 	}
 }
 
-//void PipelineState::set_render_pass(const backend::RenderPass &render_pass)
+// void PipelineState::set_render_pass(const backend::RenderPass &render_pass)
 //{
 //	if (render_pass_)
 //	{
@@ -161,7 +165,7 @@ void PipelineState::set_pipeline_layout(backend::PipelineLayout &pipeline_layout
 //
 //		dirty_ = true;
 //	}
-//}
+// }
 
 void PipelineState::set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data)
 {
@@ -169,6 +173,16 @@ void PipelineState::set_specialization_constant(uint32_t constant_id, const std:
 
 	if (specialization_constant_state_.is_dirty())
 	{
+		dirty_ = true;
+	}
+}
+
+void PipelineState::set_attachments_state(const AttachmentsState &attachments_state)
+{
+	if (attachments_state_ != attachments_state)
+	{
+		attachments_state_ = attachments_state;
+
 		dirty_ = true;
 	}
 }
@@ -191,7 +205,6 @@ void PipelineState::set_input_assembly_state(const InputAssemblyState &input_ass
 
 		dirty_ = true;
 	}
-
 }
 
 void PipelineState::set_rasterization_state(const RasterizationState &rasterization_state)
@@ -222,7 +235,6 @@ void PipelineState::set_multisample_state(const MultisampleState &multisample_st
 
 		dirty_ = true;
 	}
-
 }
 
 void PipelineState::set_depth_stencil_state(const DepthStencilState &depth_stencil_state)
@@ -243,7 +255,6 @@ void PipelineState::set_color_blend_state(const ColorBlendState &color_blend_sta
 
 		dirty_ = true;
 	}
-
 }
 
 void PipelineState::set_subpass_index(uint32_t subpass_index)
@@ -254,7 +265,6 @@ void PipelineState::set_subpass_index(uint32_t subpass_index)
 
 		dirty_ = true;
 	}
-
 }
 
 void PipelineState::set_has_mesh_shader(bool has_mesh_shader)
@@ -268,14 +278,19 @@ const backend::PipelineLayout &PipelineState::get_pipeline_layout() const
 	return *pipeline_layout_;
 }
 
-//const backend::RenderPass *PipelineState::get_render_pass() const
+// const backend::RenderPass *PipelineState::get_render_pass() const
 //{
 //	return render_pass_;
-//}
+// }
 
 const SpecializationConstantState &PipelineState::get_specialization_constant_state() const
 {
 	return specialization_constant_state_;
+}
+
+const AttachmentsState & PipelineState::get_attachments_state() const
+{
+	return attachments_state_;
 }
 
 const VertexInputState &PipelineState::get_vertex_input_state() const
@@ -318,10 +333,10 @@ bool PipelineState::has_mesh_shader() const
 	return has_mesh_shader_;
 }
 
-uint32_t PipelineState::get_subpass_index() const
-{
-	return subpass_index_;
-}
+//uint32_t PipelineState::get_subpass_index() const
+//{
+//	return subpass_index_;
+//}
 
 bool PipelineState::is_dirty() const
 {

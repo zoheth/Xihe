@@ -336,14 +336,6 @@ void RasterRdgPass::begin_draw(backend::CommandBuffer &command_buffer, RenderTar
 		clear_value_.push_back(vk::ClearColorValue{0.0f, 0.0f, 0.0f, 1.0f});
 	}
 
-	/*if (render_pass_ && framebuffer_)
-	{
-		command_buffer.begin_render_pass(render_target, *render_pass_, *framebuffer_, clear_value_, contents);
-	}
-	else
-	{
-		command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
-	}*/
 	command_buffer.begin_rendering(render_target, clear_value_);
 }
 

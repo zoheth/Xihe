@@ -132,6 +132,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void set_viewport_state(const ViewportState &state_info);
 
+	void set_attachments_state(const AttachmentsState &state_info);
+
 	void set_vertex_input_state(const VertexInputState &state_info);
 
 	void set_input_assembly_state(const InputAssemblyState &state_info);
@@ -217,7 +219,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	// const RenderPassBinding &get_current_render_pass() const;
 
-	uint32_t get_current_subpass_index() const;
+	//uint32_t get_current_subpass_index() const;
 
 	const vk::CommandBufferLevel level_{};
 	CommandPool                 &command_pool_;

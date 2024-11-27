@@ -40,8 +40,8 @@ bool TempApp::prepare(Window *window)
 		pass_info.outputs = {
 		    //{rendering::RdgResourceType::kAttachment, "albedo", vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eInputAttachment},
 		    {rendering::RdgResourceType::kSwapchain, "swapchain"},
-		    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eInputAttachment},
-		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eInputAttachment},
+		    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
+		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment},
 		};
 
 		auto subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, backend::ShaderSource{"deferred/geometry.vert"}, backend::ShaderSource{"deferred/geometry.frag"}, *scene_, *camera);

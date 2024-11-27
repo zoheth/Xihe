@@ -82,13 +82,13 @@ size_t ResourceRecord::register_graphics_pipeline(VkPipelineCache pipeline_cache
 	graphics_pipeline_indices_.push_back(graphics_pipeline_indices_.size());
 
 	auto &pipeline_layout = pipeline_state.get_pipeline_layout();
-	//auto render_pass = pipeline_state.get_render_pass();
+	// auto render_pass = pipeline_state.get_render_pass();
 
-	write(stream_, 
-		ResourceType::kGraphicsPipeline, 
-		pipeline_layout_to_index_.at(&pipeline_layout),
+	write(stream_,
+	      ResourceType::kGraphicsPipeline,
+	      pipeline_layout_to_index_.at(&pipeline_layout) );
 		//render_pass_to_index_.at(render_pass),
-		pipeline_state.get_subpass_index());
+		// pipeline_state.get_subpass_index());
 
 	auto &specialization_constant_state = pipeline_state.get_specialization_constant_state().get_specialization_constant_state();
 
