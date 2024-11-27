@@ -39,10 +39,7 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer
 {
 	if (level_ == vk::CommandBufferLevel::eSecondary)
 	{
-		/*assert(primary_cmd_buf && "A primary command buffer pointer must be provided when calling begin from a secondary one");
-		auto render_pass_binding = primary_cmd_buf->get_current_render_pass();
-
-		return begin(flags, render_pass_binding.render_pass, render_pass_binding.framebuffer, primary_cmd_buf->get_current_subpass_index());*/
+		// todo
 	}
 	pipeline_state_.reset();
 	resource_binding_state_.reset();
@@ -53,51 +50,6 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer
 	return vk::Result::eSuccess;
 }
 
-//vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_index)
-//{
-//	pipeline_state_.reset();
-//	resource_binding_state_.reset();
-//	descriptor_set_layout_binding_state_.clear();
-//	stored_push_constants_.clear();
-//
-//	vk::CommandBufferBeginInfo       begin_info(flags);
-//	vk::CommandBufferInheritanceInfo inheritance_info;
-//
-//	if (level_ == vk::CommandBufferLevel::eSecondary)
-//	{
-//		/*assert((render_pass && framebuffer) && "Render pass and framebuffer must be provided when calling begin from a secondary one");
-//
-//		current_render_pass_.render_pass = render_pass;
-//		current_render_pass_.framebuffer = framebuffer;
-//
-//		inheritance_info.renderPass  = current_render_pass_.render_pass->get_handle();
-//		inheritance_info.framebuffer = current_render_pass_.framebuffer->get_handle();
-//		inheritance_info.subpass     = subpass_index;
-//
-//		begin_info.pInheritanceInfo = &inheritance_info;*/
-//	}
-//
-//	get_handle().begin(begin_info);
-//	return vk::Result::eSuccess;
-//}
-
-//void CommandBuffer::init_state(uint32_t subpass_index)
-//{
-//	// current_render_pass_ = {&render_pass, &framebuffer};
-//	pipeline_state_.set_subpass_index(subpass_index);
-//
-//	// Update blend state attachments for first subpass
-//	auto blend_state = pipeline_state_.get_color_blend_state();
-//	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(subpass_index));
-//	pipeline_state_.set_color_blend_state(blend_state);
-//
-//	//// Reset descriptor sets
-//	// resource_binding_state_.reset();
-//	// descriptor_set_layout_binding_state_.clear();
-//
-//	//// Clear stored push constants
-//	// stored_push_constants_.clear();
-//}
 
 void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target, const std::vector<vk::ClearValue> &clear_values)
 {
@@ -158,72 +110,6 @@ void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target
 	get_handle().beginRendering(rendering_info);
 }
 
-#if 0
-
-void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<vk::ClearValue> &clear_values, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses, vk::SubpassContents contents)
-{
-	pipeline_state_.reset();
-	resource_binding_state_.reset();
-	descriptor_set_layout_binding_state_.clear();
-
-	auto &render_pass = get_render_pass(render_target, load_store_infos, subpasses);
-	auto &framebuffer = get_device().get_resource_cache().request_framebuffer(render_target, render_pass);
-
-	begin_render_pass(render_target, render_pass, framebuffer, clear_values, contents);
-}
-
-void CommandBuffer::begin_render_pass(const rendering::RenderTarget &render_target, const RenderPass &render_pass, const Framebuffer &framebuffer, const std::vector<vk::ClearValue> &clear_values, vk::SubpassContents contents)
-{
-	current_render_pass_ = {&render_pass, &framebuffer};
-
-	// Update blend state attachments for first subpass
-	auto blend_state = pipeline_state_.get_color_blend_state();
-	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(pipeline_state_.get_subpass_index()));
-	pipeline_state_.set_color_blend_state(blend_state);
-
-	vk::RenderPassBeginInfo begin_info(
-	    current_render_pass_.render_pass->get_handle(), current_render_pass_.framebuffer->get_handle(), {{}, render_target.get_extent()}, clear_values);
-
-	const auto &framebuffer_extent = current_render_pass_.framebuffer->get_extent();
-
-	// Test the requested render area to confirm that it is optimal and could not cause a performance reduction
-	if (!is_render_size_optimal(framebuffer_extent, begin_info.renderArea))
-	{
-		// Only prints the warning if the framebuffer or render area are different since the last time the render size was not optimal
-		if ((framebuffer_extent != last_framebuffer_extent_) || (begin_info.renderArea.extent != last_render_area_extent_))
-		{
-			LOGW("Render target extent is not an optimal size, this may result in reduced performance.");
-		}
-
-		last_framebuffer_extent_ = framebuffer_extent;
-		last_render_area_extent_ = begin_info.renderArea.extent;
-	}
-
-	get_handle().beginRenderPass(begin_info, contents);
-}
-
-#endif
-
-//void CommandBuffer::next_subpass()
-//{
-//	// Increment subpass index
-//	pipeline_state_.set_subpass_index(pipeline_state_.get_subpass_index() + 1);
-//
-//	// Update blend state attachments
-//	auto blend_state = pipeline_state_.get_color_blend_state();
-//	blend_state.attachments.resize(current_render_pass_.render_pass->get_color_output_count(pipeline_state_.get_subpass_index()));
-//	pipeline_state_.set_color_blend_state(blend_state);
-//
-//	// Reset descriptor sets
-//	resource_binding_state_.reset();
-//	descriptor_set_layout_binding_state_.clear();
-//
-//	// Clear stored push constants
-//	stored_push_constants_.clear();
-//
-//	get_handle().nextSubpass(vk::SubpassContents::eInline);
-//}
-
 void CommandBuffer::execute_commands(CommandBuffer &secondary_command_buffer)
 {
 	get_handle().executeCommands(secondary_command_buffer.get_handle());
@@ -242,11 +128,6 @@ void CommandBuffer::end_rendering()
 {
 	get_handle().endRendering();
 }
-
-//void CommandBuffer::end_render_pass()
-//{
-//	get_handle().endRenderPass();
-//}
 
 void CommandBuffer::set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data)
 {
@@ -525,39 +406,6 @@ void CommandBuffer::bind_pipeline_layout(PipelineLayout &pipeline_layout)
 	pipeline_state_.set_pipeline_layout(pipeline_layout);
 }
 
-//RenderPass &CommandBuffer::get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses)
-//{
-//	assert(!subpasses.empty() && "Cannot create a render pass without any subpass");
-//
-//	std::vector<SubpassInfo> subpass_infos(subpasses.size());
-//	auto                     subpass_info_it = subpass_infos.begin();
-//
-//	for (auto &subpass : subpasses)
-//	{
-//		subpass_info_it->input_attachments                = subpass->get_input_attachments();
-//		subpass_info_it->output_attachments               = subpass->get_output_attachments();
-//		subpass_info_it->color_resolve_attachments        = subpass->get_color_resolve_attachments();
-//		subpass_info_it->disable_depth_stencil_attachment = subpass->get_disable_depth_stencil_attachment();
-//		subpass_info_it->depth_stencil_resolve_mode       = subpass->get_depth_stencil_resolve_mode();
-//		subpass_info_it->depth_stencil_resolve_attachment = subpass->get_depth_stencil_resolve_attachment();
-//		subpass_info_it->depth_stencil_attachment         = subpass->get_depth_stencil_attachment();
-//		subpass_info_it->debug_name                       = subpass->get_debug_name();
-//
-//		++subpass_info_it;
-//	}
-//
-//	return get_device().get_resource_cache().request_render_pass(render_target.get_attachments(), load_store_infos, subpass_infos);
-//}
-
-//bool CommandBuffer::is_render_size_optimal(const vk::Extent2D &extent, const vk::Rect2D &render_area) const
-//{
-//	auto render_area_granularity = current_render_pass_.render_pass->get_render_area_granularity();
-//
-//	return ((render_area.offset.x % render_area_granularity.width == 0) && (render_area.offset.y % render_area_granularity.height == 0) &&
-//	        ((render_area.extent.width % render_area_granularity.width == 0) || (render_area.offset.x + render_area.extent.width == extent.width)) &&
-//	        ((render_area.extent.height % render_area_granularity.height == 0) || (render_area.offset.y + render_area.extent.height == extent.height)));
-//}
-
 void CommandBuffer::flush(vk::PipelineBindPoint pipeline_bind_point)
 {
 	flush_pipeline_state(pipeline_bind_point);
@@ -775,13 +623,4 @@ void CommandBuffer::flush_push_constants()
 	stored_push_constants_.clear();
 }
 
-//const CommandBuffer::RenderPassBinding &CommandBuffer::get_current_render_pass() const
-//{
-//	return current_render_pass_;
-//}
-
-//uint32_t CommandBuffer::get_current_subpass_index() const
-//{
-//	return pipeline_state_.get_subpass_index();
-//}
 }        // namespace xihe::backend

@@ -77,25 +77,4 @@ class RdgBuilder
 	bool is_dirty_{true};
 };
 
-#if 0
-template <typename T, typename... Args>
-void RdgBuilder::add_pass(std::string name, Args &&...args)
-{
-	static_assert(std::is_base_of_v<rendering::RdgPass, T>, "T must be a derivative of RenderPass");
-
-	if (rdg_passes_.contains(name))
-	{
-		throw std::runtime_error{"Pass with name " + name + " already exists"};
-	}
-	rdg_passes_.emplace(name, std::make_unique<T>(name, render_context_, std::forward<Args>(args)...));
-
-	pass_order_.push_back(name);
-
-	/*if (rdg_passes_[name]->needs_recreate_rt())
-	{
-	    render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
-	}*/
-	render_context_.register_rdg_render_target(name, rdg_passes_[name].get());
-}
-#endif
 }        // namespace xihe::rendering

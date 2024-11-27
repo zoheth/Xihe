@@ -6,7 +6,6 @@
 #include <vulkan/vulkan.hpp>
 
 #include "backend/pipeline_layout.h"
-#include "backend/render_pass.h"
 #include "common/helpers.h"
 
 namespace xihe
@@ -126,8 +125,6 @@ class PipelineState
 
 	void set_pipeline_layout(backend::PipelineLayout &pipeline_layout);
 
-	// void set_render_pass(const backend::RenderPass &render_pass);
-
 	void set_specialization_constant(uint32_t constant_id, const std::vector<uint8_t> &data);
 
 	void set_attachments_state(const AttachmentsState &attachments_state);
@@ -151,8 +148,6 @@ class PipelineState
 	void set_has_mesh_shader(bool has_mesh_shader);
 
 	const backend::PipelineLayout &get_pipeline_layout() const;
-
-	//const backend::RenderPass *get_render_pass() const;
 
 	const SpecializationConstantState &get_specialization_constant_state() const;
 
@@ -184,8 +179,6 @@ class PipelineState
 	bool dirty_{false};
 
 	backend::PipelineLayout *pipeline_layout_{nullptr};
-
-	//const backend::RenderPass *render_pass_{nullptr};
 
 	SpecializationConstantState specialization_constant_state_{};
 	AttachmentsState            attachments_state_{};

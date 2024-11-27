@@ -6,16 +6,6 @@ namespace xihe::backend
 {
 namespace
 {
-inline void write_subpass_info(std::ostringstream &os, const std::vector<SubpassInfo> &value)
-{
-	write(os, value.size());
-	for (const SubpassInfo &item : value)
-	{
-		write(os, item.input_attachments);
-		write(os, item.output_attachments);
-	}
-}
-
 inline void write_processes(std::ostringstream &os, const std::vector<std::string> &value)
 {
 	write(os, value.size());
@@ -65,16 +55,6 @@ size_t ResourceRecord::register_pipeline_layout(const std::vector<ShaderModule *
 	write(stream_, ResourceType::kPipelineLayout, shader_indices, bindless_descriptor_set);
 
 	return pipeline_layout_indices_.back();
-}
-
-size_t ResourceRecord::register_render_pass(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
-{
-	render_pass_indices_.push_back(render_pass_indices_.size());
-
-	write(stream_, ResourceType::kRenderPass, attachments, load_store_infos);
-	write_subpass_info(stream_, subpasses);
-
-	return render_pass_indices_.back();
 }
 
 size_t ResourceRecord::register_graphics_pipeline(VkPipelineCache pipeline_cache, PipelineState &pipeline_state)
@@ -130,11 +110,6 @@ void ResourceRecord::set_pipeline_layout(size_t index, const PipelineLayout &pip
 {
 	pipeline_layout_to_index_[&pipeline_layout] = index;
 }
-
-//void ResourceRecord::set_render_pass(size_t index, const RenderPass &render_pass)
-//{
-//	render_pass_to_index_[&render_pass] = index;
-//}
 
 void ResourceRecord::set_graphics_pipeline(size_t index, const GraphicsPipeline &graphics_pipeline)
 {

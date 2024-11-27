@@ -258,8 +258,7 @@ GraphicsPipeline::GraphicsPipeline(Device &device, vk::PipelineCache pipeline_ca
 	                                           &color_blend_state_create_info,
 	                                           &dynamic_state_create_info,
 	                                           pipeline_state.get_pipeline_layout().get_handle(),
-	                                           //pipeline_state.get_render_pass()->get_handle(),
-	                                           VK_NULL_HANDLE};
+	                                           {}};
 
 	vk::PipelineRenderingCreateInfo pipeline_rendering_info{{},
 	                                                        pipeline_state.get_attachments_state().color_attachment_formats,

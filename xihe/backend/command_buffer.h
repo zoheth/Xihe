@@ -2,10 +2,9 @@
 
 #include "common/helpers.h"
 #include "common/vk_common.h"
-#include "framebuffer.h"
 #include "image.h"
-#include "render_pass.h"
 #include "rendering/pipeline_state.h"
+#include "rendering/render_target.h"
 #include "resources_management/resource_binding_state.h"
 #include "vulkan_resource.h"
 
@@ -27,12 +26,6 @@ class BindlessDescriptorSet;
 class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 {
   public:
-	/*struct RenderPassBinding
-	{
-		const backend::RenderPass  *render_pass;
-		const backend::Framebuffer *framebuffer;
-	};*/
-
 	enum class ResetMode
 	{
 		kResetPool,
@@ -52,33 +45,15 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	vk::Result begin(vk::CommandBufferUsageFlags flags, CommandBuffer *primary_cmd_buf = nullptr);
 
-	/*vk::Result begin(vk::CommandBufferUsageFlags flags, const backend::RenderPass *render_pass, const backend::Framebuffer *framebuffer, uint32_t subpass_index);*/
-
-	// void init_state(uint32_t subpass_index);
-
 	void begin_rendering(const rendering::RenderTarget     &render_target,
 	                     const std::vector<vk::ClearValue> &clear_values = {});
 
-	/*void begin_render_pass(const rendering::RenderTarget                          &render_target,
-	                       const std::vector<common::LoadStoreInfo>               &load_store_infos,
-	                       const std::vector<vk::ClearValue>                      &clear_values,
-	                       const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses,
-	                       vk::SubpassContents                                     contents = vk::SubpassContents::eInline);
-
-	void begin_render_pass(const rendering::RenderTarget     &render_target,
-	                       const RenderPass                  &render_pass,
-	                       const Framebuffer                 &framebuffer,
-	                       const std::vector<vk::ClearValue> &clear_values,
-	                       vk::SubpassContents                contents = vk::SubpassContents::eInline);*/
-
-	// void next_subpass();
 
 	void execute_commands(CommandBuffer &secondary_command_buffer);
 
 	void execute_commands(std::vector<CommandBuffer *> &secondary_command_buffers);
 
 	void end_rendering();
-	// void end_render_pass();
 
 	vk::Result end();
 
@@ -162,13 +137,6 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void bind_pipeline_layout(PipelineLayout &pipeline_layout);
 
-	/*RenderPass &get_render_pass(const rendering::RenderTarget &render_target, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<std::unique_ptr<rendering::Subpass>> &subpasses);*/
-
-	/**
-	 * @brief Check that the render area is an optimal size by comparing to the render area granularity
-	 */
-	// bool is_render_size_optimal(const vk::Extent2D &extent, const vk::Rect2D &render_area) const;
-
 	void draw(uint32_t vertex_count, uint32_t instance_count, uint32_t first_vertex, uint32_t first_instance);
 
 	void draw_indexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance);
@@ -209,22 +177,15 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query);*/
 
-
-
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_pipeline_state(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_push_constants();
 
-	// const RenderPassBinding &get_current_render_pass() const;
-
-	//uint32_t get_current_subpass_index() const;
 
 	const vk::CommandBufferLevel level_{};
 	CommandPool                 &command_pool_;
-
-	// RenderPassBinding    current_render_pass_{};
 
 	PipelineState        pipeline_state_{};
 	ResourceBindingState resource_binding_state_{};

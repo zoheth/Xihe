@@ -6,7 +6,6 @@
 #include "backend/descriptor_set.h"
 #include "backend/descriptor_set_layout.h"
 #include "backend/device.h"
-#include "backend/framebuffer.h"
 #include "rendering/pipeline_state.h"
 #include "rendering/render_target.h"
 #include "resource_record.h"
@@ -71,19 +70,6 @@ struct hash<xihe::backend::VulkanResource<T>>
 		return std::hash<T>()(resource.get_handle());
 	}
 };
-
-//template <>
-//struct hash<xihe::backend::RenderPass>
-//{
-//	std::size_t operator()(const xihe::backend::RenderPass &render_pass) const
-//	{
-//		std::size_t result = 0;
-//
-//		hash_combine(result, render_pass.get_handle());
-//
-//		return result;
-//	}
-//};
 
 template <>
 struct hash<xihe::backend::DescriptorSetLayout>
@@ -179,8 +165,6 @@ struct hash<xihe::backend::ImageView>
 	}
 };
 
-// RenderPass is VulkanResource
-
 template <>
 struct hash<xihe::backend::ShaderModule>
 {
@@ -262,25 +246,6 @@ struct hash<xihe::backend::ShaderVariant>
 		std::size_t result = 0;
 
 		hash_combine(result, shader_variant.get_id());
-
-		return result;
-	}
-};
-
-template <>
-struct hash<xihe::backend::SubpassInfo>
-{
-	size_t operator()(const xihe::backend::SubpassInfo &subpass_info) const noexcept
-	{
-		std::size_t result = 0;
-
-		hash_combine(result, subpass_info.input_attachments);
-		hash_combine(result, subpass_info.output_attachments);
-		hash_combine(result, subpass_info.color_resolve_attachments);
-		hash_combine(result, subpass_info.disable_depth_stencil_attachment);
-		hash_combine(result, subpass_info.depth_stencil_resolve_attachment);
-		hash_combine(result, subpass_info.depth_stencil_resolve_mode);
-		hash_combine(result, subpass_info.debug_name);
 
 		return result;
 	}
@@ -479,17 +444,6 @@ inline void hash_param<std::vector<common::LoadStoreInfo>>(
 }
 
 template <>
-inline void hash_param<std::vector<SubpassInfo>>(
-    size_t                         &seed,
-    const std::vector<SubpassInfo> &value)
-{
-	for (auto &subpass_info : value)
-	{
-		hash_combine(seed, subpass_info);
-	}
-}
-
-template <>
 inline void hash_param<std::vector<ShaderModule *>>(
     size_t                            &seed,
     const std::vector<ShaderModule *> &value)
@@ -593,20 +547,6 @@ struct RecordHelper<PipelineLayout, A...>
 		recorder.set_pipeline_layout(index, pipeline_layout);
 	}
 };
-
-//template <class... A>
-//struct RecordHelper<RenderPass, A...>
-//{
-//	size_t record(ResourceRecord &recorder, A &...args)
-//	{
-//		return recorder.register_render_pass(args...);
-//	}
-//
-//	void index(ResourceRecord &recorder, size_t index, RenderPass &render_pass)
-//	{
-//		//recorder.set_render_pass(index, render_pass);
-//	}
-//};
 
 template <class... A>
 struct RecordHelper<GraphicsPipeline, A...>

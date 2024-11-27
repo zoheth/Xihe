@@ -62,31 +62,15 @@ DescriptorSet &ResourceCache::request_descriptor_set(DescriptorSetLayout &descri
 	return request_resource(device_, recorder_, descriptor_set_mutex_, state_.descriptor_sets, descriptor_set_layout, descriptor_pool, buffer_infos, image_infos);
 }
 
-//RenderPass &ResourceCache::request_render_pass(const std::vector<rendering::Attachment> &attachments, const std::vector<common::LoadStoreInfo> &load_store_infos, const std::vector<SubpassInfo> &subpasses)
-//{
-//	return request_resource(device_, recorder_, render_pass_mutex_, state_.render_passes, attachments, load_store_infos, subpasses);
-//}
-//
-//Framebuffer &ResourceCache::request_framebuffer(const rendering::RenderTarget &render_target, const RenderPass &render_pass)
-//{
-//	return request_resource(device_, recorder_, framebuffer_mutex_, state_.framebuffers, render_target, render_pass);
-//}
-
 void ResourceCache::clear()
 {
 	state_.shader_modules.clear();
 	state_.pipeline_layouts.clear();
 	state_.descriptor_sets.clear();
 	state_.descriptor_set_layouts.clear();
-	//state_.render_passes.clear();
 	clear_pipelines();
-	// clear_framebuffers();
 }
 
-//void ResourceCache::clear_framebuffers()
-//{
-//	state_.framebuffers.clear();
-//}
 
 void ResourceCache::clear_pipelines()
 {

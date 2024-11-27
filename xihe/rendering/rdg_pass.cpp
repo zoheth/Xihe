@@ -305,16 +305,6 @@ const std::vector<common::LoadStoreInfo> &RasterRdgPass::get_load_store() const
 	return load_store_;
 }
 
-//backend::RenderPass &RasterRdgPass::get_render_pass() const
-//{
-//	return *render_pass_;
-//}
-
-//backend::Framebuffer &RasterRdgPass::get_framebuffer() const
-//{
-//	return *framebuffer_;
-//}
-
 void RasterRdgPass::set_thread_index(uint32_t subpass_index, uint32_t thread_index)
 {
 	assert(subpass_index < subpasses_.size());

@@ -71,12 +71,10 @@ void RenderPipeline::draw(backend::CommandBuffer &command_buffer, RenderTarget &
 
 		if (i == 0)
 		{
-			// command_buffer.begin_render_pass(render_target, load_store_, clear_value_, subpasses_, contents);
 			command_buffer.begin_rendering(render_target, clear_value_);
 		}
 		else
 		{
-			// command_buffer.next_subpass();
 			throw std::runtime_error{"Not implemented"};
 		}
 
@@ -91,7 +89,6 @@ void RenderPipeline::draw(backend::CommandBuffer &command_buffer, RenderTarget &
 
 	active_subpass_index_ = 0;
 
-	// command_buffer.end_render_pass();
 	command_buffer.end_rendering();
 }
 
