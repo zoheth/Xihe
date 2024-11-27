@@ -276,12 +276,6 @@ struct hash<xihe::PipelineState>
 
 		hash_combine(result, pipeline_state.get_pipeline_layout().get_handle());
 
-		// For graphics only
-		/*if (auto render_pass = pipeline_state.get_render_pass())
-		{
-			hash_combine(result, render_pass->get_handle());
-		}*/
-
 		hash_combine(result, pipeline_state.get_specialization_constant_state());
 
 		//hash_combine(result, pipeline_state.get_subpass_index());

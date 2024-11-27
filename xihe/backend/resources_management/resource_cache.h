@@ -81,7 +81,6 @@ class ResourceCache
 	std::mutex shader_module_mutex_         = {};
 	std::mutex descriptor_set_layout_mutex_ = {};
 	std::mutex graphics_pipeline_mutex_     = {};
-	std::mutex render_pass_mutex_           = {};
 	std::mutex compute_pipeline_mutex_      = {};
 	std::mutex framebuffer_mutex_           = {};
 };

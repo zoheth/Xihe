@@ -251,8 +251,6 @@ RasterRdgPass::RasterRdgPass(std::string name, RenderContext &render_context, Pa
 
 void RasterRdgPass::prepare(backend::CommandBuffer &command_buffer)
 {
-	/*render_pass_ = &command_buffer.get_render_pass(*get_render_target(), load_store_, subpasses_);
-	framebuffer_ = &get_device().get_resource_cache().request_framebuffer(*get_render_target(), *render_pass_);*/
 }
 
 void RasterRdgPass::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, std::vector<backend::CommandBuffer *> secondary_command_buffers)
@@ -336,7 +334,6 @@ void RasterRdgPass::end_draw(backend::CommandBuffer &command_buffer, RenderTarge
 		gui_->draw(command_buffer);
 	
 	}
-	// command_buffer.end_render_pass();
 	command_buffer.end_rendering();
 
 	if (use_swapchain_image_)

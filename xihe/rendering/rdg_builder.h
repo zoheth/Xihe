@@ -38,6 +38,8 @@ struct SecondaryDrawTask : enki::ITaskSet
 	uint32_t                subpass_index;
 };
 
+
+
 class RdgBuilder
 {
   public:

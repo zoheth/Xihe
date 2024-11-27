@@ -583,7 +583,6 @@ void CommandBuffer::flush_pipeline_state(vk::PipelineBindPoint pipeline_bind_poi
 	// Create and bind pipeline
 	if (pipeline_bind_point == vk::PipelineBindPoint::eGraphics)
 	{
-		// pipeline_state_.set_render_pass(*current_render_pass_.render_pass);
 		auto &pipeline = get_device().get_resource_cache().request_graphics_pipeline(pipeline_state_);
 
 		get_handle().bindPipeline(pipeline_bind_point, pipeline.get_handle());

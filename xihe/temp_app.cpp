@@ -44,6 +44,15 @@ bool TempApp::prepare(Window *window)
 		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment},
 		};
 
+		rdg_builder_->add_pass("geometry_pass")
+		    .outputs({rendering::RdgResourceType::kSwapchain, "swapchain"},
+		             {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
+		             {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment})
+		    .shader("deferred/geometry.vert", "deferred/geometry.frag")
+		    .execute([scene_, camera]() {
+
+		    });
+
 		auto subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, backend::ShaderSource{"deferred/geometry.vert"}, backend::ShaderSource{"deferred/geometry.frag"}, *scene_, *camera);
 
 		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;

@@ -116,7 +116,6 @@ void PipelineState::reset()
 	clear_dirty();
 
 	pipeline_layout_ = nullptr;
-	// render_pass_     = nullptr;
 
 	specialization_constant_state_.reset();
 
