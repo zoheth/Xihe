@@ -1,7 +1,8 @@
-#include "geometry_subpass.h"
+#include "geometry_pass.h"
 
 #include "rendering/render_context.h"
 #include "rendering/render_frame.h"
+#include "rendering/subpasses/shared_uniform.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
@@ -9,34 +10,22 @@
 #include "scene_graph/components/texture.h"
 #include "scene_graph/node.h"
 #include "scene_graph/scene.h"
-#include "shared_uniform.h"
 
 #include <ranges>
 
+#include <utility>
+
 namespace xihe::rendering
 {
-GeometrySubpass::GeometrySubpass(RenderContext &render_context, backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, sg::Scene &scene, sg::Camera &camera) :
-    Subpass{render_context, std::move(vertex_shader), std::move(fragment_shader)},
-    camera_{camera},
-    meshes_{scene.get_components<sg::Mesh>()},
-    scene_{scene}
-{}
-
-void GeometrySubpass::prepare()
+GeometryPass::GeometryPass(backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, std::vector<sg::Mesh *> meshes, sg::Camera &camera) :
+    vertex_shader_{std::move(vertex_shader)},
+    fragment_shader_{std::move(fragment_shader)},
+    meshes_{std::move(meshes)},
+    camera_{camera}
 {
-	auto &device = render_context_.get_device();
-	for (auto &mesh : meshes_)
-	{
-		for (auto &sub_mesh : mesh->get_submeshes())
-		{
-			auto &variant     = sub_mesh->get_shader_variant();
-			auto &vert_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), variant);
-			auto &frag_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), variant);
-		}
-	}
 }
 
-void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
+void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame)
 {
 	std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> opaque_nodes;
 	std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> transparent_nodes;
@@ -49,7 +38,7 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 
 		for (const auto &[node, sub_mesh] : opaque_nodes | std::views::values)
 		{
-			update_uniform(command_buffer, *node, thread_index_);
+			update_uniform(command_buffer,active_frame, *node, 0);
 
 			draw_submesh(command_buffer, *sub_mesh);
 		}
@@ -62,16 +51,15 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 	color_blend_attachment.src_alpha_blend_factor = vk::BlendFactor::eOneMinusSrcAlpha;
 
 	ColorBlendState color_blend_state{};
-	//todo
-	color_blend_state.attachments.resize(get_output_attachments().size());
+	color_blend_state.attachments.resize(color_attachments_count_);
 	for (auto &it : color_blend_state.attachments)
 	{
 		it = color_blend_attachment;
 	}
 
 	command_buffer.set_color_blend_state(color_blend_state);
-	
-	command_buffer.set_depth_stencil_state(get_depth_stencil_state());
+
+	// command_buffer.set_depth_stencil_state(get_depth_stencil_state());
 
 	// Draw transparent objects in back-to-front order
 	{
@@ -79,24 +67,23 @@ void GeometrySubpass::draw(backend::CommandBuffer &command_buffer)
 
 		for (const auto &[node, sub_mesh] : transparent_nodes | std::views::values | std::views::reverse)
 		{
-			update_uniform(command_buffer, *node, thread_index_);
+			update_uniform(command_buffer, active_frame, *node, 0);
 
 			draw_submesh(command_buffer, *sub_mesh);
 		}
 	}
 }
 
-void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg::Node &node, size_t thread_index)
+void GeometryPass::update_uniform(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, sg::Node &node, size_t thread_index)
 {
 	SceneUniform global_uniform{};
 
 	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
 
-	auto &render_frame = render_context_.get_active_frame();
 
 	auto &transform = node.get_transform();
 
-	auto allocation = render_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
+	auto allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(SceneUniform), thread_index);
 
 	global_uniform.model           = transform.get_world_matrix();
 	global_uniform.camera_position = glm::vec3((glm::inverse(camera_.get_view())[3]));
@@ -106,7 +93,7 @@ void GeometrySubpass::update_uniform(backend::CommandBuffer &command_buffer, sg:
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 1, 0);
 }
 
-void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh, vk::FrontFace front_face)
+void GeometryPass::draw_submesh(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh, vk::FrontFace front_face)
 {
 	auto &device = command_buffer.get_device();
 
@@ -114,12 +101,14 @@ void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::S
 
 	prepare_pipeline_state(command_buffer, front_face, sub_mesh.get_material()->double_sided);
 
-	auto &vert_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), sub_mesh.get_shader_variant());
-	auto &frag_shader_module = device.get_resource_cache().request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), sub_mesh.get_shader_variant());
+	auto &resource_cache     = command_buffer.get_device().get_resource_cache();
+
+	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, vertex_shader_.value(), sub_mesh.get_shader_variant());
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, fragment_shader_, sub_mesh.get_shader_variant());
 
 	std::vector<backend::ShaderModule *> shader_modules{&vert_shader_module, &frag_shader_module};
 
-	auto &pipeline_layout = prepare_pipeline_layout(command_buffer, shader_modules);
+	auto &pipeline_layout =  resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
 
 	command_buffer.bind_pipeline_layout(pipeline_layout);
 
@@ -186,9 +175,9 @@ void GeometrySubpass::draw_submesh(backend::CommandBuffer &command_buffer, sg::S
 	draw_submesh_command(command_buffer, sub_mesh);
 }
 
-void GeometrySubpass::prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face, bool double_sided_material)
+void GeometryPass::prepare_pipeline_state(backend::CommandBuffer &command_buffer, vk::FrontFace front_face, bool double_sided_material)
 {
-	RasterizationState rasterization_state = base_rasterization_state_;
+	RasterizationState rasterization_state;
 	rasterization_state.front_face         = front_face;
 
 	if (double_sided_material)
@@ -198,25 +187,12 @@ void GeometrySubpass::prepare_pipeline_state(backend::CommandBuffer &command_buf
 
 	command_buffer.set_rasterization_state(rasterization_state);
 
-	MultisampleState multisample_state{};
+	/*MultisampleState multisample_state{};
 	multisample_state.rasterization_samples = sample_count_;
-	command_buffer.set_multisample_state(multisample_state);
+	command_buffer.set_multisample_state(multisample_state);*/
 }
 
-backend::PipelineLayout &GeometrySubpass::prepare_pipeline_layout(backend::CommandBuffer &command_buffer, const std::vector<backend::ShaderModule *> &shader_modules)
-{
-	for (auto &shader_module : shader_modules)
-	{
-		for (auto &[name, mode] : resource_mode_map_)
-		{
-			shader_module->set_resource_mode(name, mode);
-		}
-	}
-	auto &resource_cache = command_buffer.get_device().get_resource_cache();
-	return resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
-}
-
-void GeometrySubpass::prepare_push_constants(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh)
+void GeometryPass::prepare_push_constants(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh)
 {
 	const auto pbr_material = dynamic_cast<const sg::PbrMaterial *>(sub_mesh.get_material());
 
@@ -232,7 +208,7 @@ void GeometrySubpass::prepare_push_constants(backend::CommandBuffer &command_buf
 	}
 }
 
-void GeometrySubpass::draw_submesh_command(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh)
+void GeometryPass::draw_submesh_command(backend::CommandBuffer &command_buffer, sg::SubMesh &sub_mesh)
 {
 	if (sub_mesh.index_count != 0)
 	{
@@ -246,7 +222,7 @@ void GeometrySubpass::draw_submesh_command(backend::CommandBuffer &command_buffe
 	}
 }
 
-void GeometrySubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &opaque_nodes, std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &transparent_nodes) const
+void GeometryPass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &opaque_nodes, std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &transparent_nodes) const
 {
 	auto camera_transform = camera_.get_node()->get_transform().get_world_matrix();
 
@@ -277,4 +253,4 @@ void GeometrySubpass::get_sorted_nodes(std::multimap<float, std::pair<sg::Node *
 		}
 	}
 }
-}        // namespace xihe::rendering
+}

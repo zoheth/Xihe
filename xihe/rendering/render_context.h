@@ -4,7 +4,6 @@
 #include "backend/device.h"
 #include "backend/swapchain.h"
 #include "platform/window.h"
-#include "rendering/rdg_pass.h"
 #include "rendering/render_target.h"
 
 namespace xihe::rendering
@@ -57,9 +56,9 @@ class RenderContext
 	                                                       vk::CommandBufferLevel            level,
 	                                                       size_t                            thread_index) const;
 
-	backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
+	/*backend::BindlessDescriptorSet *get_bindless_descriptor_set() const;
 
-	void reset_bindless_index() const;
+	void reset_bindless_index() const;*/
 
 	void begin_frame();
 
@@ -117,7 +116,7 @@ class RenderContext
 
 	size_t thread_count_{1};
 
-	std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
+	// std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
 
 	std::unordered_map<std::string, RenderTarget::CreateFunc> create_render_target_functions_{};
 };

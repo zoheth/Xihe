@@ -171,7 +171,8 @@ backend::PipelineLayout &MeshletSubpass::prepare_pipeline_layout(backend::Comman
 			shader_module->set_resource_mode(name, mode);
 		}
 	}
-	return command_buffer.get_device().get_resource_cache().request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
+	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+	return resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
 }
 
 void MeshletSubpass::draw_mshader_mesh(backend::CommandBuffer &command_buffer, sg::MshaderMesh &mshader_mesh)

@@ -20,7 +20,8 @@ T &request_resource(Device &device, ResourceRecord &record, std::mutex &resource
 }        // namespace
 
 ResourceCache::ResourceCache(Device &device) :
-    device_(device)
+    device_(device),
+	bindless_descriptor_set_(device)
 {
 }
 

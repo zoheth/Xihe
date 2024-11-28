@@ -64,13 +64,19 @@ class ResourceCache
 	                                      const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
 	                                      const BindingMap<vk::DescriptorImageInfo>  &image_infos);
 
+	BindlessDescriptorSet &request_bindless_descriptor_set()
+	{
+		return bindless_descriptor_set_;
+	}
+
 	void clear();
 	void clear_pipelines();
 
   private:
 	Device &device_;
 	ResourceRecord recorder_{};
-	
+
+	BindlessDescriptorSet bindless_descriptor_set_;
 
 	vk::PipelineCache pipeline_cache_{VK_NULL_HANDLE};
 

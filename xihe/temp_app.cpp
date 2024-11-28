@@ -49,7 +49,7 @@ bool TempApp::prepare(Window *window)
 		             {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
 		             {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment})
 		    .shader("deferred/geometry.vert", "deferred/geometry.frag")
-		    .execute([scene_, camera]() {
+		    .execute([]() {
 
 		    });
 

@@ -21,8 +21,6 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 		swapchain_ = std::make_unique<backend::Swapchain>(device, surface, present_mode, present_mode_priority_list, surface_format_priority_list);
 	}
 
-	bindless_descriptor_set_ = std::make_unique<backend::BindlessDescriptorSet>(device);
-
 	graphics_queue_               = &device.get_suitable_graphics_queue();
 	uint32_t compute_family_index = device.get_queue_family_index(vk::QueueFlagBits::eCompute);
 
@@ -189,16 +187,6 @@ backend::CommandBuffer &RenderContext::request_graphics_command_buffer(backend::
 backend::CommandBuffer &RenderContext::request_compute_command_buffer(backend::CommandBuffer::ResetMode reset_mode, vk::CommandBufferLevel level, size_t thread_index) const
 {
 	return get_active_frame().request_command_buffer(*compute_queue_, reset_mode, level, thread_index);
-}
-
-backend::BindlessDescriptorSet *RenderContext::get_bindless_descriptor_set() const
-{
-	return bindless_descriptor_set_.get();
-}
-
-void RenderContext::reset_bindless_index() const
-{
-	bindless_descriptor_set_->reset_index();
 }
 
 void RenderContext::begin_frame()
@@ -513,7 +501,7 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Rd
 		auto swapchain_image = backend::Image{device_, swapchain_->get_images()[i], extent, swapchain_->get_format(), swapchain_->get_image_usage()};
 		auto render_target   = rdg_pass->create_render_target(std::move(swapchain_image));
 
-		auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
+		/*auto     image_infos                         = rdg_pass->get_descriptor_image_infos(*render_target);
 		uint32_t first_bindless_descriptor_set_index = std::numeric_limits<uint32_t>::max();
 		for (auto &image_info : image_infos)
 		{
@@ -524,7 +512,7 @@ void RenderContext::register_rdg_render_target(const std::string &name, const Rd
 				first_bindless_descriptor_set_index = index;
 			}
 		}
-		render_target->set_first_bindless_descriptor_set_index(first_bindless_descriptor_set_index);
+		render_target->set_first_bindless_descriptor_set_index(first_bindless_descriptor_set_index);*/
 
 		frames_[i]->update_render_target(name, std::move(render_target));
 	}

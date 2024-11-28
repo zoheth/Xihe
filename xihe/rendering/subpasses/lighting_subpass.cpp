@@ -65,7 +65,7 @@ void LightingSubpass::draw(backend::CommandBuffer &command_buffer)
 		shader_modules           = {&vert_shader_module, &frag_shader_module};
 	}
 
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, render_context_.get_bindless_descriptor_set());
+	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
 	command_buffer.bind_pipeline_layout(pipeline_layout);
 
 	// we know, that the lighting subpass does not have any vertex stage input -> reset the vertex input state

@@ -341,7 +341,7 @@ void XiheApp::update_bindless_descriptor_sets()
 			{
 				vk::DescriptorImageInfo image_info = textures[i]->get_descriptor_image_info();
 
-				render_context_->get_bindless_descriptor_set()->update(i, image_info);
+				device_->get_resource_cache().request_bindless_descriptor_set().update(i, image_info);
 			}
 		}
 	}
