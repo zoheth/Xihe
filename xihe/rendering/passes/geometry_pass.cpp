@@ -2,6 +2,7 @@
 
 #include "rendering/render_context.h"
 #include "rendering/render_frame.h"
+#include "rendering/subpass.h"
 #include "rendering/subpasses/shared_uniform.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
@@ -17,9 +18,7 @@
 
 namespace xihe::rendering
 {
-GeometryPass::GeometryPass(backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, std::vector<sg::Mesh *> meshes, sg::Camera &camera) :
-    vertex_shader_{std::move(vertex_shader)},
-    fragment_shader_{std::move(fragment_shader)},
+GeometryPass::GeometryPass(std::vector<sg::Mesh *> meshes, sg::Camera &camera) :
     meshes_{std::move(meshes)},
     camera_{camera}
 {
@@ -103,8 +102,8 @@ void GeometryPass::draw_submesh(backend::CommandBuffer &command_buffer, sg::SubM
 
 	auto &resource_cache     = command_buffer.get_device().get_resource_cache();
 
-	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, vertex_shader_.value(), sub_mesh.get_shader_variant());
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, fragment_shader_, sub_mesh.get_shader_variant());
+	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), sub_mesh.get_shader_variant());
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), sub_mesh.get_shader_variant());
 
 	std::vector<backend::ShaderModule *> shader_modules{&vert_shader_module, &frag_shader_module};
 

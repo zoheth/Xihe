@@ -1,11 +1,33 @@
 #include "render_graph.h"
 
+#include "rendering/render_frame.h"
+
 namespace xihe::rendering
 {
 void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
 {
 	command_buffer.get_handle().setViewport(0, {{0.0f, 0.0f, static_cast<float>(extent.width), static_cast<float>(extent.height), 0.0f, 1.0f}});
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
+}
+
+PassNode::PassNode(std::string name, PassType type, PassInfo &&pass_info) :
+    name_{std::move(name)}, type_{type}, pass_info_{std::move(pass_info)}
+{
+}
+
+void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target)
+{
+	
+}
+
+void PassNode::set_render_target(std::unique_ptr<RenderTarget> &&render_target)
+{
+	render_target_ = std::move(render_target);
+}
+
+RenderTarget * PassNode::get_render_target()
+{
+	return render_target_.get();
 }
 
 void RenderGraph::execute()
@@ -40,9 +62,14 @@ void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, boo
 	{
 		RenderTarget *render_target = pass_node->get_render_target();
 
+		if (!render_target)
+		{
+			render_target = &render_context_.get_active_frame().get_render_target();
+		}
+
 		set_viewport_and_scissor(command_buffer, render_target->get_extent());
 
-		pass_node->execute(command_buffer);
+		pass_node->execute(command_buffer, *render_target);
 	}
 
 	command_buffer.end();

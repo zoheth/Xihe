@@ -7,7 +7,7 @@
 #include "backend/descriptor_pool.h"
 #include "backend/descriptor_set.h"
 #include "backend/semaphore_pool.h"
-#include "rendering/render_target.h"
+//#include "rendering/render_target.h"
 
 namespace xihe::rendering
 {
@@ -37,8 +37,8 @@ class RenderFrame
 		vk::CommandBufferLevel level,
 		size_t thread_index);
 
-	RenderTarget &      get_render_target(const std::string &rdg_name);
-	RenderTarget const &get_render_target(const std::string &rdg_name) const;
+	RenderTarget &      get_render_target();
+	RenderTarget const &get_render_target() const;
 
 	vk::DescriptorSet request_descriptor_set(const backend::DescriptorSetLayout    &descriptor_set_layout,
 	                                         const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
@@ -53,7 +53,7 @@ class RenderFrame
 
 	void clear_descriptors();
 
-	void update_render_target(std::string rdg_name, std::unique_ptr<RenderTarget> &&render_target);
+	void update_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
 	void release_owned_semaphore(vk::Semaphore semaphore);
 
@@ -74,7 +74,8 @@ private:
 
 	backend::Device &device_;
 
-	std::unordered_map<std::string, std::unique_ptr<RenderTarget>> render_targets_ = {};
+	// std::unordered_map<std::string, std::unique_ptr<RenderTarget>> render_targets_ = {};
+	std::unique_ptr<RenderTarget> swapchain_render_target_;
 
 	/// Commands pools associated to the frame
 	std::map<uint32_t, std::vector<std::unique_ptr<backend::CommandPool>>> command_pools_;

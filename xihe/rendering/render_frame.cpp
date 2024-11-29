@@ -49,23 +49,33 @@ backend::CommandBuffer &RenderFrame::request_command_buffer(const backend::Queue
 	return (*command_pool_it)->request_command_buffer(level);
 }
 
-RenderTarget &RenderFrame::get_render_target(const std::string &rdg_name)
+RenderTarget & RenderFrame::get_render_target()
 {
-	if (!render_targets_.contains(rdg_name))
-	{
-		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
-	}
-	return *render_targets_[rdg_name];
+	return *swapchain_render_target_;
 }
 
-RenderTarget const &RenderFrame::get_render_target(const std::string &rdg_name) const
+RenderTarget const & RenderFrame::get_render_target() const
 {
-	if (!render_targets_.contains(rdg_name))
-	{
-		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
-	}
-	return *render_targets_.at(rdg_name);
+	return *swapchain_render_target_;
 }
+
+//RenderTarget &RenderFrame::get_render_target(const std::string &rdg_name)
+//{
+//	if (!render_targets_.contains(rdg_name))
+//	{
+//		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
+//	}
+//	return *render_targets_[rdg_name];
+//}
+//
+//RenderTarget const &RenderFrame::get_render_target(const std::string &rdg_name) const
+//{
+//	if (!render_targets_.contains(rdg_name))
+//	{
+//		throw std::runtime_error{"Render target not found for RDG name " + rdg_name};
+//	}
+//	return *render_targets_.at(rdg_name);
+//}
 
 vk::DescriptorSet RenderFrame::request_descriptor_set(const backend::DescriptorSetLayout &descriptor_set_layout, const BindingMap<vk::DescriptorBufferInfo> &buffer_infos, const BindingMap<vk::DescriptorImageInfo> &image_infos, bool update_after_bind, size_t thread_index)
 {
@@ -165,11 +175,16 @@ void RenderFrame::clear_descriptors()
 	}
 }
 
-void RenderFrame::update_render_target(std::string rdg_name, std::unique_ptr<RenderTarget> &&render_target)
+void RenderFrame::update_render_target(std::unique_ptr<RenderTarget> &&render_target)
 {
-	render_targets_.erase(rdg_name);
-	render_targets_.emplace(std::move(rdg_name), std::move(render_target));
+	swapchain_render_target_ = std::move(render_target);
 }
+
+//void RenderFrame::update_render_target(std::string rdg_name, std::unique_ptr<RenderTarget> &&render_target)
+//{
+//	render_targets_.erase(rdg_name);
+//	render_targets_.emplace(std::move(rdg_name), std::move(render_target));
+//}
 
 void RenderFrame::release_owned_semaphore(vk::Semaphore semaphore)
 {

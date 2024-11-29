@@ -59,8 +59,14 @@ class PassNode
   public:
 	PassNode(std::string name, PassType type, PassInfo &&pass_info);
 
-	void execute(backend::CommandBuffer &command_buffer);
+	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
 
+	void set_render_target(std::unique_ptr<RenderTarget> &&render_target);
+
+	/**
+	 * \brief 如果返回nullptr,则表示这个pass使用render frame的render target
+	 * \return 
+	 */
 	RenderTarget *get_render_target();
 
   private:
@@ -100,5 +106,7 @@ class RenderGraph
 	RenderContext         &render_context_;
 
 	std::vector<PassBatch> pass_batches_{};
+
+	std::vector<PassNode> pass_nodes_{};
 };
 }        // namespace xihe::rendering

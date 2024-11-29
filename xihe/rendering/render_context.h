@@ -33,9 +33,7 @@ class RenderContext
 	 */
 	void prepare(size_t thread_count = 1);
 
-	void recreate();
-
-	void recreate_swapchain();
+	void recreate_frame_render_targets();
 
 	void begin();
 
@@ -82,7 +80,11 @@ class RenderContext
 
 	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
 
-	void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
+	backend::Swapchain const &get_swapchain() const;
+
+	void set_render_target_function(const RenderTarget::CreateFunc &create_render_target_function);
+
+	//void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
 
 	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
 
@@ -118,7 +120,7 @@ class RenderContext
 
 	// std::unique_ptr<backend::BindlessDescriptorSet> bindless_descriptor_set_;
 
-	std::unordered_map<std::string, RenderTarget::CreateFunc> create_render_target_functions_{};
+	RenderTarget::CreateFunc create_render_target_function_{RenderTarget::kDefaultCreateFunc};
 };
 
 }        // namespace xihe::rendering

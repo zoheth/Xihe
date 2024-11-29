@@ -1,4 +1,5 @@
 #pragma once
+#include "render_pass.h"
 #include "backend/command_buffer.h"
 #include "backend/resources_management/resource_cache.h"
 #include "backend/shader_module.h"
@@ -21,22 +22,22 @@ class Camera;
 namespace rendering
 {
 
-class GeometryPass
+class GeometryPass : public RenderPass
 {
   public:
 	/**
 	 * \brief
 	 */
-	GeometryPass(backend::ShaderSource &&vertex_shader, backend::ShaderSource &&fragment_shader, std::vector<sg::Mesh *> meshes, sg::Camera &camera);
+	GeometryPass(std::vector<sg::Mesh *> meshes, sg::Camera &camera);
 
-	~GeometryPass() = default;
+	virtual ~GeometryPass() = default;
 
 	/**
 	 * \brief
 	 * \param command_buffer
 	 * \param active_frame 用于获取当前帧的资源，或者分配资源
 	 */
-	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame);
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame) override;
 
   private:
 	virtual void update_uniform(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, sg::Node &node, size_t thread_index);
@@ -55,14 +56,6 @@ class GeometryPass
 	 */
 	void get_sorted_nodes(std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &opaque_nodes,
 	                      std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> &transparent_nodes) const;
-
-
-	std::optional<backend::ShaderSource> vertex_shader_;
-
-	std::optional<backend::ShaderSource> task_shader_;
-	std::optional<backend::ShaderSource> mesh_shader_;
-
-	backend::ShaderSource fragment_shader_;
 
 	std::vector<sg::Mesh *> meshes_;
 	sg::Camera             &camera_;

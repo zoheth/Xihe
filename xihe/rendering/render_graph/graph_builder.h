@@ -2,6 +2,7 @@
 
 #include "render_resource.h"
 #include "render_graph.h"
+#include "rendering/passes/render_pass.h"
 #include "backend/sampler.h"
 #include "backend/shader_module.h"
 
@@ -15,8 +16,8 @@ class GraphBuilder;
 class PassBuilder
 {
 public:
-	PassBuilder(GraphBuilder &graph_builder, const std::string &name) :
-	    graph_builder_(graph_builder), pass_name_(name)
+	PassBuilder(GraphBuilder &graph_builder, std::string name, RenderPass &&render_pass) :
+	  graph_builder_(graph_builder), pass_name_(std::move(name)), render_pass_(std::move(render_pass))
 	{}
 
 	PassBuilder &inputs(std::initializer_list<PassInput> inputs)
@@ -31,61 +32,41 @@ public:
 		return *this;
 	}
 
-	PassBuilder &shader(const std::string &vert, const std::string &frag)
-	{
-		vert_shader_ = backend::ShaderSource{vert};
-		frag_shader_ = backend::ShaderSource{frag};
-		return *this;
-	}
+	PassBuilder &shader(std::initializer_list<std::string> file_names);
 
-	template <typename F>
-	void execute(F &&func)
-	{
-		execute_func_ = std::forward<F>(func);
-		graph_builder_.add_pass(pass_name_, std::move(pass_info_),
-		                        std::move(vert_shader_), std::move(frag_shader_),
-		                        std::move(execute_func_));
-	}
+	void finish();
 
-  private:
+private:
 	GraphBuilder         &graph_builder_;
 	std::string           pass_name_;
 	PassInfo              pass_info_;
+	RenderPass            render_pass_;
 
-	std::optional<backend::ShaderSource> vertex_shader_;
 
-	std::optional<backend::ShaderSource> task_shader_;
-	std::optional<backend::ShaderSource> mesh_shader_;
-
-	std::optional<backend::ShaderSource> fragment_shader_;
-
-	std::optional<backend::ShaderSource> compute_shader_;
-
-	std::function<void()> execute_func_;
 };
 
 class GraphBuilder
 {
 public:
-	PassBuilder add_pass(const std::string &name)
+	GraphBuilder(RenderContext &render_context) :
+	    render_context_(render_context)
+	{}
+
+	PassBuilder add_pass(const std::string &name, RenderPass &&render_pass)
 	{
-		return PassBuilder(*this, name);
+		return {*this, name, std::move(render_pass)};
 	}
 
 	// 内部方法,由PassBuilder调用
-	void add_pass(const std::string      &name,
-	              PassInfo              &&pass_info,
-	              backend::ShaderSource &&vert_shader,
-	              backend::ShaderSource &&frag_shader,
-	              std::function<void()> &&execute_func)
-	{
-		// 存储pass信息
-		passes_.emplace_back(PassData{
-		    name,
-		    std::move(pass_info),
-		    std::move(vert_shader),
-		    std::move(frag_shader),
-		    std::move(execute_func)});
-	}
+	void add_pass(const std::string &name,
+	              PassInfo         &&pass_info,
+	              RenderPass       &&render_pass);
+
+	void build();
+
+private:
+	RenderContext &render_context_;
+	
+	bool is_dirty_{false};
 };
 }

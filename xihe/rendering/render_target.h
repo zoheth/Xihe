@@ -44,7 +44,6 @@ class RenderTarget
 
 	const std::vector<Attachment> &get_attachments() const;
 
-
 	void     set_first_bindless_descriptor_set_index(uint32_t index);
 	uint32_t get_first_bindless_descriptor_set_index() const;
 
