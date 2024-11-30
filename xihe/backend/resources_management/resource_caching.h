@@ -493,6 +493,14 @@ inline void hash_param<std::map<uint32_t, std::map<uint32_t, vk::DescriptorImage
 	}
 }
 
+template <>
+inline void hash_param<vk::SamplerCreateInfo>(
+    size_t                      &seed,
+    const vk::SamplerCreateInfo &value)
+{
+	hash_combine(seed, value);
+}
+
 template <typename T, typename... Args>
 inline void hash_param(size_t &seed, const T &first_arg, const Args &...args)
 {

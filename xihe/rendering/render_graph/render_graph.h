@@ -63,6 +63,11 @@ enum class PassType
 class PassNode
 {
   public:
+	struct InputInfo
+	{
+		Barrier barrier;
+		std::variant<backend::Buffer*, backend::ImageView*> resource;
+	};
 	PassNode(std::string name, PassType type, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, RenderFrame &render_frame);
@@ -75,7 +80,8 @@ class PassNode
 	 */
 	RenderTarget *get_render_target();
 
-	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
+	// void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
+	void add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource);
 	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
 
 	void add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier);
@@ -93,7 +99,7 @@ class PassNode
 	std::unique_ptr<RenderTarget> render_target_;
 
 	// Barriers applied before execution to ensure the input resources are in the correct state for reading.
-	std::unordered_map<uint32_t, Barrier> input_barriers_;
+	std::unordered_map<uint32_t, InputInfo> inputs_;
 
 	// Barriers applied before execution to ensure the output resources are in the correct state for writing.
 	std::unordered_map<uint32_t, Barrier> output_barriers_;

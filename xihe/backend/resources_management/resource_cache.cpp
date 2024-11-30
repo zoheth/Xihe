@@ -62,6 +62,11 @@ DescriptorSet &ResourceCache::request_descriptor_set(DescriptorSetLayout &descri
 	return request_resource(device_, recorder_, descriptor_set_mutex_, state_.descriptor_sets, descriptor_set_layout, descriptor_pool, buffer_infos, image_infos);
 }
 
+Sampler & ResourceCache::request_sampler(vk::SamplerCreateInfo info)
+{
+	return request_resource(device_, recorder_, sampler_mutex_, state_.samplers, info);
+}
+
 void ResourceCache::clear()
 {
 	state_.shader_modules.clear();

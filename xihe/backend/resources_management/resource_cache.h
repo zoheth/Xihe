@@ -9,6 +9,7 @@
 #include "backend/descriptor_set_layout.h"
 #include "backend/pipeline.h"
 #include "backend/pipeline_layout.h"
+#include "backend/sampler.h"
 #include "backend/shader_module.h"
 #include "common/vk_common.h"
 #include "rendering/render_target.h"
@@ -35,6 +36,7 @@ struct ResourceCacheState
 	std::unordered_map<std::size_t, GraphicsPipeline>    graphics_pipelines;
 	std::unordered_map<std::size_t, ComputePipeline>     compute_pipelines;
 	std::unordered_map<std::size_t, DescriptorSet>       descriptor_sets;
+	std::unordered_map<std::size_t, Sampler>             samplers;
 };
 
 class ResourceCache
@@ -64,6 +66,8 @@ class ResourceCache
 	                                      const BindingMap<vk::DescriptorBufferInfo> &buffer_infos,
 	                                      const BindingMap<vk::DescriptorImageInfo>  &image_infos);
 
+	Sampler &request_sampler(vk::SamplerCreateInfo info);
+
 	BindlessDescriptorSet &request_bindless_descriptor_set()
 	{
 		if (!bindless_descriptor_set_)
@@ -92,7 +96,7 @@ class ResourceCache
 	std::mutex descriptor_set_layout_mutex_ = {};
 	std::mutex graphics_pipeline_mutex_     = {};
 	std::mutex compute_pipeline_mutex_      = {};
-	std::mutex framebuffer_mutex_           = {};
+	std::mutex sampler_mutex_           = {};
 };
 }        // namespace backend
 }        // namespace xihe

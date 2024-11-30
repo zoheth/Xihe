@@ -18,7 +18,7 @@ GeometryPass::GeometryPass(std::vector<sg::Mesh *> meshes, sg::Camera &camera) :
 {
 }
 
-void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame)
+void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
 {
 	std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> opaque_nodes;
 	std::multimap<float, std::pair<sg::Node *, sg::SubMesh *>> transparent_nodes;

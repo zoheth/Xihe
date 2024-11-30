@@ -2,6 +2,11 @@
 
 namespace xihe::rendering
 {
+namespace 
+{
+vk::SamplerCreateInfo g_buffer_sampler{};
+}
+
 void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &lighting_state, uint32_t set, uint32_t binding)
 {
 	command_buffer.bind_buffer(lighting_state.light_buffer.get_buffer(),
@@ -13,13 +18,13 @@ void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &
 	command_buffer.set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
 }
 
-LightingPass::LightingPass(std::vector<sg::Light *> lights) :
-    lights_{std::move(lights)}
+LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera) :
+    lights_{std::move(lights)}, camera_(camera)
 {
 	shader_variant_.add_define({"MAX_LIGHT_COUNT " + std::to_string(kMaxLightCount)});
 }
 
-void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame)
+void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
 {
 	set_lighting_state(kMaxLightCount);
 
@@ -44,7 +49,27 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
 	command_buffer.bind_pipeline_layout(pipeline_layout);
 
+	// we know, that the lighting subpass does not have any vertex stage input -> reset the vertex input state
+	assert(pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex).empty());
+	command_buffer.set_vertex_input_state({});
 
+	command_buffer.bind_image(input_bindables[0].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 0, 0);
+	command_buffer.bind_image(input_bindables[1].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 1, 0);
+	command_buffer.bind_image(input_bindables[2].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 2, 0);
+
+	RasterizationState rasterization_state;
+	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
+	command_buffer.set_rasterization_state(rasterization_state);
+
+	LightUniform light_uniform;
+
+	light_uniform.inv_view_proj = glm::inverse(vulkan_style_projection(camera_.get_projection()) * camera_.get_view());
+
+	auto  allocation   = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), 0);
+	allocation.update(light_uniform);
+	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
+
+	command_buffer.draw(3, 1, 0, 0);
 }
 
 void LightingPass::set_lighting_state(size_t light_count)

@@ -2,12 +2,17 @@
 
 #include "render_pass.h"
 #include "scene_graph/components/light.h"
+#include "scene_graph/components/camera.h"
 #include "scene_graph/node.h"
 
 namespace xihe::rendering
 {
 constexpr uint32_t kMaxLightCount = 32;
 
+struct alignas(16) LightUniform
+{
+	glm::mat4 inv_view_proj;
+};
 
 struct alignas(16) Light
 {
@@ -40,14 +45,16 @@ void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &
 class LightingPass : public RenderPass
 {
   public:
-	LightingPass(std::vector<sg::Light *> lights);
+	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera);
 
-	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame) override;
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
 	void set_lighting_state(size_t light_count);
 
 	std::vector<sg::Light *> lights_;
+
+	sg::Camera &camera_;
 
 	LightingState lighting_state_;
 

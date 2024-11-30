@@ -12,12 +12,7 @@ class GeometryPass : public RenderPass
 
 	virtual ~GeometryPass() = default;
 
-	/**
-	 * \brief
-	 * \param command_buffer
-	 * \param active_frame  Used to obtain resources for the current frame, or allocate resources
-	 */
-	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame) override;
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
 	virtual void update_uniform(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, sg::Node &node, size_t thread_index);

@@ -1,21 +1,65 @@
 #pragma once
 
-#include "shared_uniform.h"
 #include "backend/command_buffer.h"
 #include "backend/shader_module.h"
 #include "rendering/render_frame.h"
+#include "shared_uniform.h"
 
 #include <optional>
+#include <variant>
 
 namespace xihe
 {
 namespace rendering
 {
+
 glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
+
+std::unique_ptr<backend::Sampler> create_sa
+
+class ShaderBindable
+{
+  public:
+	ShaderBindable() = default;
+
+	ShaderBindable(backend::Buffer *buffer) :
+	    resource_{buffer}
+	{}
+	ShaderBindable(backend::ImageView *image_view) :
+	    resource_{image_view}
+	{}
+
+	ShaderBindable &operator=(std::variant<backend::Buffer *, backend::ImageView *> resource)
+	{
+		resource_ = resource;
+		return *this;
+	}
+
+	backend::ImageView &image_view() const
+	{
+		if (std::holds_alternative<backend::ImageView *>(resource_))
+		{
+			return *std::get<backend::ImageView *>(resource_);
+		}
+		throw std::runtime_error("Resource is not an image view");
+	}
+
+	backend::Buffer &buffer() const
+	{
+		if (std::holds_alternative<backend::Buffer *>(resource_))
+		{
+			return *std::get<backend::Buffer *>(resource_);
+		}
+		throw std::runtime_error("Resource is not a buffer");
+	}
+
+  private:
+	std::variant<backend::Buffer *, backend::ImageView *> resource_{};
+};
 
 class RenderPass
 {
-public:
+  public:
 	RenderPass() = default;
 
 	void set_shader(std::initializer_list<std::string> file_names);
@@ -26,9 +70,15 @@ public:
 	const backend::ShaderSource &get_fragment_shader() const;
 	const backend::ShaderSource &get_compute_shader() const;
 
-	virtual void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame) {};
+	/**
+	 * \brief
+	 * \param command_buffer
+	 * \param active_frame  Used to obtain resources for the current frame, or allocate resources
+	 * \param input_bindables The order of input_bindables corresponds to the order of inputs passed during add_pass
+	 */
+	virtual void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables);
 
-private:
+  private:
 	std::optional<backend::ShaderSource> vertex_shader_;
 
 	std::optional<backend::ShaderSource> task_shader_;
@@ -38,5 +88,5 @@ private:
 
 	std::optional<backend::ShaderSource> compute_shader_;
 };
-}
-}
+}        // namespace rendering
+}        // namespace xihe

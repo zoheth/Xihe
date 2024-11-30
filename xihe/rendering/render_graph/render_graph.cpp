@@ -2,6 +2,8 @@
 
 #include "rendering/render_frame.h"
 
+#include <ranges>
+
 namespace xihe::rendering
 {
 void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::Extent2D const &extent)
@@ -19,7 +21,22 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 {
 	backend::ScopedDebugLabel subpass_debug_label{command_buffer, name_.c_str()};
 
+	std::vector<ShaderBindable> shader_bindable(inputs_.size());
+
 	// todo input barriers
+	for (const auto &[index, input_info] : inputs_)
+	{
+		shader_bindable[index] = input_info.resource;
+
+		if (std::holds_alternative<backend::Buffer *>(input_info.resource))
+		{
+			// command_buffer.buffer_memory_barrier(std::get<backend::Buffer *>(input_info.resource), input_info.barrier);
+		}
+		else
+		{
+			command_buffer.image_memory_barrier(*std::get<backend::ImageView *>(input_info.resource), std::get<common::ImageMemoryBarrier> (input_info.barrier));
+		}
+	}
 
 	auto &output_views = render_target.get_views();
 	for (const auto &[index, barrier] : output_barriers_)
@@ -35,7 +52,7 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 
 	command_buffer.begin_rendering(render_target);
 
-	render_pass_->execute(command_buffer, render_frame);
+	render_pass_->execute(command_buffer, render_frame, shader_bindable);
 
 	command_buffer.end_rendering();
 
@@ -74,19 +91,28 @@ RenderTarget * PassNode::get_render_target()
 	return render_target_.get();
 }
 
-void PassNode::add_input_memory_barrier(uint32_t index, Barrier &&barrier)
+void PassNode::add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource)
 {
-	input_barriers_[index] = std::move(barrier);
+	assert(index < pass_info_.inputs.size());
+	if (std::holds_alternative<backend::Buffer *>(resource))
+	{
+		assert(std::holds_alternative<common::BufferMemoryBarrier>(barrier));
+	}
+	else
+	{
+		assert(std::holds_alternative<common::ImageMemoryBarrier>(barrier));
+	}
+	inputs_[index] = {barrier, resource};
 }
 
 void PassNode::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
 {
-	output_barriers_[index] = std::move(barrier);
+	output_barriers_[index] = barrier;
 }
 
 void PassNode::add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier)
 {
-	release_barriers_[image_view] = std::move(barrier);
+	release_barriers_[image_view] = barrier;
 }
 
 RenderGraph::RenderGraph(RenderContext &render_context) : render_context_{render_context}

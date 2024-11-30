@@ -90,4 +90,9 @@ const backend::ShaderSource & RenderPass::get_compute_shader() const
 	}
 	return compute_shader_.value();
 }
+
+void RenderPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
+{
+	throw std::runtime_error("RenderPass::execute not implemented");
+}
 }
