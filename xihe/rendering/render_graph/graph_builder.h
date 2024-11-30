@@ -1,10 +1,10 @@
 #pragma once
 
-#include "render_resource.h"
-#include "render_graph.h"
-#include "rendering/passes/render_pass.h"
 #include "backend/sampler.h"
 #include "backend/shader_module.h"
+#include "render_graph.h"
+#include "render_resource.h"
+#include "rendering/passes/render_pass.h"
 
 #include <functional>
 #include <optional>
@@ -14,7 +14,7 @@ namespace xihe::rendering
 
 class GraphBuilder
 {
-public:
+  public:
 	class PassBuilder
 	{
 	  public:
@@ -56,14 +56,14 @@ public:
 
 	void build();
 
-private:
-	void           add_pass(const std::string            &name,
-	                        PassInfo                    &&pass_info,
-	                        std::unique_ptr<RenderPass> &&render_pass);
+  private:
+	void add_pass(const std::string            &name,
+	              PassInfo                    &&pass_info,
+	              std::unique_ptr<RenderPass> &&render_pass);
 
-	RenderGraph &render_graph_;
+	RenderGraph   &render_graph_;
 	RenderContext &render_context_;
-	
+
 	bool is_dirty_{false};
 };
-}
+}        // namespace xihe::rendering

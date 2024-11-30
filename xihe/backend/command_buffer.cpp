@@ -172,17 +172,6 @@ void CommandBuffer::bind_index_buffer(const backend::Buffer &buffer, vk::DeviceS
 	get_handle().bindIndexBuffer(buffer.get_handle(), offset, index_type);
 }
 
-void CommandBuffer::bind_lighting(LightingState &lighting_state, uint32_t set, uint32_t binding)
-{
-	bind_buffer(lighting_state.light_buffer.get_buffer(),
-	            lighting_state.light_buffer.get_offset(),
-	            lighting_state.light_buffer.get_size(),
-	            set, binding, 0);
-	set_specialization_constant(0, to_u32(lighting_state.directional_lights.size()));
-	set_specialization_constant(1, to_u32(lighting_state.point_lights.size()));
-	set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
-}
-
 vk::Result CommandBuffer::end()
 {
 	get_handle().end();

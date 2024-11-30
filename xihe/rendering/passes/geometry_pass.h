@@ -1,25 +1,9 @@
 #pragma once
 #include "render_pass.h"
-#include "backend/command_buffer.h"
-#include "backend/resources_management/resource_cache.h"
-#include "backend/shader_module.h"
-#include "rendering/render_frame.h"
+#include "scene_graph/components/camera.h"
+#include "scene_graph/components/mesh.h"
 
-#include <optional>
-
-namespace xihe
-{
-
-namespace sg
-{
-class Scene;
-class Node;
-class Mesh;
-class SubMesh;
-class Camera;
-}        // namespace sg
-
-namespace rendering
+namespace xihe::rendering
 {
 class GeometryPass : public RenderPass
 {
@@ -58,5 +42,4 @@ class GeometryPass : public RenderPass
 
 	uint32_t color_attachments_count_{2};
 };
-}        // namespace rendering
-}        // namespace xihe
+}        // namespace xihe::rendering

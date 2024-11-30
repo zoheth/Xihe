@@ -1,17 +1,13 @@
 #include "geometry_pass.h"
 
-#include "rendering/render_context.h"
-#include "rendering/render_frame.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
-#include "scene_graph/components/mesh.h"
+#include "scene_graph/components/sub_mesh.h"
 #include "scene_graph/components/texture.h"
 #include "scene_graph/node.h"
-#include "scene_graph/scene.h"
 
 #include <ranges>
-
 #include <utility>
 
 namespace xihe::rendering

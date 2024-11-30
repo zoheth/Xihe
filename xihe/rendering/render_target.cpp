@@ -40,7 +40,7 @@ RenderTarget::RenderTarget(std::vector<backend::Image> &&images) :
 	it = std::find_if(std::next(images_.begin()),
 	                  images_.end(),
 	                  [this](backend::Image const &image) { return (extent_.width != image.get_extent().width) || (extent_.height != image.get_extent().height); });
-	// todo 确定是否需要这个检查
+	// todo: determine if this check is necessary
 	/*if (it != images_.end())
 	{
 		throw VulkanException{VK_ERROR_INITIALIZATION_FAILED, "Extent size is not unique"};

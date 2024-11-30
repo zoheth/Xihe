@@ -97,8 +97,6 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void bind_index_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, vk::IndexType index_type);
 
-	void bind_lighting(LightingState &lighting_state, uint32_t set, uint32_t binding);
-
 	/**
 	 * @brief Reset the command buffer to a state where it can be recorded to
 	 * @param reset_mode How to reset the buffer, should match the one used by the pool to allocate it
