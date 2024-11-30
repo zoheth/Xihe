@@ -2,13 +2,13 @@
 
 namespace xihe::rendering
 {
-PassBuilder &PassBuilder::shader(std::initializer_list<std::string> file_names)
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::shader(std::initializer_list<std::string> file_names)
 {
 	render_pass_->set_shader(file_names);
 	return *this;
 }
 
-void PassBuilder::finish()
+void GraphBuilder::PassBuilder::finish()
 {
 	graph_builder_.add_pass(pass_name_, std::move(pass_info_),
 	                        std::move(render_pass_));

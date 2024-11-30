@@ -35,7 +35,7 @@ RenderContext::RenderContext(backend::Device &device, vk::SurfaceKHR surface, co
 		compute_queue_ = &device.get_queue(compute_family_index, 0);
 	}
 
-	// todo: 这部分可能需要封装
+	// todo: this part may need to be encapsulated
 	vk::SemaphoreCreateInfo     semaphore_create_info;
 	vk::SemaphoreTypeCreateInfo semaphore_type_create_info;
 	semaphore_type_create_info.semaphoreType = vk::SemaphoreType::eTimeline;

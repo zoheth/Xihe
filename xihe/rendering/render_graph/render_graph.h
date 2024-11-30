@@ -14,7 +14,7 @@ class GraphBuilder;
 
 using Barrier = std::variant<common::ImageMemoryBarrier, common::BufferMemoryBarrier>;
 
-enum RenderResourceType
+enum class RenderResourceType
 {
 	kInvalid    = -1,
 	kBuffer     = 0,
@@ -53,7 +53,7 @@ struct PassInfo
 	std::vector<PassOutput> outputs;
 };
 
-enum PassType
+enum class PassType
 {
 	kNone    = 0,
 	kRaster  = 1 << 0,
@@ -70,8 +70,8 @@ class PassNode
 	void set_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
 	/**
-	 * \brief 如果返回nullptr,则表示这个pass使用render frame的render target
-	 * \return 
+	 * \brief 
+	 * \return If nullptr is returned, it indicates that this pass uses the render target of the render frame
 	 */
 	RenderTarget *get_render_target();
 
@@ -109,10 +109,10 @@ class RenderGraph
 
 	void execute();
 
-	// 由GraphBuilder调用
+  private:
+	// Called by GraphBuilder
 	void add_pass_node(PassNode &&pass_node);
 
-  private:
 	struct PassBatch
 	{
 		std::vector<PassNode *> pass_nodes;

@@ -1,4 +1,6 @@
 #pragma once
+
+#include "shared_uniform.h"
 #include "backend/command_buffer.h"
 #include "backend/shader_module.h"
 #include "rendering/render_frame.h"
