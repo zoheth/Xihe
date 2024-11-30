@@ -3,11 +3,17 @@
 #include "backend/sampler.h"
 #include "rendering/render_context.h"
 #include "rendering/render_target.h"
+#include "rendering/passes/render_pass.h"
 
 #include <functional>
+#include <variant>
 
 namespace xihe::rendering
 {
+class GraphBuilder;
+
+using Barrier = std::variant<common::ImageMemoryBarrier, common::BufferMemoryBarrier>;
+
 enum RenderResourceType
 {
 	kInvalid    = -1,
@@ -57,22 +63,24 @@ enum PassType
 class PassNode
 {
   public:
-	PassNode(std::string name, PassType type, PassInfo &&pass_info);
+	PassNode(std::string name, PassType type, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
 
-	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target);
+	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, RenderFrame &render_frame);
 
 	void set_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
 	/**
-	 * \brief 如果返回nullptr,则表示这个pass使用render frame的render target
+	 * \brief 濡傛灉杩斿洖nullptr,鍒欒〃绀鸿繖涓猵ass浣跨敤render frame鐨剅ender target
 	 * \return 
 	 */
 	RenderTarget *get_render_target();
 
-  private:
-	void begin_execute(backend::CommandBuffer &command_buffer);
+	void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
+	void add_output_memory_barrier(uint32_t index, Barrier &&barrier);
 
-	void end_execute(backend::CommandBuffer &command_buffer);
+	void add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier);
+
+  private:
 
 	std::string name_;
 
@@ -80,15 +88,29 @@ class PassNode
 
 	PassInfo pass_info_;
 
+	std::unique_ptr<RenderPass> render_pass_;
+
 	std::unique_ptr<RenderTarget> render_target_;
+
+	// Barriers applied before execution to ensure the input resources are in the correct state for reading.
+	std::unordered_map<uint32_t, Barrier> input_barriers_;
+
+	// Barriers applied before execution to ensure the output resources are in the correct state for writing.
+	std::unordered_map<uint32_t, Barrier> output_barriers_;
+
+	// Barriers applied after execution to release resource ownership for cross-queue synchronization.
+	std::unordered_map<const backend::ImageView *, Barrier> release_barriers_;
 };
 
 class RenderGraph
 {
   public:
-	RenderGraph();
+	RenderGraph(RenderContext &render_context);
 
 	void execute();
+
+	// 鐢盙raphBuilder璋冪敤
+	void add_pass_node(PassNode &&pass_node);
 
   private:
 	struct PassBatch
@@ -108,5 +130,7 @@ class RenderGraph
 	std::vector<PassBatch> pass_batches_{};
 
 	std::vector<PassNode> pass_nodes_{};
+
+	friend GraphBuilder;
 };
 }        // namespace xihe::rendering

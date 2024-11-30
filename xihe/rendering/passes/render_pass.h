@@ -9,6 +9,8 @@ namespace xihe
 {
 namespace rendering
 {
+glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
+
 class RenderPass
 {
 public:

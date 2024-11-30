@@ -21,6 +21,25 @@ class Camera;
 
 namespace rendering
 {
+struct PBRMaterialUniform
+{
+	glm::uvec4 texture_indices;
+
+	glm::vec4 base_color_factor;
+
+	float metallic_factor;
+
+	float roughness_factor;
+};
+
+struct alignas(16) SceneUniform
+{
+	glm::mat4 model;
+
+	glm::mat4 camera_view_proj;
+
+	glm::vec3 camera_position;
+};
 
 class GeometryPass : public RenderPass
 {
@@ -35,7 +54,7 @@ class GeometryPass : public RenderPass
 	/**
 	 * \brief
 	 * \param command_buffer
-	 * \param active_frame ÓÃÓÚ»ñÈ¡µ±Ç°Ö¡µÄ×ÊÔ´£¬»òÕß·ÖÅä×ÊÔ´
+	 * \param active_frame ç”¨äºè·å–å½“å‰å¸§çš„èµ„æºï¼Œæˆ–è€…åˆ†é…èµ„æº
 	 */
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame) override;
 

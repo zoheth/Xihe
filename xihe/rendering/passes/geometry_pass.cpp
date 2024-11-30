@@ -2,8 +2,6 @@
 
 #include "rendering/render_context.h"
 #include "rendering/render_frame.h"
-#include "rendering/subpass.h"
-#include "rendering/subpasses/shared_uniform.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
@@ -77,7 +75,7 @@ void GeometryPass::update_uniform(backend::CommandBuffer &command_buffer, Render
 {
 	SceneUniform global_uniform{};
 
-	global_uniform.camera_view_proj = camera_.get_pre_rotation() * xihe::vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
+	global_uniform.camera_view_proj = camera_.get_pre_rotation() * vulkan_style_projection(camera_.get_projection()) * camera_.get_view();
 
 
 	auto &transform = node.get_transform();

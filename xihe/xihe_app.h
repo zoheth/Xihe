@@ -12,8 +12,7 @@
 #include "platform/application.h"
 #include "platform/window.h"
 #include "rendering/render_context.h"
-#include "rendering/render_pipeline.h"
-#include "rendering/rdg_builder.h"
+#include "rendering/render_graph/graph_builder.h"
 #include "scene_graph/scene.h"
 
 namespace xihe
@@ -85,7 +84,8 @@ class XiheApp : public Application
 
 	std::unique_ptr<rendering::RenderContext> render_context_;
 
-	std::unique_ptr<rendering::RdgBuilder> rdg_builder_;
+	std::unique_ptr<rendering::GraphBuilder> graph_builder_;
+	std::unique_ptr<rendering::RenderGraph>   render_graph_;
 
 	std::unique_ptr<sg::Scene> scene_;
 

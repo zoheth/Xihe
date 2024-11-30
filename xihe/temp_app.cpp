@@ -1,8 +1,8 @@
 #include "temp_app.h"
 
 #include "backend/shader_compiler/glsl_compiler.h"
-#include "rendering/subpasses/geometry_subpass.h"
-#include "rendering/subpasses/lighting_subpass.h"
+#include "rendering/passes/geometry_pass.h"
+#include "scene_graph/components/mesh.h"
 #include "scene_graph/components/camera.h"
 
 namespace xihe
@@ -35,31 +35,20 @@ bool TempApp::prepare(Window *window)
 
 	// geometry pass
 	{
-		rendering::PassInfo pass_info{};
+		auto geometry_pass = std::make_unique<rendering::GeometryPass>(scene_->get_components<sg::Mesh>(), *camera);
 
-		pass_info.outputs = {
-		    //{rendering::RdgResourceType::kAttachment, "albedo", vk::Format::eR8G8B8A8Unorm, vk::ImageUsageFlagBits::eInputAttachment},
-		    {rendering::RdgResourceType::kSwapchain, "swapchain"},
-		    {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
-		    {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment},
-		};
+		graph_builder_->add_pass("geometry_pass", std::move(geometry_pass))
 
-		rdg_builder_->add_pass("geometry_pass")
-		    .outputs({rendering::RdgResourceType::kSwapchain, "swapchain"},
-		             {rendering::RdgResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
-		             {rendering::RdgResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment})
-		    .shader("deferred/geometry.vert", "deferred/geometry.frag")
-		    .execute([]() {
+		    .outputs({{rendering::RenderResourceType::kSwapchain, "swapchain"},
+		              {rendering::RenderResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
+		              {rendering::RenderResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment}})
 
-		    });
+		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
 
-		auto subpass = std::make_unique<rendering::GeometrySubpass>(*render_context_, backend::ShaderSource{"deferred/geometry.vert"}, backend::ShaderSource{"deferred/geometry.frag"}, *scene_, *camera);
-
-		std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
-		subpasses.push_back(std::move(subpass));
-
-		rdg_builder_->add_raster_pass("geometry_pass", std::move(pass_info), std::move(subpasses));
+		    .finish();
 	}
+
+	graph_builder_->build();
 
 	//// lighting pass
 	//{
@@ -95,7 +84,7 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
 }
-}
+}        // namespace xihe
 
 std::unique_ptr<xihe::Application> create_application()
 {

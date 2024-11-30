@@ -20,8 +20,7 @@ T &request_resource(Device &device, ResourceRecord &record, std::mutex &resource
 }        // namespace
 
 ResourceCache::ResourceCache(Device &device) :
-    device_(device),
-	bindless_descriptor_set_(device)
+    device_(device)
 {
 }
 
@@ -69,6 +68,7 @@ void ResourceCache::clear()
 	state_.pipeline_layouts.clear();
 	state_.descriptor_sets.clear();
 	state_.descriptor_set_layouts.clear();
+	bindless_descriptor_set_.reset();
 	clear_pipelines();
 }
 

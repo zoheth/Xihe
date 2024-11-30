@@ -2,6 +2,15 @@
 
 namespace xihe::rendering
 {
+glm::mat4 vulkan_style_projection(const glm::mat4 &proj)
+{
+	// Flip Y in clipspace. X = -1, Y = -1 is topLeft in Vulkan.
+	glm::mat4 mat = proj;
+	mat[1][1] *= -1;
+
+	return mat;
+}
+
 void RenderPass::set_shader(std::initializer_list<std::string> file_names)
 {
 	for (const auto &file_name : file_names)

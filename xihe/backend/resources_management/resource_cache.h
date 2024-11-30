@@ -66,7 +66,11 @@ class ResourceCache
 
 	BindlessDescriptorSet &request_bindless_descriptor_set()
 	{
-		return bindless_descriptor_set_;
+		if (!bindless_descriptor_set_)
+		{
+			bindless_descriptor_set_ = std::make_unique<BindlessDescriptorSet>(device_);
+		}
+		return *bindless_descriptor_set_;
 	}
 
 	void clear();
@@ -76,7 +80,7 @@ class ResourceCache
 	Device &device_;
 	ResourceRecord recorder_{};
 
-	BindlessDescriptorSet bindless_descriptor_set_;
+	std::unique_ptr<BindlessDescriptorSet> bindless_descriptor_set_;
 
 	vk::PipelineCache pipeline_cache_{VK_NULL_HANDLE};
 

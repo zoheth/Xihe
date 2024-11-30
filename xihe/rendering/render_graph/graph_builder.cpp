@@ -4,7 +4,7 @@ namespace xihe::rendering
 {
 PassBuilder &PassBuilder::shader(std::initializer_list<std::string> file_names)
 {
-	render_pass_.set_shader(file_names);
+	render_pass_->set_shader(file_names);
 	return *this;
 }
 
@@ -14,7 +14,7 @@ void PassBuilder::finish()
 	                        std::move(render_pass_));
 }
 
-void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, RenderPass &&render_pass)
+void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass)
 {
 	is_dirty_ = true;
 
@@ -73,7 +73,27 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, Rende
 	{
 		// todo	
 	}
-	PassNode pass_node{name, PassType::kRaster, std::move(pass_info)};
 
+	PassNode pass_node{name, PassType::kRaster, std::move(pass_info), std::move(render_pass)};
+	render_graph_.add_pass_node(std::move(pass_node));
+
+}
+
+void GraphBuilder::build()
+{
+	RenderGraph::PassBatch pass_batch;
+	pass_batch.type = PassType::kRaster;
+	pass_batch.pass_nodes.push_back(&render_graph_.pass_nodes_[0]);
+	common::ImageMemoryBarrier barrier{};
+	barrier.old_layout      = vk::ImageLayout::eUndefined;
+	barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+	barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+	barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+	barrier.src_access_mask = {};
+	barrier.dst_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+
+	render_graph_.pass_nodes_[0].add_output_memory_barrier(0, std::move(barrier));
+
+	render_graph_.pass_batches_.push_back(std::move(pass_batch));
 }
 }        // namespace xihe::rendering

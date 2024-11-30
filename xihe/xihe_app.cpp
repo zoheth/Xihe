@@ -41,7 +41,7 @@ XiheApp::~XiheApp()
 
 	scene_.reset();
 
-	rdg_builder_.reset();
+	render_graph_.reset();
 	stats_.reset();
 	gui_.reset();
 
@@ -156,7 +156,8 @@ bool XiheApp::prepare(Window *window)
 	// todo
 	render_context_->prepare(8);
 
-	rdg_builder_ = std::make_unique<rendering::RdgBuilder>(*render_context_);
+	render_graph_ = std::make_unique<rendering::RenderGraph>(*render_context_);
+	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
 	return true;
 }
@@ -192,7 +193,7 @@ void XiheApp::update(float delta_time)
 
 	// update_bindless_descriptor_sets();
 
-	rdg_builder_->execute();
+	render_graph_->execute();
 
 	// command_buffer.end();
 
