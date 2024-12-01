@@ -1,12 +1,10 @@
 #version 450
 
-#define SHADOW_MAP_CASCADE_COUNT 3
-
 precision highp float;
 
-layout(input_attachment_index = 0, binding = 0) uniform subpassInput i_depth;
-layout(input_attachment_index = 1, binding = 1) uniform subpassInput i_albedo;
-layout(input_attachment_index = 2, binding = 2) uniform subpassInput i_normal;
+layout(binding = 0) uniform sampler2D i_depth;
+layout(binding = 1) uniform sampler2D i_albedo;
+layout(binding = 2) uniform sampler2D i_normal;
 
 layout(location = 0) in vec2 in_uv;
 layout(location = 0) out vec4 o_color;
@@ -14,7 +12,6 @@ layout(location = 0) out vec4 o_color;
 layout(set = 0, binding = 3) uniform GlobalUniform
 {
     mat4 inv_view_proj;
-    vec2 inv_resolution;
 }
 global_uniform;
 
@@ -84,31 +81,24 @@ float calculate_shadow(highp vec3 pos, uint i)
 void main()
 {
 	// Retrieve position from depth
-	vec4  clip         = vec4(in_uv * 2.0 - 1.0, subpassLoad(i_depth).x, 1.0);
+
+	vec2 screen_uv = gl_FragCoord.xy / vec2(textureSize(i_depth, 0));
+
+	vec4 clip = vec4(in_uv * 2.0 - 1.0, texture(i_depth, screen_uv).x, 1.0);
+
 	highp vec4 world_w = global_uniform.inv_view_proj * clip;
 	highp vec3 pos     = world_w.xyz / world_w.w;
-	vec4 albedo = subpassLoad(i_albedo);
+	vec4 albedo = texture(i_albedo, screen_uv);
 	// Transform from [0,1] to [-1,1]
-	vec3 normal = subpassLoad(i_normal).xyz;
+	vec3 normal = texture(i_normal, screen_uv).xyz;
 	normal      = normalize(2.0 * normal - 1.0);
 
-	// Calculate shadow
-	uint cascade_i = 0;
-	for(uint i = 0; i < SHADOW_MAP_CASCADE_COUNT; ++i) {
-		if(subpassLoad(i_depth).x < shadow_uniform.far_d[i]) {	
-			cascade_i = i;
-		}
-	}
 
 	// Calculate lighting
 	vec3 L = vec3(0.0);
 	for (uint i = 0U; i < DIRECTIONAL_LIGHT_COUNT; ++i)
 	{
 		L += apply_directional_light(lights_info.directional_lights[i], normal);
-		if(i==0U)
-		{
-			L *= calculate_shadow(pos, cascade_i);
-		}
 	}
 	for (uint i = 0U; i < POINT_LIGHT_COUNT; ++i)
 	{
@@ -121,20 +111,6 @@ void main()
 	vec3 ambient_color = vec3(0.2) * albedo.xyz;
 
 	vec3 final_color = ambient_color + L * albedo.xyz;
-
-#ifdef SHOW_CASCADE_VIEW
-    vec3 cascade_overlay = vec3(0.0);
-    if (cascade_i == 0) {
-        cascade_overlay = vec3(0.2, 0.3, 0.6);
-    } else if (cascade_i == 1) {
-        cascade_overlay = vec3(0.3, 0.6, 0.3);
-    } else if (cascade_i == 2) {
-		cascade_overlay = vec3(0.6, 0.4, 0.2);
-    } else if (cascade_i == 3) {
-        cascade_overlay = vec3(0.6, 0.3, 0.6);
-    }
-    final_color = mix(final_color, final_color + cascade_overlay, 0.3);
-#endif
 	
 	o_color = vec4(final_color, 1.0);
 }

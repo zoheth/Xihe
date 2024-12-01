@@ -2,16 +2,48 @@
 
 namespace xihe::rendering
 {
+GraphBuilder::PassBuilder::PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass) :
+    graph_builder_(graph_builder), pass_name_(std::move(name)), render_pass_(std::move(render_pass))
+{}
+
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::inputs(std::initializer_list<PassInput> inputs)
+{
+	pass_info_.inputs = inputs;
+	return *this;
+}
+
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::outputs(std::initializer_list<PassOutput> outputs)
+{
+	pass_info_.outputs = outputs;
+	return *this;
+}
+
 GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::shader(std::initializer_list<std::string> file_names)
 {
 	render_pass_->set_shader(file_names);
 	return *this;
 }
 
-void GraphBuilder::PassBuilder::finish()
+void GraphBuilder::PassBuilder::finalize()
 {
 	graph_builder_.add_pass(pass_name_, std::move(pass_info_),
 	                        std::move(render_pass_));
+}
+
+void GraphBuilder::build_pass_batches()
+{
+	PassBatchBuilder batch_builder;
+}
+
+std::pair<std::vector<std::unordered_set<int>>, std::vector<int>> GraphBuilder::build_dependency_graph()
+{
+	auto &pass_nodes = render_graph_.pass_nodes_;
+
+	std::vector<std::unordered_set<int>> adjacency_list(pass_nodes.size());
+
+	std::vector<int> indegree(pass_nodes.size(), 0);
+
+
 }
 
 void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass)
@@ -49,7 +81,7 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::
 					continue;
 				}
 				vk::Extent3D extent = swapchain_image_extent;
-				
+
 				backend::ImageBuilder image_builder{extent};
 				image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY)
 				    .with_format(output.format);
@@ -71,17 +103,16 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::
 	}
 	else
 	{
-		// todo	
+		// todo
 	}
 
 	PassNode pass_node{name, PassType::kRaster, std::move(pass_info), std::move(render_pass)};
 	render_graph_.add_pass_node(std::move(pass_node));
-
 }
 
 void GraphBuilder::build()
 {
-	RenderGraph::PassBatch pass_batch;
+	PassBatch pass_batch;
 	pass_batch.type = PassType::kRaster;
 	pass_batch.pass_nodes.push_back(&render_graph_.pass_nodes_[0]);
 	common::ImageMemoryBarrier barrier{};

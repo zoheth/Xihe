@@ -108,6 +108,14 @@ class PassNode
 	std::unordered_map<const backend::ImageView *, Barrier> release_barriers_;
 };
 
+struct PassBatch
+{
+	std::vector<PassNode *> pass_nodes;
+	PassType                type;
+	int64_t                 wait_batch_index{-1};
+	uint64_t                signal_semaphore_value{0};
+};
+
 class RenderGraph
 {
   public:
@@ -118,14 +126,6 @@ class RenderGraph
   private:
 	// Called by GraphBuilder
 	void add_pass_node(PassNode &&pass_node);
-
-	struct PassBatch
-	{
-		std::vector<PassNode *> pass_nodes;
-		PassType                type;
-		int64_t                 wait_batch_index{-1};
-		uint64_t                signal_semaphore_value{0};
-	};
 
 	void execute_raster_batch(PassBatch &pass_batch, bool is_first, bool is_last);
 

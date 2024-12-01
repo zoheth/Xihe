@@ -45,7 +45,7 @@ bool TempApp::prepare(Window *window)
 
 		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
 
-		    .finish();
+		    .finalize();
 	}
 
 	graph_builder_->build();

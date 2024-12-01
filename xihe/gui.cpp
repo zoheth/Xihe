@@ -162,7 +162,7 @@ Gui::Gui(XiheApp &app, Window &window, const stats::Stats *stats, const float fo
 
 		queue.submit(command_buffer, device.request_fence());
 
-		// Wait for the command buffer to finish its work before destroying the staging buffer
+		// Wait for the command buffer to finalize its work before destroying the staging buffer
 		device.get_fence_pool().wait();
 		device.get_fence_pool().reset();
 		device.get_command_pool().reset_pool();

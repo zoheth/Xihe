@@ -18,25 +18,15 @@ class GraphBuilder
 	class PassBuilder
 	{
 	  public:
-		PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass) :
-		    graph_builder_(graph_builder), pass_name_(std::move(name)), render_pass_(std::move(render_pass))
-		{}
+		PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass);
 
-		PassBuilder &inputs(std::initializer_list<PassInput> inputs)
-		{
-			pass_info_.inputs = inputs;
-			return *this;
-		}
+		PassBuilder &inputs(std::initializer_list<PassInput> inputs);
 
-		PassBuilder &outputs(std::initializer_list<PassOutput> outputs)
-		{
-			pass_info_.outputs = outputs;
-			return *this;
-		}
+		PassBuilder &outputs(std::initializer_list<PassOutput> outputs);
 
 		PassBuilder &shader(std::initializer_list<std::string> file_names);
 
-		void finish();
+		void finalize();
 
 	  private:
 		GraphBuilder               &graph_builder_;
@@ -53,10 +43,27 @@ class GraphBuilder
 	{
 		return {*this, name, std::move(render_pass)};
 	}
-
 	void build();
 
   private:
+	class PassBatchBuilder
+	{
+	  public:
+		void add_pass(RenderPass *pass, int batch_index);
+
+		void add_wait_semaphore(vk::Semaphore semaphore);
+
+		std::vector<PassBatch> finalize();
+	private:
+		PassInfo current_batch_;
+	  std::vector<PassBatch> batches_;
+	};
+
+	void build_pass_batches();
+
+	std::pair<std::vector<std::unordered_set<int>>, std::vector<int>>
+	    build_dependency_graph();
+
 	void add_pass(const std::string            &name,
 	              PassInfo                    &&pass_info,
 	              std::unique_ptr<RenderPass> &&render_pass);
