@@ -12,6 +12,25 @@
 namespace xihe::rendering
 {
 
+class ResourceStateTracker
+{
+  public:
+	struct State
+	{
+		ResourceUsageState      usage_state;
+		int32_t                 producer_pass{-1};
+		int32_t                 last_user{-1};
+		backend::ImageView     *image_view{nullptr};
+	};
+
+	void track_resource(PassNode &pass_node, int32_t pass_idx);
+
+	void track_resource(const std::string &name, const ResourceUsageState &state);
+
+  private:
+	std::unordered_map<std::string, State> states_;
+};
+
 class GraphBuilder
 {
   public:
@@ -45,28 +64,41 @@ class GraphBuilder
 	}
 	void build();
 
-  private:
 	class PassBatchBuilder
 	{
 	  public:
-		void add_pass(RenderPass *pass, int batch_index);
+		void process_pass(PassNode *pass);
 
-		void add_wait_semaphore(vk::Semaphore semaphore);
+		void set_batch_dependency(int64_t wait_batch_index);
 
 		std::vector<PassBatch> finalize();
-	private:
-		PassInfo current_batch_;
-	  std::vector<PassBatch> batches_;
+
+	  private:
+		void finalize_current_batch();
+
+		PassBatch              current_batch_;
+		std::vector<PassBatch> batches_;
 	};
-
-	void build_pass_batches();
-
-	std::pair<std::vector<std::unordered_set<int>>, std::vector<int>>
-	    build_dependency_graph();
 
 	void add_pass(const std::string            &name,
 	              PassInfo                    &&pass_info,
 	              std::unique_ptr<RenderPass> &&render_pass);
+
+	void build_pass_batches();
+
+	std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>>
+	    build_dependency_graph() const;
+
+	void process_pass_inputs(
+	    uint32_t              node,
+	    PassNode             &current_pass,
+	    ResourceStateTracker &resource_tracker,
+	    PassBatchBuilder     &batch_builder);
+
+	void process_pass_outputs(
+	    uint32_t              node,
+	    PassNode             &current_pass,
+	    ResourceStateTracker &resource_tracker);
 
 	RenderGraph   &render_graph_;
 	RenderContext &render_context_;

@@ -11,7 +11,12 @@ glm::mat4 vulkan_style_projection(const glm::mat4 &proj)
 	return mat;
 }
 
-void RenderPass::set_shader(std::initializer_list<std::string> file_names)
+PassType RenderPass::get_type() const
+{
+	return type_;
+}
+
+void   RenderPass::set_shader(std::initializer_list<std::string> file_names)
 {
 	for (const auto &file_name : file_names)
 	{
@@ -43,6 +48,23 @@ void RenderPass::set_shader(std::initializer_list<std::string> file_names)
 		{
 			mesh_shader_ = backend::ShaderSource{file_name};
 		}
+	}
+
+	if (vertex_shader_.has_value() && fragment_shader_.has_value())
+	{
+		type_ = PassType::kRaster;
+	}
+	else if (compute_shader_.has_value())
+	{
+		type_ = PassType::kCompute;
+	}
+	else if (task_shader_.has_value() && mesh_shader_.has_value())
+	{
+		type_ = PassType::kMesh;
+	}
+	else
+	{
+		throw std::runtime_error("Pass type not set");
 	}
 }
 

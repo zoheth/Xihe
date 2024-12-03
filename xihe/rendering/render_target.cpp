@@ -58,7 +58,7 @@ const vk::Extent2D &RenderTarget::get_extent() const
 	return extent_;
 }
 
-const std::vector<backend::ImageView> & RenderTarget::get_views() const
+std::vector<backend::ImageView> & RenderTarget::get_views()
 {
 	return image_views_;
 }

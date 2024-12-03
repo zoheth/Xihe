@@ -1,4 +1,5 @@
 #pragma once
+#include "render_resource.h"
 #include "backend/command_buffer.h"
 #include "backend/sampler.h"
 #include "rendering/render_context.h"
@@ -14,27 +15,16 @@ class GraphBuilder;
 
 using Barrier = std::variant<common::ImageMemoryBarrier, common::BufferMemoryBarrier>;
 
-enum class RenderResourceType
-{
-	kInvalid    = -1,
-	kBuffer     = 0,
-	kTexture    = 1,
-	kAttachment = 2,
-	kReference  = 3,
-	kSwapchain  = 4
-};
-
 struct PassInput
 {
-	RenderResourceType type;
+	ResourceUsage usage;
 	std::string        name;
 };
 struct PassOutput
 {
-	RenderResourceType                                type;
+	ResourceUsage                                     usage;
 	std::string                                       name;
 	vk::Format                                        format;
-	vk::ImageUsageFlags                               usage{};
 	vk::Extent3D                                      override_resolution{};
 	std::function<vk::Extent3D(const vk::Extent3D &)> modify_extent{};
 
@@ -53,12 +43,6 @@ struct PassInfo
 	std::vector<PassOutput> outputs;
 };
 
-enum class PassType
-{
-	kNone    = 0,
-	kRaster  = 1 << 0,
-	kCompute = 1 << 1
-};
 
 class PassNode
 {
@@ -68,9 +52,13 @@ class PassNode
 		Barrier barrier;
 		std::variant<backend::Buffer*, backend::ImageView*> resource;
 	};
-	PassNode(std::string name, PassType type, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
+	PassNode(std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, RenderFrame &render_frame);
+
+	PassInfo &get_pass_info();
+
+	PassType get_type() const;
 
 	void set_render_target(std::unique_ptr<RenderTarget> &&render_target);
 
@@ -79,6 +67,10 @@ class PassNode
 	 * \return If nullptr is returned, it indicates that this pass uses the render target of the render frame
 	 */
 	RenderTarget *get_render_target();
+
+	void set_batch_index(uint64_t batch_index);
+
+	int64_t get_batch_index() const;
 
 	// void add_input_memory_barrier(uint32_t index, Barrier &&barrier);
 	void add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource);
@@ -93,6 +85,8 @@ class PassNode
 	PassType type_;
 
 	PassInfo pass_info_;
+
+	int64_t batch_index_{-1};
 
 	std::unique_ptr<RenderPass> render_pass_;
 

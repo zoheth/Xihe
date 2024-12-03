@@ -40,7 +40,8 @@ class RenderTarget
 	RenderTarget(std::vector<backend::Image> &&images);
 
 	const vk::Extent2D                    &get_extent() const;
-	const std::vector<backend::ImageView> &get_views() const;
+	// todo need const?
+	std::vector<backend::ImageView> &get_views();
 
 	const std::vector<Attachment> &get_attachments() const;
 

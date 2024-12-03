@@ -39,7 +39,7 @@ bool TempApp::prepare(Window *window)
 
 		graph_builder_->add_pass("geometry_pass", std::move(geometry_pass))
 
-		    .outputs({{rendering::RenderResourceType::kSwapchain, "swapchain"},
+		    .outputs({{rendering::ResourceUsage::kSwapchain, "swapchain"},
 		              {rendering::RenderResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
 		              {rendering::RenderResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment}})
 

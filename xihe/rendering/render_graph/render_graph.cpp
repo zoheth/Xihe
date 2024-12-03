@@ -12,8 +12,8 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-PassNode::PassNode(std::string name, PassType type, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass) :
-    name_{std::move(name)}, type_{type}, pass_info_{std::move(pass_info)}, render_pass_{std::move(render_pass)}
+PassNode::PassNode(std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass) :
+    name_{std::move(name)}, type_{render_pass->get_type()}, pass_info_{std::move(pass_info)}, render_pass_{std::move(render_pass)}
 {
 }
 
@@ -81,6 +81,16 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 	}
 }
 
+PassInfo & PassNode::get_pass_info()
+{
+	return pass_info_;
+}
+
+PassType PassNode::get_type() const
+{
+	return type_;
+}
+
 void PassNode::set_render_target(std::unique_ptr<RenderTarget> &&render_target)
 {
 	render_target_ = std::move(render_target);
@@ -91,7 +101,21 @@ RenderTarget * PassNode::get_render_target()
 	return render_target_.get();
 }
 
-void PassNode::add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource)
+void PassNode::set_batch_index(uint64_t batch_index)
+{
+	batch_index_ = batch_index;
+}
+
+int64_t PassNode::get_batch_index() const
+{
+	if (batch_index_ == -1)
+	{
+		throw std::runtime_error("Batch index not set");
+	}
+	return batch_index_;
+}
+
+void  PassNode::add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource)
 {
 	assert(index < pass_info_.inputs.size());
 	if (std::holds_alternative<backend::Buffer *>(resource))

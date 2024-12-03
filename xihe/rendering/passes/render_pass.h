@@ -15,8 +15,6 @@ namespace rendering
 
 glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
 
-std::unique_ptr<backend::Sampler> create_sa
-
 class ShaderBindable
 {
   public:
@@ -62,6 +60,8 @@ class RenderPass
   public:
 	RenderPass() = default;
 
+	PassType get_type() const;
+
 	void set_shader(std::initializer_list<std::string> file_names);
 
 	const backend::ShaderSource &get_vertex_shader() const;
@@ -79,6 +79,8 @@ class RenderPass
 	virtual void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables);
 
   private:
+	PassType type_{};
+
 	std::optional<backend::ShaderSource> vertex_shader_;
 
 	std::optional<backend::ShaderSource> task_shader_;
