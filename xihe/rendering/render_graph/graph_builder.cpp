@@ -2,51 +2,39 @@
 
 namespace xihe::rendering
 {
-void ResourceStateTracker::track_resource(PassNode &pass_node, int32_t pass_idx)
+ResourceStateTracker::State ResourceStateTracker::get_or_create_state(const std::string &name)
 {
-	auto &pass_info = pass_node.get_pass_info();
-	for (uint32_t i = 0; i < pass_info.outputs.size(); ++i)
+	if (!states_.contains(name))
 	{
-		auto &output = pass_info.outputs[i];
-		if (states_.contains(output.name))
-		{
-			throw std::runtime_error("Resource already exists");
-		}
-		states_[output.name].producer_pass = pass_idx;
-		states_[output.name].last_user     = pass_idx;
-		if (auto *render_target = pass_node.get_render_target())
-		{
-			auto &views                     = render_target->get_views();
-			states_[output.name].image_view = &views[i];
-		}
-
-		update_resource_state(output.usage, pass_node.get_type(), states_[output.name].usage_state);
+		states_[name] = {};
 	}
+	return states_[name];
 }
 
-ResourceStateTracker::State &ResourceStateTracker::get_state(const std::string &name)
+void ResourceStateTracker::track_resource(const std::string &name, uint32_t node, const ResourceUsageState &state)
 {
-	auto it = states_.find(name);
-	if (it == states_.end())
+	if (!states_.contains(name))
 	{
-		throw std::runtime_error("Resource state not found");
+		throw std::runtime_error("Resource state not found.");
 	}
-	return it->second;
+	states_[name].usage_state = state;
+
+	states_[name].last_user = node;
 }
 
 GraphBuilder::PassBuilder::PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass) :
     graph_builder_(graph_builder), pass_name_(std::move(name)), render_pass_(std::move(render_pass))
 {}
 
-GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::inputs(std::initializer_list<PassInput> inputs)
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::bindables(std::initializer_list<PassBindable> bindables)
 {
-	pass_info_.inputs = inputs;
+	pass_info_.bindables = bindables;
 	return *this;
 }
 
-GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::outputs(std::initializer_list<PassOutput> outputs)
+GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::attachments(std::initializer_list<PassAttachment> attachments)
 {
-	pass_info_.outputs = outputs;
+	pass_info_.attachments = attachments;
 	return *this;
 }
 
@@ -56,10 +44,201 @@ GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::shader(std::initializer_li
 	return *this;
 }
 
+GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::present()
+{
+	is_present_ = true;
+	return *this;
+}
+
 void GraphBuilder::PassBuilder::finalize()
 {
 	graph_builder_.add_pass(pass_name_, std::move(pass_info_),
-	                        std::move(render_pass_));
+	                        std::move(render_pass_), is_present_);
+}
+
+void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass, bool is_present)
+{
+	is_dirty_ = true;
+
+	PassNode pass_node{render_graph_, name, std::move(pass_info), std::move(render_pass)};
+
+	if (is_present)
+	{
+		common::ImageMemoryBarrier barrier;
+		barrier.old_layout      = vk::ImageLayout::eUndefined;
+		barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
+		barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
+		barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
+		barrier.src_access_mask = {};
+		barrier.dst_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
+		pass_node.add_attachment_memory_barrier(0, barrier);
+	}
+
+	render_graph_.add_pass_node(std::move(pass_node));
+}
+
+void GraphBuilder::create_resources()
+{
+	struct ResourceCreateInfo
+	{
+		bool                 is_buffer   = false;
+		bool                 is_external = false;
+		bool                 is_handled  = false;        // Track if resource has been created
+		vk::BufferUsageFlags buffer_usage{};
+		vk::ImageUsageFlags  image_usage{};
+		vk::Format           format = vk::Format::eUndefined;
+		vk::Extent3D         extent{};
+	};
+
+	// First: Collect all resource information
+	std::unordered_map<std::string, ResourceCreateInfo> resource_infos;
+	for (auto &pass : render_graph_.pass_nodes_)
+	{
+		auto &info = pass.get_pass_info();
+
+		for (const auto &bindable : info.bindables)
+		{
+			auto &res_info = resource_infos[bindable.name];
+			switch (bindable.type)
+			{
+				case BindableType::kSampled:
+					res_info.image_usage |= vk::ImageUsageFlagBits::eSampled;
+					break;
+				case BindableType::kStorageRead:
+				case BindableType::kStorageWrite:
+				case BindableType::kStorageReadWrite:
+					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
+					break;
+			}
+		}
+
+		// Collect attachment info
+		for (const auto &attachment : info.attachments)
+		{
+			auto &res_info  = resource_infos[attachment.name];
+			res_info.format = attachment.format;
+			if (attachment.extent.width > 0)
+			{
+				res_info.extent = attachment.extent;
+			}
+			if (attachment.type == AttachmentType::kColor)
+			{
+				res_info.image_usage |= vk::ImageUsageFlagBits::eColorAttachment;
+				if (res_info.format == vk::Format::eUndefined)
+				{
+					res_info.format = vk::Format::eR8G8B8A8Unorm;
+				}
+			}
+			else if (attachment.type == AttachmentType::kDepth)
+			{
+				res_info.image_usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
+				if (res_info.format == vk::Format::eUndefined)
+				{
+					res_info.format = vk::Format::eD32Sfloat;
+				}
+			}
+		}
+	}
+
+	backend::Device &device = render_context_.get_device();
+
+	// Second: Create RenderTargets for passes with attachments
+	for (auto &pass : render_graph_.pass_nodes_)
+	{
+		auto &info = pass.get_pass_info();
+		if (info.attachments.empty())
+		{
+			continue;
+		}
+
+		// Prepare images and resource infos together
+		std::vector<backend::Image> rt_images;
+		rt_images.reserve(info.attachments.size());
+		std::vector<ResourceInfo> resource_infos_to_update;
+		resource_infos_to_update.reserve(info.attachments.size());
+
+		for (const auto &attachment : info.attachments)
+		{
+			auto &res_info = resource_infos[attachment.name];
+
+			vk::Extent3D extent = res_info.extent;
+			// Create image
+			if (extent == vk::Extent3D{})
+			{
+				extent.height = render_context_.get_swapchain().get_extent().height;
+				extent.width  = render_context_.get_swapchain().get_extent().width;
+				extent.depth  = 1;
+			}
+			backend::ImageBuilder image_builder{extent};
+			image_builder.with_format(res_info.format)
+			    .with_usage(res_info.image_usage)
+			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
+			rt_images.push_back(image_builder.build(device));
+
+			// Prepare resource info (except image_view which we'll set later)
+			ResourceInfo resource_info;
+			resource_info.external = res_info.is_external;
+			ResourceInfo::ImageDesc image_desc;
+			image_desc.format  = res_info.format;
+			image_desc.extent  = extent;
+			image_desc.usage   = res_info.image_usage;
+			resource_info.desc = image_desc;
+			resource_infos_to_update.push_back(resource_info);
+
+			res_info.is_handled = true;
+		}
+
+		// Create RenderTarget
+		auto render_target = std::make_unique<RenderTarget>(std::move(rt_images));
+
+		// Update resource infos with image views
+		for (size_t i = 0; i < info.attachments.size(); ++i)
+		{
+			std::get_if<ResourceInfo::ImageDesc>(&resource_infos_to_update[i].desc)->image_view = &render_target->get_views()[i];
+			render_graph_.resources_[info.attachments[i].name] = resource_infos_to_update[i];
+		}
+
+		pass.set_render_target(std::move(render_target));
+	}
+
+	// Third: Create remaining resources
+	for (const auto &[name, info] : resource_infos)
+	{
+		if (info.is_handled)
+		{
+			continue;
+		}
+
+		ResourceInfo resource_info;
+		resource_info.external = info.is_external;
+
+		if (info.is_buffer)
+		{
+			ResourceInfo::BufferDesc buffer_desc;
+			buffer_desc.usage = info.buffer_usage;
+			// todo
+			resource_info.desc = buffer_desc;
+		}
+		else
+		{
+			ResourceInfo::ImageDesc image_desc;
+			image_desc.format = info.format;
+			image_desc.extent = info.extent;
+			image_desc.usage  = info.image_usage;
+
+			backend::ImageBuilder image_builder{info.extent};
+			image_builder.with_format(info.format)
+			    .with_usage(info.image_usage)
+			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
+
+			images_.push_back(image_builder.build(device));
+			image_views_.emplace_back(images_.back(), vk::ImageViewType::e2D);
+			image_desc.image_view = &image_views_.back();
+			resource_info.desc    = image_desc;
+		}
+
+		render_graph_.resources_[name] = resource_info;
+	}
 }
 
 void GraphBuilder::build_pass_batches()
@@ -68,6 +247,8 @@ void GraphBuilder::build_pass_batches()
 	PassBatchBuilder     batch_builder;
 
 	auto [adjacency_list, indegree] = build_dependency_graph();
+
+	create_resources();
 
 	// Topological sort and build pass batches
 	std::queue<uint32_t> zero_indegree_queue;
@@ -88,9 +269,9 @@ void GraphBuilder::build_pass_batches()
 
 		PassNode &current_pass = render_graph_.pass_nodes_[node];
 
-		process_pass_inputs(node, current_pass, resource_state_tracker, batch_builder);
+		batch_builder.process_pass(&current_pass);
 
-		process_pass_outputs(node, current_pass, resource_state_tracker);
+		process_pass_resources(node, current_pass, resource_state_tracker, batch_builder);
 
 		for (uint32_t neighbor : adjacency_list[node])
 		{
@@ -111,32 +292,56 @@ void GraphBuilder::build_pass_batches()
 
 std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> GraphBuilder::build_dependency_graph() const
 {
-	auto &pass_nodes = render_graph_.pass_nodes_;
-
+	auto                                     &pass_nodes = render_graph_.pass_nodes_;
 	std::vector<std::unordered_set<uint32_t>> adjacency_list(pass_nodes.size());
+	std::vector<uint32_t>                     indegree(pass_nodes.size(), 0);
 
-	std::vector<uint32_t> indegree(pass_nodes.size(), 0);
+	// 记录所有写入操作的producer
+	std::unordered_map<std::string, std::vector<uint32_t>> resource_writers;
 
-	std::unordered_map<std::string, std::vector<uint32_t>> output_to_producers;
+	// 收集所有写操作
 	for (uint32_t i = 0; i < pass_nodes.size(); ++i)
 	{
-		for (const auto &output : pass_nodes[i].get_pass_info().outputs)
+		const auto &pass_info = pass_nodes[i].get_pass_info();
+
+		// 收集bindable中的写操作
+		for (const auto &resource : pass_info.bindables)
 		{
-			output_to_producers[output.name].push_back(i);
+			if (resource.type == BindableType::kStorageBufferReadWrite ||
+			    resource.type == BindableType::kStorageBufferWrite ||
+			    resource.type == BindableType::kStorageReadWrite ||
+			    resource.type == BindableType::kStorageWrite)
+			{
+				resource_writers[resource.name].push_back(i);
+			}
+		}
+
+		// attachments总是写操作
+		for (const auto &attachment : pass_info.attachments)
+		{
+			resource_writers[attachment.name].push_back(i);
 		}
 	}
 
+	// 建立依赖
 	for (uint32_t consumer = 0; consumer < pass_nodes.size(); ++consumer)
 	{
-		const auto &inputs = pass_nodes[consumer].get_pass_info().inputs;
-		for (const auto &input : inputs)
+		const auto &pass_info = pass_nodes[consumer].get_pass_info();
+
+		// 检查bindable的依赖
+		for (const auto &resource : pass_info.bindables)
 		{
-			if (auto it = output_to_producers.find(input.name); it != output_to_producers.end())
+			if (auto it = resource_writers.find(resource.name);
+			    it != resource_writers.end())
 			{
-				for (uint32_t producer : it->second)
+				for (uint32_t producer : resource_writers[resource.name])
 				{
-					adjacency_list[producer].insert(consumer);
-					indegree[consumer]++;
+					/*adjacency_list[producer].insert(consumer);
+					indegree[consumer]++;*/
+					if (adjacency_list[producer].insert(consumer).second)
+					{
+						indegree[consumer]++;
+					}
 				}
 			}
 		}
@@ -145,127 +350,67 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 	return {adjacency_list, indegree};
 }
 
-void GraphBuilder::process_pass_inputs(uint32_t node, PassNode &current_pass, ResourceStateTracker &resource_tracker, PassBatchBuilder &batch_builder)
+void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, ResourceStateTracker &tracker, PassBatchBuilder &batch_builder)
 {
-	batch_builder.process_pass(&current_pass);
+	const PassInfo &pass_info = pass.get_pass_info();
 
-	const auto &pass_info        = current_pass.get_pass_info();
-	int64_t     wait_batch_index = -1;
-
-	for (uint32_t i = 0; i < pass_info.inputs.size(); ++i)
+	for (size_t i = 0; i < pass_info.bindables.size(); ++i)
 	{
-		const auto        &input         = pass_info.inputs[i];
-		const std::string &resource_name = input.name;
+		const auto &bindable = pass_info.bindables[i];
 
-		auto &resource_state = resource_tracker.get_state(resource_name);
+		ResourceUsageState new_state;
+		update_bindable_state(bindable.type, pass.get_type(), new_state);
 
-		if (resource_state.last_user != -1)
+		auto state = tracker.get_or_create_state(bindable.name);
+
+
+		if (state.last_user != -1 && render_graph_.pass_nodes_[state.last_user].get_type() != pass.get_type())
 		{
-			auto &prev_pass = render_graph_.pass_nodes_[resource_state.last_user];
-			if (prev_pass.get_type() != current_pass.get_type())
-			{
-				batch_builder.set_batch_dependency(prev_pass.get_batch_index());
-			}
-
-			current_pass.add_input_info(i, barrier, resource_state.image_view);
-
-			if (barrier.new_layout != barrier.old_layout ||
-			    barrier.src_stage_mask != barrier.dst_stage_mask ||
-			    barrier.src_access_mask != barrier.dst_access_mask)
-			{
-				current_pass.add_input_info(i, barrier);
-
-				// 更新资源状态
-				resource_state.layout      = barrier.new_layout;
-				resource_state.stage_mask  = barrier.dst_stage_mask;
-				resource_state.access_mask = barrier.dst_access_mask;
-				resource_state.last_user   = node;
-			}
+			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
 		}
+
+		// todo buffer barrier
+
+		common::ImageMemoryBarrier barrier;
+		barrier.src_stage_mask  = state.usage_state.stage_mask;
+		barrier.src_access_mask = state.usage_state.access_mask;
+		barrier.dst_stage_mask  = new_state.stage_mask;
+		barrier.dst_access_mask = new_state.access_mask;
+
+		barrier.old_layout = state.usage_state.layout;
+		barrier.new_layout = new_state.layout;
+		
+
+		tracker.track_resource(bindable.name, node, new_state);
+
+		pass.add_bindable_info(i, bindable.name, std::move(barrier));
 	}
-}
 
-void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass)
-{
-	is_dirty_ = true;
-
-	std::vector<backend::Image> images;
-
-	bool use_swapchain_image = false;
-	for (const auto &output : pass_info.outputs)
+	for (size_t i = 0; i < pass_info.attachments.size(); ++i)
 	{
-		if (output.type == RenderResourceType::kSwapchain)
-		{
-			use_swapchain_image = true;
-		}
+		const auto        &attachment = pass_info.attachments[i];
+		ResourceUsageState new_state;
+		update_attachment_state(attachment.type, new_state);
+		auto                       state = tracker.get_or_create_state(attachment.name);
+		common::ImageMemoryBarrier barrier;
+		barrier.src_stage_mask  = state.usage_state.stage_mask;
+		barrier.src_access_mask = state.usage_state.access_mask;
+		barrier.dst_stage_mask  = new_state.stage_mask;
+		barrier.dst_access_mask = new_state.access_mask;
+		barrier.old_layout      = state.usage_state.layout;
+		barrier.new_layout      = new_state.layout;
+		tracker.track_resource(attachment.name, node, new_state);
+		pass.add_attachment_memory_barrier(i,std::move(barrier));
 	}
-	if (use_swapchain_image)
-	{
-		RenderTarget::CreateFunc create_func = [this, &pass_info](backend::Image &&swapchain_image) {
-			auto                       &device = swapchain_image.get_device();
-			std::vector<backend::Image> images;
-			vk::Extent3D                swapchain_image_extent = swapchain_image.get_extent();
-			if (auto swapchain_count = std::ranges::count_if(pass_info.outputs, [](const auto &output) {
-				    return output.type == RenderResourceType::kSwapchain;
-			    });
-			    swapchain_count > 1)
-			{
-				throw std::runtime_error("Multiple swapchain outputs are not supported.");
-			}
-			for (const auto &output : pass_info.outputs)
-			{
-				if (output.type == RenderResourceType::kSwapchain)
-				{
-					images.push_back(std::move(swapchain_image));
-					continue;
-				}
-				vk::Extent3D extent = swapchain_image_extent;
-
-				backend::ImageBuilder image_builder{extent};
-				image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY)
-				    .with_format(output.format);
-				if (common::is_depth_format(output.format))
-				{
-					image_builder.with_usage(vk::ImageUsageFlagBits::eDepthStencilAttachment | output.usage);
-				}
-				else
-				{
-					image_builder.with_usage(vk::ImageUsageFlagBits::eColorAttachment | output.usage);
-				}
-				backend::Image image = image_builder.build(device);
-				images.push_back(std::move(image));
-			}
-			return std::make_unique<RenderTarget>(std::move(images));
-		};
-
-		render_context_.set_render_target_function(create_func);
-	}
-	else
-	{
-		// todo
-	}
-
-	PassNode pass_node{name, std::move(pass_info), std::move(render_pass)};
-	render_graph_.add_pass_node(std::move(pass_node));
 }
 
 void GraphBuilder::build()
 {
-	build_pass_batches();
-	/*PassBatch pass_batch;
-	pass_batch.type = PassType::kRaster;
-	pass_batch.pass_nodes.push_back(&render_graph_.pass_nodes_[0]);
-	common::ImageMemoryBarrier barrier{};
-	barrier.old_layout      = vk::ImageLayout::eUndefined;
-	barrier.new_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-	barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
-	barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-	barrier.src_access_mask = {};
-	barrier.dst_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
-
-	render_graph_.pass_nodes_[0].add_output_memory_barrier(0, std::move(barrier));
-
-	render_graph_.pass_batches_.push_back(std::move(pass_batch));*/
+	if (is_dirty_)
+	{
+		build_pass_batches();	
+	}
+	is_dirty_ = false;
 }
 
 void GraphBuilder::PassBatchBuilder::process_pass(PassNode *pass)

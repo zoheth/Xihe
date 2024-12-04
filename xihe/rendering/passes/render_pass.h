@@ -4,6 +4,7 @@
 #include "backend/shader_module.h"
 #include "rendering/render_frame.h"
 #include "shared_uniform.h"
+#include "rendering/render_graph/render_resource.h"
 
 #include <optional>
 #include <variant>
@@ -14,46 +15,6 @@ namespace rendering
 {
 
 glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
-
-class ShaderBindable
-{
-  public:
-	ShaderBindable() = default;
-
-	ShaderBindable(backend::Buffer *buffer) :
-	    resource_{buffer}
-	{}
-	ShaderBindable(backend::ImageView *image_view) :
-	    resource_{image_view}
-	{}
-
-	ShaderBindable &operator=(std::variant<backend::Buffer *, backend::ImageView *> resource)
-	{
-		resource_ = resource;
-		return *this;
-	}
-
-	backend::ImageView &image_view() const
-	{
-		if (std::holds_alternative<backend::ImageView *>(resource_))
-		{
-			return *std::get<backend::ImageView *>(resource_);
-		}
-		throw std::runtime_error("Resource is not an image view");
-	}
-
-	backend::Buffer &buffer() const
-	{
-		if (std::holds_alternative<backend::Buffer *>(resource_))
-		{
-			return *std::get<backend::Buffer *>(resource_);
-		}
-		throw std::runtime_error("Resource is not a buffer");
-	}
-
-  private:
-	std::variant<backend::Buffer *, backend::ImageView *> resource_{};
-};
 
 class RenderPass
 {

@@ -73,6 +73,7 @@ void ResourceCache::clear()
 	state_.pipeline_layouts.clear();
 	state_.descriptor_sets.clear();
 	state_.descriptor_set_layouts.clear();
+	state_.samplers.clear();
 	bindless_descriptor_set_.reset();
 	clear_pipelines();
 }

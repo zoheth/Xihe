@@ -2,8 +2,10 @@
 
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/passes/geometry_pass.h"
-#include "scene_graph/components/mesh.h"
+#include "rendering/passes/lighting_pass.h"
 #include "scene_graph/components/camera.h"
+#include "scene_graph/components/light.h"
+#include "scene_graph/components/mesh.h"
 
 namespace xihe
 {
@@ -39,36 +41,33 @@ bool TempApp::prepare(Window *window)
 
 		graph_builder_->add_pass("geometry_pass", std::move(geometry_pass))
 
-		    .outputs({{rendering::ResourceUsage::kSwapchain, "swapchain"},
-		              {rendering::RenderResourceType::kAttachment, "depth", common::get_suitable_depth_format(get_device()->get_gpu().get_handle()), vk::ImageUsageFlagBits::eDepthStencilAttachment},
-		              {rendering::RenderResourceType::kAttachment, "normal", vk::Format::eA2B10G10R10UnormPack32, vk::ImageUsageFlagBits::eColorAttachment}})
+		    .attachments({{rendering::AttachmentType::kDepth, "depth"},
+		                  {rendering::AttachmentType::kColor, "albedo"},
+		                  {rendering::AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32}})
 
 		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
 
 		    .finalize();
 	}
 
+	// lighting pass
+	{
+		auto lighting_pass = std::make_unique<rendering::LightingPass>(scene_->get_components<sg::Light>(), *camera);
+
+		graph_builder_->add_pass("lighting_pass", std::move(lighting_pass))
+
+		    .bindables({{rendering::BindableType::kSampled, "depth"},
+		                {rendering::BindableType::kSampled, "albedo"},
+		                {rendering::BindableType::kSampled, "normal"}})
+
+		    .shader({"deferred/lighting.vert", "deferred/lighting_simple.frag"})
+
+		    .present()
+
+			.finalize();
+	}
+
 	graph_builder_->build();
-
-	//// lighting pass
-	//{
-	//	rendering::PassInfo pass_info{};
-	//	pass_info.inputs = {
-	//	    {rendering::RdgResourceType::kAttachment, "albedo"},
-	//	    {rendering::RdgResourceType::kAttachment, "depth"},
-	//	    {rendering::RdgResourceType::kAttachment, "normal"}};
-	//	pass_info.outputs = {
-	//	    {rendering::RdgResourceType::kSwapchain, "swapchain"}};
-
-	//	auto lighting_vs = backend::ShaderSource{"deferred/lighting.vert"};
-	//	auto lighting_fs = backend::ShaderSource{"deferred/lighting.frag"};
-	//	auto subpass     = std::make_unique<rendering::LightingSubpass>(*render_context_, std::move(lighting_vs), std::move(lighting_fs), *camera, *scene_,nullptr);
-
-	//	std::vector<std::unique_ptr<rendering::Subpass>> subpasses;
-	//	subpasses.push_back(std::move(subpass));
-
-	//	rdg_builder_->add_raster_pass("lighting_pass", std::move(pass_info), std::move(subpasses));
-	//}
 
 	return true;
 }

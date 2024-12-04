@@ -25,6 +25,12 @@ void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 	get_sorted_nodes(opaque_nodes, transparent_nodes);
 
+	DepthStencilState depth_stencil_state{};
+	depth_stencil_state.depth_test_enable  = true;
+	depth_stencil_state.depth_write_enable = true;
+
+	command_buffer.set_depth_stencil_state(depth_stencil_state);
+
 	// Draw opaque objects in front-to-back order
 	{
 		backend::ScopedDebugLabel label{command_buffer, "Opaque objects"};

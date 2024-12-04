@@ -65,6 +65,7 @@ void RenderContext::prepare(size_t thread_count)
 	{
 		frames_.emplace_back(std::make_unique<rendering::RenderFrame>(device_, thread_count));
 	}
+	recreate_frame_render_targets();
 
 	thread_count_ = thread_count;
 	prepared_     = true;

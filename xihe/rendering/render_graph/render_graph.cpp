@@ -12,133 +12,6 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-PassNode::PassNode(std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass) :
-    name_{std::move(name)}, type_{render_pass->get_type()}, pass_info_{std::move(pass_info)}, render_pass_{std::move(render_pass)}
-{
-}
-
-void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, RenderFrame &render_frame)
-{
-	backend::ScopedDebugLabel subpass_debug_label{command_buffer, name_.c_str()};
-
-	std::vector<ShaderBindable> shader_bindable(inputs_.size());
-
-	// todo input barriers
-	for (const auto &[index, input_info] : inputs_)
-	{
-		shader_bindable[index] = input_info.resource;
-
-		if (std::holds_alternative<backend::Buffer *>(input_info.resource))
-		{
-			// command_buffer.buffer_memory_barrier(std::get<backend::Buffer *>(input_info.resource), input_info.barrier);
-		}
-		else
-		{
-			command_buffer.image_memory_barrier(*std::get<backend::ImageView *>(input_info.resource), std::get<common::ImageMemoryBarrier> (input_info.barrier));
-		}
-	}
-
-	auto &output_views = render_target.get_views();
-	for (const auto &[index, barrier] : output_barriers_)
-	{
-		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
-		{
-			command_buffer.image_memory_barrier(output_views[index], std::get<common::ImageMemoryBarrier>(barrier));
-		}
-		else
-		{
-		}
-	}
-
-	command_buffer.begin_rendering(render_target);
-
-	render_pass_->execute(command_buffer, render_frame, shader_bindable);
-
-	command_buffer.end_rendering();
-
-	if (!render_target_)
-	{
-		auto                      &views = render_target.get_views();
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.old_layout      = vk::ImageLayout::eColorAttachmentOptimal;
-		memory_barrier.new_layout      = vk::ImageLayout::ePresentSrcKHR;
-		memory_barrier.src_access_mask = vk::AccessFlagBits2::eColorAttachmentWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eColorAttachmentOutput;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
-
-		command_buffer.image_memory_barrier(views[0], memory_barrier);
-	}
-
-	for (auto &[view, barrier] : release_barriers_)
-	{
-		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
-		{
-			command_buffer.image_memory_barrier(*view, std::get<common::ImageMemoryBarrier>(barrier));
-		}
-		else
-		{
-		}
-	}
-}
-
-PassInfo & PassNode::get_pass_info()
-{
-	return pass_info_;
-}
-
-PassType PassNode::get_type() const
-{
-	return type_;
-}
-
-void PassNode::set_render_target(std::unique_ptr<RenderTarget> &&render_target)
-{
-	render_target_ = std::move(render_target);
-}
-
-RenderTarget * PassNode::get_render_target()
-{
-	return render_target_.get();
-}
-
-void PassNode::set_batch_index(uint64_t batch_index)
-{
-	batch_index_ = batch_index;
-}
-
-int64_t PassNode::get_batch_index() const
-{
-	if (batch_index_ == -1)
-	{
-		throw std::runtime_error("Batch index not set");
-	}
-	return batch_index_;
-}
-
-void  PassNode::add_input_info(uint32_t index, Barrier &&barrier, std::variant<backend::Buffer*, backend::ImageView*> &&resource)
-{
-	assert(index < pass_info_.inputs.size());
-	if (std::holds_alternative<backend::Buffer *>(resource))
-	{
-		assert(std::holds_alternative<common::BufferMemoryBarrier>(barrier));
-	}
-	else
-	{
-		assert(std::holds_alternative<common::ImageMemoryBarrier>(barrier));
-	}
-	inputs_[index] = {barrier, resource};
-}
-
-void PassNode::add_output_memory_barrier(uint32_t index, Barrier &&barrier)
-{
-	output_barriers_[index] = barrier;
-}
-
-void PassNode::add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier)
-{
-	release_barriers_[image_view] = barrier;
-}
-
 RenderGraph::RenderGraph(RenderContext &render_context) : render_context_{render_context}
 {}
 
@@ -160,6 +33,16 @@ void RenderGraph::execute()
 			execute_compute_batch(pass_batches_[i], is_first, is_last);
 		}
 	}
+}
+
+ShaderBindable RenderGraph::get_resource_bindable(ResourceHandle handle) const
+{
+	auto it = resources_.find(handle);
+	if (it == resources_.end())
+	{
+		throw std::runtime_error("Resource not found");
+	}
+	return it->second.get_bindable();
 }
 
 void RenderGraph::add_pass_node(PassNode &&pass_node)

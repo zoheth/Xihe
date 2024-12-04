@@ -61,8 +61,8 @@ struct MultisampleState
 
 struct DepthStencilState
 {
-	bool               depth_test_enable{VK_TRUE};
-	bool               depth_write_enable{VK_TRUE};
+	bool               depth_test_enable{VK_FALSE};
+	bool               depth_write_enable{VK_FALSE};
 	vk::CompareOp      depth_compare_op{vk::CompareOp::eGreater};
 	bool               depth_bounds_test_enable{VK_FALSE};
 	bool               stencil_test_enable{VK_FALSE};

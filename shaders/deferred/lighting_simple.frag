@@ -30,53 +30,8 @@ layout(constant_id = 1) const uint POINT_LIGHT_COUNT       = 0U;
 layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;
 
 
-layout(set = 0, binding = 5) uniform ShadowUniform {
-	vec4 far_d;
-    mat4 light_matrix[SHADOW_MAP_CASCADE_COUNT];
-	uint shadowmap_first_index;
-} shadow_uniform;
-
-
 #extension GL_EXT_nonuniform_qualifier : require
 layout (set = 1, binding = 10 ) uniform sampler2DShadow global_textures[];
-
-float calculate_shadow(highp vec3 pos, uint i)
-{
-	vec4 projected_coord = shadow_uniform.light_matrix[i] * vec4(pos, 1.0);
-	projected_coord /= projected_coord.w;
-	projected_coord.xy = 0.5 * projected_coord.xy + 0.5;
-
-	if (projected_coord.x < 0.0 || projected_coord.x > 1.0 ||
-        projected_coord.y < 0.0 || projected_coord.y > 1.0)
-    {
-        return 1.0;
-    }
-
-	float shadow = 0.0;
-    int samples = 0;
-
-    const int kernel_size = 5;
-    const float shadow_map_resolution = 2048.0;
-    const float texel_size = 1.0 / shadow_map_resolution;
-    const float offset = texel_size;
-
-	const float bias = 0.005;
-
-    for(int x = -kernel_size / 2; x <= kernel_size / 2; x++) {
-        for(int y = -kernel_size / 2; y <= kernel_size / 2; y++) {
-            vec2 tex_offset = vec2(float(x), float(y)) * offset;
-            float shadow_sample = texture(
-                global_textures[nonuniformEXT(shadow_uniform.shadowmap_first_index + i)],
-                vec3(projected_coord.xy + tex_offset, projected_coord.z - bias)
-            );
-            shadow += shadow_sample;
-            samples++;
-        }
-    }
-
-    shadow /= float(samples);
-    return shadow;
-}
 
 void main()
 {

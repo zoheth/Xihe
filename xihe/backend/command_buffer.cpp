@@ -51,7 +51,7 @@ vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer
 }
 
 
-void CommandBuffer::begin_rendering(const rendering::RenderTarget &render_target, const std::vector<vk::ClearValue> &clear_values)
+void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, const std::vector<vk::ClearValue> &clear_values)
 {
 	pipeline_state_.reset();
 

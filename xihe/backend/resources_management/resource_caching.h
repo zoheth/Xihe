@@ -363,7 +363,7 @@ struct hash<xihe::ColorBlendAttachmentState>
 template <>
 struct hash<xihe::rendering::RenderTarget>
 {
-	std::size_t operator()(const xihe::rendering::RenderTarget &render_target) const noexcept
+	std::size_t operator()(xihe::rendering::RenderTarget &render_target) const noexcept
 	{
 		std::size_t result = 0;
 		hash_combine(result, render_target.get_extent());
