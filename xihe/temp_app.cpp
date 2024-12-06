@@ -3,6 +3,7 @@
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/passes/geometry_pass.h"
 #include "rendering/passes/lighting_pass.h"
+#include "rendering/passes/bloom_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
 #include "scene_graph/components/mesh.h"
@@ -39,7 +40,7 @@ bool TempApp::prepare(Window *window)
 	{
 		auto geometry_pass = std::make_unique<rendering::GeometryPass>(scene_->get_components<sg::Mesh>(), *camera);
 
-		graph_builder_->add_pass("geometry_pass", std::move(geometry_pass))
+		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
 
 		    .attachments({{rendering::AttachmentType::kDepth, "depth"},
 		                  {rendering::AttachmentType::kColor, "albedo"},
@@ -54,17 +55,42 @@ bool TempApp::prepare(Window *window)
 	{
 		auto lighting_pass = std::make_unique<rendering::LightingPass>(scene_->get_components<sg::Light>(), *camera);
 
-		graph_builder_->add_pass("lighting_pass", std::move(lighting_pass))
+		graph_builder_->add_pass("Lighting", std::move(lighting_pass))
 
 		    .bindables({{rendering::BindableType::kSampled, "depth"},
 		                {rendering::BindableType::kSampled, "albedo"},
 		                {rendering::BindableType::kSampled, "normal"}})
 
+			.attachments({{rendering::AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
+
 		    .shader({"deferred/lighting.vert", "deferred/lighting_simple.frag"})
 
-		    .present()
-
 			.finalize();
+	}
+
+	// bloom pass
+	{
+		auto extract_pass = std::make_unique<rendering::BloomExtractPass>();
+
+		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
+		    .bindables({{rendering::BindableType::kStorageRead, "lighting"},
+		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat}})
+		    .shader({"post_processing/bloom_extract.comp"})
+		    .finalize();
+	}
+
+	// composite pass
+	{
+		auto composite_pass = std::make_unique<rendering::BloomCompositePass>();
+		graph_builder_->add_pass("Bloom Composite", std::move(composite_pass))
+		    .bindables({{rendering::BindableType::kSampled, "lighting"},
+		                {rendering::BindableType::kSampled, "bloom_extract"}})
+		    .shader({"post_processing/bloom_composite.vert", "post_processing/bloom_composite.frag"})
+		    .present()
+		    .finalize();
+	}
+	{
+		
 	}
 
 	graph_builder_->build();

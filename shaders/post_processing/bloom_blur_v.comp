@@ -1,0 +1,71 @@
+#version 450
+
+layout (local_size_x = 1, local_size_y = 256) in;
+
+layout (binding = 0, rgba16f) uniform readonly image2D inputImage;
+layout (binding = 1, rgba16f) uniform writeonly image2D outputImage;
+
+layout(push_constant) uniform PushConstants {
+    float innerWeight;    // 内圈权重
+    float outerWeight;    // 外圈权重
+    float innerOffset;    // 内圈偏移
+    float outerOffset;    // 外圈偏移
+} pc;
+
+shared vec3 sharedData[256 + 8];
+
+vec3 sampleDual(ivec2 pos, ivec2 sourceSize) {
+    if(pos.x >= 0 && pos.x < sourceSize.x && 
+       pos.y >= 0 && pos.y < sourceSize.y) {
+        return imageLoad(inputImage, pos).rgb;
+    }
+    return vec3(0.0);
+}
+
+void main() {
+    uint localID = gl_LocalInvocationID.y;
+    uint groupID = gl_WorkGroupID.x;
+    
+    ivec2 sourceSize = imageSize(inputImage);
+    if(groupID >= sourceSize.x) {
+        return;
+    }
+
+    // 加载到shared memory
+    int baseY = int(gl_WorkGroupID.y * 256) - 2;
+    int y = baseY + int(localID);
+    
+    if(y >= 0 && y < sourceSize.y) {
+        sharedData[localID] = imageLoad(inputImage, ivec2(groupID, y)).rgb;
+    } else {
+        sharedData[localID] = vec3(0.0);
+    }
+    
+    barrier();
+    memoryBarrierShared();
+    
+    if(localID < 256) {
+        vec3 color = vec3(0.0);
+        ivec2 basePos = ivec2(groupID, gl_WorkGroupID.y * 256 + localID);
+        
+        // 内圈模糊
+        color += sharedData[localID + 2] * pc.innerWeight;
+        color += sharedData[localID + 1] * pc.innerWeight;
+        color += sharedData[localID + 3] * pc.innerWeight;
+        color += sharedData[localID + 4] * pc.innerWeight;
+        
+        // 外圈模糊
+        ivec2 pos = basePos;
+        color += sampleDual(pos + ivec2(0, -4), sourceSize) * pc.outerWeight;
+        color += sampleDual(pos + ivec2(0, 4), sourceSize) * pc.outerWeight;
+        color += sampleDual(pos + ivec2(0, -3), sourceSize) * pc.outerWeight;
+        color += sampleDual(pos + ivec2(0, 3), sourceSize) * pc.outerWeight;
+        
+        // 归一化
+        color /= (pc.innerWeight * 4.0 + pc.outerWeight * 4.0);
+        
+        if(basePos.y < sourceSize.y) {
+            imageStore(outputImage, basePos, vec4(color, 1.0));
+        }
+    }
+}

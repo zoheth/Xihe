@@ -38,6 +38,12 @@ void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageS
 			state.access_mask = vk::AccessFlagBits2::eShaderRead;
 			state.layout      = vk::ImageLayout::eGeneral;
 			break;
+
+		case BindableType::kStorageWrite:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eShaderWrite;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
 	}
 }
 

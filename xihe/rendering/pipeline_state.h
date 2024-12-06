@@ -13,7 +13,7 @@ namespace xihe
 struct AttachmentsState
 {
 	std::vector<vk::Format> color_attachment_formats;
-	vk::Format              depth_attachment_format{vk::Format::eUndefined};
+	vk::Format              depth_attachment_format{vk::Format::eD32Sfloat};
 	vk::Format              stencil_attachment_format{vk::Format::eUndefined};
 };
 struct VertexInputState

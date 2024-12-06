@@ -105,9 +105,12 @@ void GraphBuilder::create_resources()
 					res_info.image_usage |= vk::ImageUsageFlagBits::eSampled;
 					break;
 				case BindableType::kStorageRead:
+					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
+					break;
 				case BindableType::kStorageWrite:
 				case BindableType::kStorageReadWrite:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
+					res_info.format = bindable.format;
 					break;
 			}
 		}
@@ -223,17 +226,18 @@ void GraphBuilder::create_resources()
 		{
 			ResourceInfo::ImageDesc image_desc;
 			image_desc.format = info.format;
-			image_desc.extent = info.extent;
+			// todo
+			image_desc.extent = vk::Extent3D{1280, 720, 1};
 			image_desc.usage  = info.image_usage;
 
-			backend::ImageBuilder image_builder{info.extent};
+			backend::ImageBuilder image_builder{image_desc.extent};
 			image_builder.with_format(info.format)
 			    .with_usage(info.image_usage)
 			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
-			images_.push_back(image_builder.build(device));
-			image_views_.emplace_back(images_.back(), vk::ImageViewType::e2D);
-			image_desc.image_view = &image_views_.back();
+			render_graph_.images_.push_back(image_builder.build(device));
+			render_graph_.image_views_.emplace_back(render_graph_.images_.back(), vk::ImageViewType::e2D);
+			image_desc.image_view = &render_graph_.image_views_.back();
 			resource_info.desc    = image_desc;
 		}
 
@@ -338,6 +342,11 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 				{
 					/*adjacency_list[producer].insert(consumer);
 					indegree[consumer]++;*/
+					if (producer == consumer)
+					{
+						continue;
+					}
+
 					if (adjacency_list[producer].insert(consumer).second)
 					{
 						indegree[consumer]++;
@@ -363,12 +372,6 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		auto state = tracker.get_or_create_state(bindable.name);
 
-
-		if (state.last_user != -1 && render_graph_.pass_nodes_[state.last_user].get_type() != pass.get_type())
-		{
-			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
-		}
-
 		// todo buffer barrier
 
 		common::ImageMemoryBarrier barrier;
@@ -379,11 +382,46 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		barrier.old_layout = state.usage_state.layout;
 		barrier.new_layout = new_state.layout;
+
+		if (state.last_user != -1 && render_graph_.pass_nodes_[state.last_user].get_type() != pass.get_type())
+		{
+			common::ImageMemoryBarrier release_barrier;
+
+			auto &prev_pass = render_graph_.pass_nodes_[state.last_user];
+			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
+
+
+			if (pass.get_type() == PassType::kCompute)
+			{
+				release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+				release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+
+				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			}
+			else if (pass.get_type() == PassType::kRaster)
+			{
+				release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+				release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+
+				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			}
+
+			release_barrier.new_layout      = state.usage_state.layout;
+			release_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+			release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
+
+			prev_pass.add_release_barrier(bindable.name, release_barrier);
+
+			/*barrier.old_layout      = state.usage_state.layout;
+			barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+			barrier.src_access_mask = vk::AccessFlagBits2::eNone;*/
+		}
+
+		pass.add_bindable(i, bindable.name, barrier);	
 		
-
 		tracker.track_resource(bindable.name, node, new_state);
-
-		pass.add_bindable_info(i, bindable.name, std::move(barrier));
 	}
 
 	for (size_t i = 0; i < pass_info.attachments.size(); ++i)
@@ -426,7 +464,7 @@ void GraphBuilder::PassBatchBuilder::process_pass(PassNode *pass)
 	}
 
 	current_batch_.pass_nodes.push_back(pass);
-	pass->set_batch_index(batches_.size() - 1);
+	pass->set_batch_index(batches_.size());
 }
 
 void GraphBuilder::PassBatchBuilder::set_batch_dependency(int64_t wait_batch_index)

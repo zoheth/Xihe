@@ -6,6 +6,7 @@
 #include "rendering/passes/render_pass.h"
 
 #include <variant>
+#include <optional>
 
 namespace xihe::rendering
 {
@@ -20,6 +21,8 @@ struct PassBindable
 {
 	BindableType type;
 	std::string  name;
+	vk::Format   format;
+	vk::Extent3D extent{};
 };
 struct PassAttachment
 {
@@ -40,7 +43,7 @@ class PassNode
 	struct BindableInfo
 	{
 		ResourceHandle handle;
-		Barrier        barrier;
+		std::optional<Barrier> barrier;
 	};
 	PassNode(RenderGraph &render_graph, std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
 
@@ -62,11 +65,12 @@ class PassNode
 
 	int64_t get_batch_index() const;
 
-	void add_bindable_info(uint32_t index, const ResourceHandle &handle, Barrier &&barrier);
+	void add_bindable(uint32_t index, const ResourceHandle &handle, Barrier &&barrier);
+	void add_bindable(uint32_t index, const ResourceHandle &handle);
 
 	void add_attachment_memory_barrier(uint32_t index, Barrier &&barrier);
 
-	void add_release_barrier(const backend::ImageView *image_view, Barrier &&barrier);
+	void add_release_barrier(const ResourceHandle &handle, Barrier &&barrier);
 
   private:
 	RenderGraph &render_graph_;
@@ -90,6 +94,6 @@ class PassNode
 	std::unordered_map<uint32_t, Barrier> attachment_barriers_;
 
 	// Barriers applied after execution to release resource ownership for cross-queue synchronization.
-	std::unordered_map<const backend::ImageView *, Barrier> release_barriers_;
+	std::unordered_map<ResourceHandle, Barrier> release_barriers_;
 };
 }        // namespace xihe::rendering

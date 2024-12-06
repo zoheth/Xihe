@@ -12,7 +12,8 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-RenderGraph::RenderGraph(RenderContext &render_context) : render_context_{render_context}
+RenderGraph::RenderGraph(RenderContext &render_context) :
+    render_context_{render_context}
 {}
 
 void RenderGraph::execute()
@@ -87,6 +88,21 @@ void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, boo
 
 void RenderGraph::execute_compute_batch(PassBatch &pass_batch, bool is_first, bool is_last)
 {
-	
+	auto &command_buffer = render_context_.request_compute_command_buffer(
+	    backend::CommandBuffer::ResetMode::kResetPool,
+	    vk::CommandBufferLevel::ePrimary, 0);
+	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	for (const auto pass_node : pass_batch.pass_nodes)
+	{
+		pass_node->execute(command_buffer, render_context_.get_active_frame().get_render_target(), render_context_.get_active_frame());
+	}
+	command_buffer.end();
+	const auto     last_wait_batch      = pass_batch.wait_batch_index;
+	const uint64_t wait_semaphore_value = last_wait_batch >= 0 ? pass_batches_[last_wait_batch].signal_semaphore_value : 0;
+
+	render_context_.compute_submit(
+	    {&command_buffer},        // list of command buffers
+	    pass_batch.signal_semaphore_value,
+	    wait_semaphore_value);
 }
-}
+}        // namespace xihe::rendering

@@ -1,0 +1,58 @@
+#version 450
+
+layout (local_size_x = 16, local_size_y = 16) in;
+
+layout (binding = 0, rgba16f) uniform readonly image2D inputImage;
+layout (binding = 1, rgba16f) uniform writeonly image2D outputImage;
+
+layout(push_constant) uniform PushConstants {
+    float threshold;      // 基础亮度阈值
+    float knee;          // 软阈值范围
+    float exposure;      // 曝光调整
+} pc;
+
+// 使用软阈值提取亮度
+vec3 softThreshold(vec3 color) {
+    // 计算亮度
+    float brightness = dot(color * pc.exposure, vec3(0.2126, 0.7152, 0.0722));
+    
+    // 应用软阈值
+    float soft = brightness - pc.threshold;
+    soft = clamp(soft, 0.0, pc.knee);
+    soft = (soft * soft) * (3.0 - 2.0 * soft / pc.knee) / pc.knee;
+    
+    return color * soft / max(brightness, 0.00001);
+}
+
+void main() {
+    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
+    ivec2 outputSize = imageSize(outputImage);
+    
+    if (gid.x >= outputSize.x || gid.y >= outputSize.y) {
+        return;
+    }
+
+    // 2x2 downsample with box filter
+    ivec2 inputSize = imageSize(inputImage);
+    ivec2 basePos = gid * 2;
+
+    imageStore(outputImage, gid, vec4(vec3(0.5), 1.0));
+
+    return;
+    
+    vec3 color = vec3(0.0);
+    for (int y = 0; y < 2; y++) {
+        for (int x = 0; x < 2; x++) {
+            ivec2 pos = basePos + ivec2(x, y);
+            if (pos.x < inputSize.x && pos.y < inputSize.y) {
+                color += imageLoad(inputImage, pos).rgb;
+            }
+        }
+    }
+    color *= 0.25; // average
+    
+    // Apply threshold
+    vec3 bright = softThreshold(color);
+    
+    imageStore(outputImage, gid, vec4(bright, 1.0));
+}

@@ -96,6 +96,12 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 	blend_state.attachments.resize(color_attachments_.size());
 	set_color_blend_state(blend_state);
 
+	vk::RenderingAttachmentInfo *p_depth_attachment = nullptr;
+	if (depth_attachment_.has_value())
+	{
+		p_depth_attachment = &depth_attachment_.value();
+	}
+
 	vk::RenderingInfo rendering_info(
 	    {},                                                     // flags
 	    {{}, render_target.get_extent()},                       // renderArea
@@ -103,7 +109,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 	    0,                                                      // viewMask
 	    static_cast<uint32_t>(color_attachments_.size()),        // colorAttachmentCount
 	    color_attachments_.data(),                               // pColorAttachments
-	    &depth_attachment_,                                      // pDepthAttachment
+	    p_depth_attachment,                                      // pDepthAttachment
 	    nullptr                                                 // pStencilAttachment
 	);
 

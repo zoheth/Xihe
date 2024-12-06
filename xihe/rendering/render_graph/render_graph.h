@@ -1,11 +1,11 @@
 #pragma once
-#include "render_resource.h"
-#include "pass_node.h"
 #include "backend/command_buffer.h"
 #include "backend/sampler.h"
+#include "pass_node.h"
+#include "render_resource.h"
+#include "rendering/passes/render_pass.h"
 #include "rendering/render_context.h"
 #include "rendering/render_target.h"
-#include "rendering/passes/render_pass.h"
 
 #include <functional>
 #include <variant>
@@ -27,6 +27,8 @@ class RenderGraph
   public:
 	RenderGraph(RenderContext &render_context);
 
+	~RenderGraph() = default;
+
 	void execute();
 
 	ShaderBindable get_resource_bindable(ResourceHandle handle) const;
@@ -39,13 +41,17 @@ class RenderGraph
 
 	void execute_compute_batch(PassBatch &pass_batch, bool is_first, bool is_last);
 
-	RenderContext         &render_context_;
+	RenderContext &render_context_;
 
 	std::vector<PassBatch> pass_batches_{};
 
 	std::vector<PassNode> pass_nodes_{};
 
 	std::unordered_map<ResourceHandle, ResourceInfo> resources_{};
+
+	std::vector<backend::Image>     images_;
+	std::vector<backend::Buffer>    buffers_;
+	std::vector<backend::ImageView> image_views_;
 
 	friend GraphBuilder;
 };

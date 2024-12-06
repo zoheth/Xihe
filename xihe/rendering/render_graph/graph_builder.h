@@ -106,10 +106,6 @@ private:
 	RenderGraph   &render_graph_;
 	RenderContext &render_context_;
 
-	std::vector<backend::Image> images_;
-	std::vector<backend::Buffer> buffers_;
-	std::vector<backend::ImageView> image_views_;
-
 	std::unordered_map<std::string, ResourceHandle> resource_handles_;
 
 	bool is_dirty_{false};

@@ -4,18 +4,49 @@
 
 namespace xihe::rendering
 {
-struct Push
+struct ExtractPush
 {
-	uint32_t width, height;
-	float    inv_width, inv_height;
-	float    inv_input_width, inv_input_height;
+	float threshold = 1.0f;
+	float knee      = 0.5f;
+	float exposure  = 1.2f;
 };
 
-class BloomScreenPass : public RenderPass
+struct BlurPush
+{
+	float inner_weight = 0.75f;
+	float outer_weight = 0.25f;
+	float inner_offset = 1.0f;
+	float outer_offset = 2.0f;
+};
+
+struct CompositePush
+{
+	float intensity  = 0.8f;
+	float tint_r     = 1.0f;
+	float tint_g     = 1.0f;
+	float tint_b     = 1.0f;
+	float saturation = 1.0f;
+};
+
+class BloomExtractPass : public RenderPass
 {
   public:
-	BloomScreenPass() = default;
-	auto execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) -> void override;
+	BloomExtractPass() = default;
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+};
+
+class BloomBlurPass : public RenderPass
+{
+  public:
+	BloomBlurPass() = default;
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+};
+
+class BloomCompositePass : public RenderPass
+{
+  public:
+	BloomCompositePass() = default;
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 };
 
 }        // namespace xihe::rendering

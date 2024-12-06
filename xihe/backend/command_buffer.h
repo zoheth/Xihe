@@ -195,7 +195,7 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	vk::Extent2D last_render_area_extent_{};
 
 	std::vector<vk::RenderingAttachmentInfo> color_attachments_;
-	vk::RenderingAttachmentInfo              depth_attachment_;
+	std::optional<vk::RenderingAttachmentInfo>              depth_attachment_;
 
 	bool update_after_bind_ = false;
 
