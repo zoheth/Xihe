@@ -60,17 +60,30 @@ void BloomBlurPass::execute(backend::CommandBuffer &command_buffer, RenderFrame 
 
 	BlurPush push;
 
+	if (horizontal_)
+	{
+		push.is_vertical = 0;
+	}
+	else
+	{
+		push.is_vertical = 1;
+	}
+
 	command_buffer.push_constants(push);
 	command_buffer.bind_image(src, 0, 0, 0);
 	command_buffer.bind_image(dst, 0, 1, 0);
 
+	// command_buffer.dispatch((extent.width + 15) / 16, (extent.height + 15) / 16, 1);
+
+	/*command_buffer.dispatch((extent.width + 255) / 256, extent.height, 1);*/
+
 	if (horizontal_)
 	{
-		command_buffer.dispatch((extent.width + 255) / 256, extent.height, 1);
+		command_buffer.dispatch(extent.height, (extent.width + 31) / 32, 1);
 	}
 	else
 	{
-		command_buffer.dispatch(extent.width, (extent.height + 255) / 256, 1);
+		command_buffer.dispatch( extent.width, (extent.height + 31) / 32, 1);
 	}
 }
 

@@ -1,71 +1,51 @@
 #version 450
-
 layout (local_size_x = 256, local_size_y = 1) in;
-
 layout (binding = 0, rgba16f) uniform readonly image2D inputImage;
 layout (binding = 1, rgba16f) uniform writeonly image2D outputImage;
-
 layout(push_constant) uniform PushConstants {
-    float innerWeight;    // 内圈权重
-    float outerWeight;    // 外圈权重
-    float innerOffset;    // 内圈偏移
-    float outerOffset;    // 外圈偏移
+    float innerWeight;
+    float outerWeight;
+    float innerOffset;
+    float outerOffset;
 } pc;
 
-shared vec3 sharedData[256 + 8];  // 减小shared memory大小，因为我们会在外圈单独采样
-
-vec3 sampleDual(ivec2 pos, ivec2 sourceSize) {
-    if(pos.x >= 0 && pos.x < sourceSize.x && 
-       pos.y >= 0 && pos.y < sourceSize.y) {
-        return imageLoad(inputImage, pos).rgb;
-    }
-    return vec3(0.0);
-}
-
+// 完全移除shared memory的使用，改为直接采样
+// 这样可以避免工作组边界的问题和同步问题
 void main() {
-    uint localID = gl_LocalInvocationID.x;
-    uint groupID = gl_WorkGroupID.y;
-    
     ivec2 sourceSize = imageSize(inputImage);
-    if(groupID >= sourceSize.y) {
+    ivec2 pos = ivec2(gl_GlobalInvocationID.xy);
+    
+    if(pos.x >= sourceSize.x || pos.y >= sourceSize.y) {
         return;
     }
-
-    // 加载到shared memory (只加载内圈需要的像素)
-    int baseX = int(gl_WorkGroupID.x * 256) - 2;
-    int x = baseX + int(localID);
     
-    if(x >= 0 && x < sourceSize.x) {
-        sharedData[localID] = imageLoad(inputImage, ivec2(x, groupID)).rgb;
-    } else {
-        sharedData[localID] = vec3(0.0);
-    }
+    vec3 color = vec3(0.0);
+    float totalWeight = 0.0;
     
-    barrier();
-    memoryBarrierShared();
-    
-    if(localID < 256) {
-        vec3 color = vec3(0.0);
-        ivec2 basePos = ivec2(gl_WorkGroupID.x * 256 + localID, groupID);
-        
-        // 内圈模糊 (使用shared memory)
-        color += sharedData[localID + 2] * pc.innerWeight;
-        color += sharedData[localID + 1] * pc.innerWeight;
-        color += sharedData[localID + 3] * pc.innerWeight;
-        color += sharedData[localID + 4] * pc.innerWeight;
-        
-        // 外圈模糊 (直接采样)
-        ivec2 pos = basePos;
-        color += sampleDual(pos + ivec2(-4, 0), sourceSize) * pc.outerWeight;
-        color += sampleDual(pos + ivec2(4, 0), sourceSize) * pc.outerWeight;
-        color += sampleDual(pos + ivec2(-3, 0), sourceSize) * pc.outerWeight;
-        color += sampleDual(pos + ivec2(3, 0), sourceSize) * pc.outerWeight;
-        
-        // 归一化
-        color /= (pc.innerWeight * 4.0 + pc.outerWeight * 4.0);
-        
-        if(basePos.x < sourceSize.x) {
-            imageStore(outputImage, basePos, vec4(color, 1.0));
+    // 内圈采样
+    for(int i = -2; i <= 2; i++) {
+        ivec2 samplePos = pos + ivec2(i, 0);
+        if(samplePos.x >= 0 && samplePos.x < sourceSize.x) {
+            float weight = pc.innerWeight;
+            color += imageLoad(inputImage, samplePos).rgb * weight;
+            totalWeight += weight;
         }
     }
+    
+    // 外圈采样
+    for(int i = -4; i <= 4; i++) {
+        if(abs(i) >= 3) {  // 只采样外圈像素
+            ivec2 samplePos = pos + ivec2(i, 0);
+            if(samplePos.x >= 0 && samplePos.x < sourceSize.x) {
+                float weight = pc.outerWeight;
+                color += imageLoad(inputImage, samplePos).rgb * weight;
+                totalWeight += weight;
+            }
+        }
+    }
+    
+    // 归一化
+    color = totalWeight > 0.0 ? color / totalWeight : vec3(0.0);
+    
+    imageStore(outputImage, pos, vec4(color, 1.0));
 }

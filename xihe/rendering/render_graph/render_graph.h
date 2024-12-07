@@ -49,9 +49,10 @@ class RenderGraph
 
 	std::unordered_map<ResourceHandle, ResourceInfo> resources_{};
 
-	std::vector<backend::Image>     images_;
-	std::vector<backend::Buffer>    buffers_;
-	std::vector<backend::ImageView> image_views_;
+	// must use unique_ptr to avoid address invalidation
+	std::vector<std::unique_ptr<backend::Image>>     images_;
+	std::vector<std::unique_ptr<backend::Buffer>>    buffers_;
+	std::vector<std::unique_ptr<backend::ImageView>> image_views_;
 
 	friend GraphBuilder;
 };

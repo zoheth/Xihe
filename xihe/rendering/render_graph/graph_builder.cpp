@@ -227,7 +227,7 @@ void GraphBuilder::create_resources()
 			ResourceInfo::ImageDesc image_desc;
 			image_desc.format = info.format;
 			// todo
-			image_desc.extent = vk::Extent3D{1280, 720, 1};
+			image_desc.extent = vk::Extent3D{640, 360, 1};
 			image_desc.usage  = info.image_usage;
 
 			backend::ImageBuilder image_builder{image_desc.extent};
@@ -235,9 +235,9 @@ void GraphBuilder::create_resources()
 			    .with_usage(info.image_usage)
 			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
-			render_graph_.images_.push_back(image_builder.build(device));
-			render_graph_.image_views_.emplace_back(render_graph_.images_.back(), vk::ImageViewType::e2D);
-			image_desc.image_view = &render_graph_.image_views_.back();
+			render_graph_.images_.push_back(image_builder.build_unique(device));
+			render_graph_.image_views_.emplace_back(std::make_unique<backend::ImageView>(*render_graph_.images_.back(), vk::ImageViewType::e2D));
+			image_desc.image_view = render_graph_.image_views_.back().get();
 			resource_info.desc    = image_desc;
 		}
 
@@ -414,9 +414,9 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 			prev_pass.add_release_barrier(bindable.name, release_barrier);
 
-			/*barrier.old_layout      = state.usage_state.layout;
+			barrier.old_layout      = state.usage_state.layout;
 			barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
-			barrier.src_access_mask = vk::AccessFlagBits2::eNone;*/
+			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
 		}
 
 		pass.add_bindable(i, bindable.name, barrier);	

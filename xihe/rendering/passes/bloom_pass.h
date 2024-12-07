@@ -11,17 +11,24 @@ struct ExtractPush
 	float exposure  = 1.2f;
 };
 
+//struct BlurPush
+//{
+//	float inner_weight = 0.75f;
+//	float outer_weight = 0.25f;
+//	float inner_offset = 1.0f;
+//	float outer_offset = 2.0f;
+//};
+
 struct BlurPush
 {
-	float inner_weight = 0.75f;
-	float outer_weight = 0.25f;
-	float inner_offset = 1.0f;
-	float outer_offset = 2.0f;
+	float inner_weight = 0.227027;
+	float outer_weight = 0.1945946;
+	int   is_vertical{0};
 };
 
 struct CompositePush
 {
-	float intensity  = 0.8f;
+	float intensity  = 15.0f;
 	float tint_r     = 1.0f;
 	float tint_g     = 1.0f;
 	float tint_b     = 1.0f;

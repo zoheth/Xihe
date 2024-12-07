@@ -35,10 +35,6 @@ void main() {
     // 2x2 downsample with box filter
     ivec2 inputSize = imageSize(inputImage);
     ivec2 basePos = gid * 2;
-
-    imageStore(outputImage, gid, vec4(vec3(0.5), 1.0));
-
-    return;
     
     vec3 color = vec3(0.0);
     for (int y = 0; y < 2; y++) {
