@@ -38,8 +38,12 @@ class BloomExtractPass : public RenderPass
 class BloomBlurPass : public RenderPass
 {
   public:
-	BloomBlurPass() = default;
+	BloomBlurPass(bool horizontal);
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+
+private:
+	bool horizontal_ = false;
+	
 };
 
 class BloomCompositePass : public RenderPass

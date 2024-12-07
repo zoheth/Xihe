@@ -41,6 +41,39 @@ void BloomExtractPass::execute(backend::CommandBuffer &command_buffer, RenderFra
 	command_buffer.dispatch((extent.width + 15) / 16, (extent.height + 15) / 16, 1);
 }
 
+BloomBlurPass::BloomBlurPass(bool horizontal) :
+    horizontal_(horizontal)
+{}
+
+void BloomBlurPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
+{
+	auto                                &resource_cache     = command_buffer.get_device().get_resource_cache();
+	auto                                &comp_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eCompute, get_compute_shader());
+	std::vector<backend::ShaderModule *> shader_modules     = {&comp_shader_module};
+	auto                                &pipeline_layout    = resource_cache.request_pipeline_layout(shader_modules);
+	command_buffer.bind_pipeline_layout(pipeline_layout);
+
+	auto &src = input_bindables[0].image_view();
+	auto &dst = input_bindables[1].image_view();
+
+	const auto extent = dst.get_image().get_extent();
+
+	BlurPush push;
+
+	command_buffer.push_constants(push);
+	command_buffer.bind_image(src, 0, 0, 0);
+	command_buffer.bind_image(dst, 0, 1, 0);
+
+	if (horizontal_)
+	{
+		command_buffer.dispatch((extent.width + 255) / 256, extent.height, 1);
+	}
+	else
+	{
+		command_buffer.dispatch(extent.width, (extent.height + 255) / 256, 1);
+	}
+}
+
 void BloomCompositePass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
 {
 	auto &resource_cache = command_buffer.get_device().get_resource_cache();
@@ -68,6 +101,5 @@ void BloomCompositePass::execute(backend::CommandBuffer &command_buffer, RenderF
 	command_buffer.set_rasterization_state(rasterization_state);
 
 	command_buffer.draw(3, 1, 0, 0);
-
 }
 }        // namespace xihe::rendering

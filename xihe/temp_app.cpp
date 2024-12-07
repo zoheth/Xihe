@@ -77,6 +77,8 @@ bool TempApp::prepare(Window *window)
 		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat}})
 		    .shader({"post_processing/bloom_extract.comp"})
 		    .finalize();
+
+
 	}
 
 	// composite pass
