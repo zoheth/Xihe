@@ -10,11 +10,9 @@ layout(push_constant) uniform Registers {
 } registers;
 
 vec3 reinhard_tone_mapping(vec3 hdr_color) {
-    // 使用改进的Reinhard，保持更多细节
     return hdr_color / (vec3(1.0) + hdr_color);
 }
 
-// 简单的锐化函数
 vec3 sharpen(sampler2D tex, vec2 uv, float strength) {
     vec2 texelSize = 1.0 / textureSize(tex, 0);
     
@@ -29,19 +27,15 @@ vec3 sharpen(sampler2D tex, vec2 uv, float strength) {
 }
 
 void main() {
-    // 采样原始HDR，不做额外的模糊
     vec3 hdr = textureLod(hdr_tex, in_uv, 0.0).rgb;
     
     // 对bloom进行适度锐化
     vec3 bloom = sharpen(bloom_tex, in_uv, 0.5);
-    
-    // 使用更精确的混合
+
     vec3 combined = hdr + bloom * registers.bloom_strength;
-    
-    // 应用曝光
+
     combined *= registers.exposure;
     
-    // 色调映射
     vec3 tone_mapped = reinhard_tone_mapping(combined);
     
     o_color = vec4(tone_mapped, 1.0);

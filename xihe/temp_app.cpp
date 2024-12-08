@@ -2,6 +2,7 @@
 
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/passes/geometry_pass.h"
+#include "rendering/passes/meshlet_pass.h"
 #include "rendering/passes/lighting_pass.h"
 #include "rendering/passes/bloom_pass.h"
 #include "scene_graph/components/camera.h"
@@ -38,7 +39,7 @@ bool TempApp::prepare(Window *window)
 
 	// geometry pass
 	{
-		auto geometry_pass = std::make_unique<rendering::GeometryPass>(scene_->get_components<sg::Mesh>(), *camera);
+		/*auto geometry_pass = std::make_unique<rendering::GeometryPass>(scene_->get_components<sg::Mesh>(), *camera);
 
 		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
 
@@ -47,6 +48,18 @@ bool TempApp::prepare(Window *window)
 		                  {rendering::AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32}})
 
 		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
+
+		    .finalize();*/
+
+		auto geometry_pass = std::make_unique<rendering::MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
+
+		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
+
+		    .attachments({{rendering::AttachmentType::kDepth, "depth"},
+		                  {rendering::AttachmentType::kColor, "albedo"},
+		                  {rendering::AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32}})
+
+		    .shader({"deferred/geometry_mesh.task", "deferred/geometry_mesh.mesh", "deferred/geometry_mesh.frag"})
 
 		    .finalize();
 	}
@@ -148,6 +161,10 @@ void TempApp::update(float delta_time)
 void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	XiheApp::request_gpu_features(gpu);
+
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShader);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
 }
