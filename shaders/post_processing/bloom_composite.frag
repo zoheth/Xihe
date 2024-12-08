@@ -1,57 +1,42 @@
 #version 450
-layout(location = 0) in vec2 inUV;
-layout(location = 0) out vec4 outColor;
-layout(binding = 0) uniform sampler2D originalImage;
-layout(binding = 1) uniform sampler2D blurredImage;
+layout(location = 0) out vec4 o_color;
+layout(location = 0) in vec2 in_uv;
+layout(set = 0, binding = 0) uniform sampler2D hdr_tex;
+layout(set = 0, binding = 1) uniform sampler2D bloom_tex; 
 
-layout(push_constant) uniform PushConstants {
-    float intensity;      // 泛光强度
-    float tint_r;        // 泛光色调 R
-    float tint_g;        // 泛光色调 G
-    float tint_b;        // 泛光色调 B
-    float saturation;    // 泛光饱和度
-} pc;
+layout(push_constant) uniform Registers {
+    float bloom_strength;    
+    float exposure;         
+} registers;
 
-// 调整饱和度
-vec3 adjustSaturation(vec3 color, float saturation) {
-    float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    return mix(vec3(luminance), color, saturation);
-}
-
-// ACES tone mapping
-vec3 ACESFilm(vec3 x) {
-    float a = 2.51f;
-    float b = 0.03f;
-    float c = 2.43f;
-    float d = 0.59f;
-    float e = 0.14f;
-    return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
-}
-
-// 简单的Reinhard tone mapping
-vec3 Reinhard(vec3 color) {
-    return color / (1.0 + color);
+// Improved tone mapping with shoulder strength control
+vec3 improved_reinhard(vec3 hdr_color, float shoulder_strength) {
+    vec3 numerator = hdr_color * (1.0 + (hdr_color / vec3(shoulder_strength * shoulder_strength)));
+    return numerator / (1.0 + hdr_color);
 }
 
 void main() {
-    // 采样原始图像和模糊后的泛光图像
-    vec3 originalColor = texture(originalImage, inUV).rgb;
-    vec3 bloomColor = texture(blurredImage, inUV).rgb;
+    // Sample with bilinear filtering for both textures
+    vec2 texelSize = 1.0 / textureSize(hdr_tex, 0);
     
-    outColor = vec4(bloomColor, 1.0);
-    return;
+    // Apply 2x2 box filter for HDR texture
+    vec3 hdr = vec3(0.0);
+    hdr += textureOffset(hdr_tex, in_uv, ivec2(-1, -1)).rgb * 0.25;
+    hdr += textureOffset(hdr_tex, in_uv, ivec2(1, -1)).rgb * 0.25;
+    hdr += textureOffset(hdr_tex, in_uv, ivec2(-1, 1)).rgb * 0.25;
+    hdr += textureOffset(hdr_tex, in_uv, ivec2(1, 1)).rgb * 0.25;
     
-    // 处理泛光
-    bloomColor = adjustSaturation(bloomColor, pc.saturation);
-    bloomColor *= vec3(pc.tint_r, pc.tint_g, pc.tint_b);
+    // Sample bloom with smooth bilinear filtering
+    vec3 bloom = textureLod(bloom_tex, in_uv, 0.0).rgb;
     
-    // 混合
-    vec3 finalColor = originalColor + bloomColor * pc.intensity;
+    // Combine with smooth interpolation
+    vec3 combined = mix(hdr, hdr + bloom, smoothstep(0.0, 1.0, registers.bloom_strength));
     
-    // 应用tone mapping
-    // finalColor = ACESFilm(finalColor);  // 或者使用 Reinhard(finalColor)
-
-    finalColor = finalColor / (1.0 + finalColor);
+    // Apply exposure with smoothing
+    combined *= max(0.0, registers.exposure);
     
-    outColor = vec4(finalColor, 1.0);
+    // Improved tone mapping
+    vec3 tone_mapped = improved_reinhard(combined, 0.8);
+    
+    o_color = vec4(tone_mapped, 1.0);
 }

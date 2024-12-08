@@ -1,0 +1,54 @@
+#version 450
+
+layout(local_size_x = 8, local_size_y = 8) in;
+
+
+layout(set = 0, binding = 0) uniform sampler2D in_tex;
+layout(rgba16f, set = 0, binding = 1) writeonly uniform image2D out_tex;
+
+layout(set = 0, binding = 2) uniform CommonUniforms {
+    uvec2 resolution;           
+    vec2 inv_resolution;        
+    vec2 inv_input_resolution;  
+} common_uniform;
+
+const float SCALE = 0.875;
+
+vec2 get_uv(vec2 uv, float x, float y)
+{
+    return uv + common_uniform.inv_input_resolution * (vec2(x, y) * SCALE);
+}
+
+vec3 bloom_blur(vec2 uv)
+{
+    vec3 rgb = vec3(0.0);
+    
+    // Center weight = 0.25
+    rgb += 0.25 * textureLod(in_tex, get_uv(uv, 0.0, 0.0), 0.0).rgb;
+    
+    // Cross weights = 0.125
+    rgb += 0.125 * textureLod(in_tex, get_uv(uv, -1.0, 0.0), 0.0).rgb;
+    rgb += 0.125 * textureLod(in_tex, get_uv(uv, 1.0, 0.0), 0.0).rgb;
+    rgb += 0.125 * textureLod(in_tex, get_uv(uv, 0.0, -1.0), 0.0).rgb;
+    rgb += 0.125 * textureLod(in_tex, get_uv(uv, 0.0, 1.0), 0.0).rgb;
+    
+    // Diagonal weights = 0.0625
+    rgb += 0.0625 * textureLod(in_tex, get_uv(uv, -1.0, 1.0), 0.0).rgb;
+    rgb += 0.0625 * textureLod(in_tex, get_uv(uv, 1.0, 1.0), 0.0).rgb;
+    rgb += 0.0625 * textureLod(in_tex, get_uv(uv, -1.0, -1.0), 0.0).rgb;
+    rgb += 0.0625 * textureLod(in_tex, get_uv(uv, 1.0, -1.0), 0.0).rgb;
+    
+    return rgb;
+}
+
+void main()
+{
+    if (any(greaterThanEqual(gl_GlobalInvocationID.xy, common_uniform.resolution))) {
+        return;
+    }
+
+    vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * common_uniform.inv_resolution;
+    vec3 rgb = bloom_blur(uv);
+    
+    imageStore(out_tex, ivec2(gl_GlobalInvocationID.xy), vec4(rgb, 1.0));
+}

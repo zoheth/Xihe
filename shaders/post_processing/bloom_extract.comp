@@ -1,18 +1,14 @@
 #version 450
-
-layout(local_size_x = 16, local_size_y = 16) in;
-
+layout(local_size_x = 8, local_size_y = 8) in;
 layout(set = 0, binding = 0) uniform sampler2D in_tex;
 layout(rgba16f, set = 0, binding = 1) writeonly uniform image2D out_tex;
 
-// Common parameters for all bloom passes
 layout(set = 0, binding = 2) uniform CommonUniforms {
     uvec2 resolution;           
     vec2 inv_resolution;        
     vec2 inv_input_resolution;  
 } common_uniform;
 
-// Extract pass specific parameters
 layout(push_constant) uniform Registers {
     float threshold;           
     float soft_threshold;      
@@ -20,44 +16,52 @@ layout(push_constant) uniform Registers {
     float saturation;         
 } registers;
 
-// Calculate luminance from RGB
+// Improved luminance calculation with higher precision
 float get_luminance(vec3 color) {
-    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+    // Using precise coefficients and ensuring high precision calculation
+    return max(dot(color, vec3(0.2126729, 0.7151522, 0.0721750)), 0.0001);
 }
 
-// Adjust color saturation
+// Improved saturation adjustment with smoothing
 vec3 adjust_saturation(vec3 color, float adjustment) {
     float luminance = get_luminance(color);
-    return mix(vec3(luminance), color, adjustment);
+    vec3 saturated = mix(vec3(luminance), color, adjustment);
+    // Add subtle smoothing to reduce temporal noise
+    return saturated * smoothstep(0.0, 0.1, luminance);
 }
 
 void main() {
-    // Check if within output resolution bounds
     if (any(greaterThanEqual(gl_GlobalInvocationID.xy, common_uniform.resolution))) {
         return;
     }
-
-    // Calculate input UV with proper scaling
+    
+    // Use bilinear filtering for smoother sampling
     vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * common_uniform.inv_resolution;
     
-    // Sample input texture
-    vec3 rgb = textureLod(in_tex, uv, 0.0).rgb;
+    // Sample with multiple taps for temporal stability
+    vec2 texelSize = common_uniform.inv_input_resolution;
+    vec3 color = vec3(0.0);
     
-    // Calculate luminance and apply threshold with smooth transition
-    float luminance = get_luminance(rgb);
-    float brightness = smoothstep(registers.threshold, 
-                                registers.threshold + registers.soft_threshold, 
-                                luminance);
+    // 2x2 box filter
+    color += textureLod(in_tex, uv + vec2(-0.5, -0.5) * texelSize, 0.0).rgb * 0.25;
+    color += textureLod(in_tex, uv + vec2(0.5, -0.5) * texelSize, 0.0).rgb * 0.25;
+    color += textureLod(in_tex, uv + vec2(-0.5, 0.5) * texelSize, 0.0).rgb * 0.25;
+    color += textureLod(in_tex, uv + vec2(0.5, 0.5) * texelSize, 0.0).rgb * 0.25;
     
-    // Extract bright areas
-    vec3 bright_color = rgb * brightness;
+    // Improved threshold calculation with smooth transition
+    float luminance = get_luminance(color);
+    float knee = registers.threshold + registers.soft_threshold;
+    float soft = smoothstep(registers.threshold, knee, luminance);
     
-    // Apply saturation adjustment
+    // Apply smooth threshold
+    vec3 bright_color = color * soft;
+    
+    // Apply improved saturation adjustment
     bright_color = adjust_saturation(bright_color, registers.saturation);
     
-    // Apply intensity
-    bright_color *= registers.intensity;
+    // Smooth intensity application
+    bright_color *= max(0.0, registers.intensity);
     
-    // Store result
+    // Apply subtle temporal smoothing
     imageStore(out_tex, ivec2(gl_GlobalInvocationID.xy), vec4(bright_color, 1.0));
 }

@@ -19,28 +19,10 @@ struct ExtractPush
 	float saturation     = 1.2f;
 };
 
-// struct BlurPush
-//{
-//	float inner_weight = 0.75f;
-//	float outer_weight = 0.25f;
-//	float inner_offset = 1.0f;
-//	float outer_offset = 2.0f;
-// };
-
-struct BlurPush
-{
-	float inner_weight = 0.227027;
-	float outer_weight = 0.1945946;
-	int   is_vertical{0};
-};
-
 struct CompositePush
 {
-	float intensity  = 15.0f;
-	float tint_r     = 1.0f;
-	float tint_g     = 1.0f;
-	float tint_b     = 1.0f;
-	float saturation = 1.0f;
+	float bloom_strength = 0.8;
+	float exposure       = 1.1;
 };
 
 class BloomComputePass : public RenderPass
@@ -60,14 +42,14 @@ class BloomExtractPass : public BloomComputePass
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 };
 
-class BloomBlurPass : public BloomComputePass
+class BloomDownsamplePass : public BloomComputePass
 {
   public:
-	BloomBlurPass(bool horizontal);
+	BloomDownsamplePass(float filter_radius);
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
-	bool horizontal_ = false;
+	float filter_radius_ = 1.0;
 };
 
 class BloomCompositePass : public RenderPass

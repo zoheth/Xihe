@@ -111,6 +111,8 @@ void GraphBuilder::create_resources()
 				case BindableType::kStorageReadWrite:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
 					res_info.format = bindable.format;
+				//todo
+					res_info.extent = bindable.extent;
 					break;
 			}
 		}
@@ -227,7 +229,7 @@ void GraphBuilder::create_resources()
 			ResourceInfo::ImageDesc image_desc;
 			image_desc.format = info.format;
 			// todo
-			image_desc.extent = vk::Extent3D{640, 360, 1};
+			image_desc.extent = info.extent;
 			image_desc.usage  = info.image_usage;
 
 			backend::ImageBuilder image_builder{image_desc.extent};
@@ -300,15 +302,15 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 	std::vector<std::unordered_set<uint32_t>> adjacency_list(pass_nodes.size());
 	std::vector<uint32_t>                     indegree(pass_nodes.size(), 0);
 
-	// ¼ÇÂ¼ËùÓĞĞ´Èë²Ù×÷µÄproducer
+	// è®°å½•æ‰€æœ‰å†™å…¥æ“ä½œçš„producer
 	std::unordered_map<std::string, std::vector<uint32_t>> resource_writers;
 
-	// ÊÕ¼¯ËùÓĞĞ´²Ù×÷
+	// æ”¶é›†æ‰€æœ‰å†™æ“ä½œ
 	for (uint32_t i = 0; i < pass_nodes.size(); ++i)
 	{
 		const auto &pass_info = pass_nodes[i].get_pass_info();
 
-		// ÊÕ¼¯bindableÖĞµÄĞ´²Ù×÷
+		// æ”¶é›†bindableä¸­çš„å†™æ“ä½œ
 		for (const auto &resource : pass_info.bindables)
 		{
 			if (resource.type == BindableType::kStorageBufferReadWrite ||
@@ -320,19 +322,19 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 			}
 		}
 
-		// attachments×ÜÊÇĞ´²Ù×÷
+		// attachmentsæ€»æ˜¯å†™æ“ä½œ
 		for (const auto &attachment : pass_info.attachments)
 		{
 			resource_writers[attachment.name].push_back(i);
 		}
 	}
 
-	// ½¨Á¢ÒÀÀµ
+	// å»ºç«‹ä¾èµ–
 	for (uint32_t consumer = 0; consumer < pass_nodes.size(); ++consumer)
 	{
 		const auto &pass_info = pass_nodes[consumer].get_pass_info();
 
-		// ¼ì²ébindableµÄÒÀÀµ
+		// æ£€æŸ¥bindableçš„ä¾èµ–
 		for (const auto &resource : pass_info.bindables)
 		{
 			if (auto it = resource_writers.find(resource.name);

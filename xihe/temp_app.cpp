@@ -74,23 +74,51 @@ bool TempApp::prepare(Window *window)
 
 		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
 		    .bindables({{rendering::BindableType::kSampled, "lighting"},
-		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640,320,1}}})
+		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640,360,1}}})
 		    .shader({"post_processing/bloom_extract.comp"})
 		    .finalize();
 
-		/*auto blur_h_pass = std::make_unique<rendering::BloomBlurPass>(true);
-		graph_builder_->add_pass("Bloom Blur Horizontal", std::move(blur_h_pass))
-		    .bindables({{rendering::BindableType::kStorageRead, "bloom_extract"},
-		                {rendering::BindableType::kStorageWrite, "bloom_blur_h", vk::Format::eR16G16B16A16Sfloat}})
-		    .shader({"post_processing/bloom_blur.comp"})
+		auto downsample_pass0 = std::make_unique<rendering::BloomDownsamplePass>(1.0f);
+		graph_builder_->add_pass("Bloom Downsample 0", std::move(downsample_pass0))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_extract"},
+		                {rendering::BindableType::kStorageWrite, "bloom_down_sample_0", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{320, 180, 1}}})
+		    .shader({"post_processing/bloom_downsample.comp"})
 		    .finalize();
 
-		auto blur_v_pass = std::make_unique<rendering::BloomBlurPass>(false);
-		graph_builder_->add_pass("Bloom Blur Vertical", std::move(blur_v_pass))
-		    .bindables({{rendering::BindableType::kStorageRead, "bloom_blur_h"},
-		                {rendering::BindableType::kStorageWrite, "bloom_blur_v", vk::Format::eR16G16B16A16Sfloat}})
-		    .shader({"post_processing/bloom_blur.comp"})
-		    .finalize();*/
+		auto downsample_pass1 = std::make_unique<rendering::BloomDownsamplePass>(0.9f);
+		graph_builder_->add_pass("Bloom Downsample 1", std::move(downsample_pass1))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_down_sample_0"},
+		                {rendering::BindableType::kStorageWrite, "bloom_down_sample_1", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{160, 90, 1}}})
+		    .shader({"post_processing/bloom_downsample.comp"})
+		    .finalize();
+
+		auto downsample_pass2 = std::make_unique<rendering::BloomDownsamplePass>(0.7f);
+		graph_builder_->add_pass("Bloom Downsample 2", std::move(downsample_pass2))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_down_sample_1"},
+		                {rendering::BindableType::kStorageWrite, "bloom_down_sample_2", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{80, 45, 1}}})
+		    .shader({"post_processing/bloom_downsample.comp"})
+		    .finalize();
+
+		auto upsample_pass0 = std::make_unique<rendering::BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 0", std::move(upsample_pass0))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_down_sample_2"},
+		                {rendering::BindableType::kStorageWrite, "bloom_up_sample_0", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{160, 90, 1}}})
+		    .shader({"post_processing/bloom_upsample.comp"})
+		    .finalize();
+
+		auto upsample_pass1 = std::make_unique<rendering::BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 1", std::move(upsample_pass1))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_up_sample_0"},
+		                {rendering::BindableType::kStorageWrite, "bloom_up_sample_1", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{320, 180, 1}}})
+		    .shader({"post_processing/bloom_upsample.comp"})
+		    .finalize();
+
+		auto upsample_pass2 = std::make_unique<rendering::BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 2", std::move(upsample_pass2))
+		    .bindables({{rendering::BindableType::kSampled, "bloom_up_sample_1"},
+		                {rendering::BindableType::kStorageWrite, "bloom_up_sample_2", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640, 360, 1}}})
+		    .shader({"post_processing/bloom_upsample.comp"})
+		    .finalize();
 	}
 
 	// composite pass
@@ -98,7 +126,7 @@ bool TempApp::prepare(Window *window)
 		auto composite_pass = std::make_unique<rendering::BloomCompositePass>();
 		graph_builder_->add_pass("Bloom Composite", std::move(composite_pass))
 		    .bindables({{rendering::BindableType::kSampled, "lighting"},
-		                {rendering::BindableType::kSampled, "bloom_extract"}})
+		                {rendering::BindableType::kSampled, "bloom_up_sample_2"}})
 		    .shader({"post_processing/bloom_composite.vert", "post_processing/bloom_composite.frag"})
 		    .present()
 		    .finalize();

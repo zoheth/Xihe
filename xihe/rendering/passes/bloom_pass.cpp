@@ -46,7 +46,7 @@ void BloomComputePass::execute(backend::CommandBuffer &command_buffer, RenderFra
 	allocation.update(uniforms);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 
-	command_buffer.dispatch((extent.width + 15) / 16, (extent.height + 15) / 16, 1);
+	command_buffer.dispatch((extent.width + 7) / 8, (extent.height + 7) / 8, 1);
 }
 
 void BloomExtractPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
@@ -58,50 +58,15 @@ void BloomExtractPass::execute(backend::CommandBuffer &command_buffer, RenderFra
 
 }
 
-BloomBlurPass::BloomBlurPass(bool horizontal) :
-    horizontal_(horizontal)
+BloomDownsamplePass::BloomDownsamplePass(float filter_radius) :
+	filter_radius_(filter_radius)
 {}
 
-void BloomBlurPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
+void BloomDownsamplePass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
 {
-	auto                                &resource_cache     = command_buffer.get_device().get_resource_cache();
-	auto                                &comp_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eCompute, get_compute_shader());
-	std::vector<backend::ShaderModule *> shader_modules     = {&comp_shader_module};
-	auto                                &pipeline_layout    = resource_cache.request_pipeline_layout(shader_modules);
-	command_buffer.bind_pipeline_layout(pipeline_layout);
+	command_buffer.push_constants(filter_radius_);
 
-	auto &src = input_bindables[0].image_view();
-	auto &dst = input_bindables[1].image_view();
-
-	const auto extent = dst.get_image().get_extent();
-
-	BlurPush push;
-
-	if (horizontal_)
-	{
-		push.is_vertical = 0;
-	}
-	else
-	{
-		push.is_vertical = 1;
-	}
-
-	command_buffer.push_constants(push);
-	command_buffer.bind_image(src, 0, 0, 0);
-	command_buffer.bind_image(dst, 0, 1, 0);
-
-	// command_buffer.dispatch((extent.width + 15) / 16, (extent.height + 15) / 16, 1);
-
-	/*command_buffer.dispatch((extent.width + 255) / 256, extent.height, 1);*/
-
-	if (horizontal_)
-	{
-		command_buffer.dispatch(extent.height, (extent.width + 31) / 32, 1);
-	}
-	else
-	{
-		command_buffer.dispatch( extent.width, (extent.height + 31) / 32, 1);
-	}
+	BloomComputePass::execute(command_buffer, active_frame, input_bindables);
 }
 
 void BloomCompositePass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
