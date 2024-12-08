@@ -407,15 +407,18 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
 				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
 			}
+			release_barrier.old_layout = state.usage_state.layout;
+			release_barrier.src_stage_mask  = state.usage_state.stage_mask;
+			release_barrier.src_access_mask = state.usage_state.access_mask;
 
-			release_barrier.new_layout      = state.usage_state.layout;
+			release_barrier.new_layout      = new_state.layout;
 			release_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
 			release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
 
 			prev_pass.add_release_barrier(bindable.name, release_barrier);
 
-			barrier.old_layout      = state.usage_state.layout;
-			barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+			// barrier.old_layout      = new_state.layout;
+			barrier.src_stage_mask  = new_state.stage_mask;
 			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
 		}
 

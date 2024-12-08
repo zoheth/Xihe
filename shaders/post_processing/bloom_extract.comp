@@ -1,54 +1,63 @@
 #version 450
 
-layout (local_size_x = 16, local_size_y = 16) in;
+layout(local_size_x = 16, local_size_y = 16) in;
 
-layout (binding = 0, rgba16f) uniform readonly image2D inputImage;
-layout (binding = 1, rgba16f) uniform writeonly image2D outputImage;
+layout(set = 0, binding = 0) uniform sampler2D in_tex;
+layout(rgba16f, set = 0, binding = 1) writeonly uniform image2D out_tex;
 
-layout(push_constant) uniform PushConstants {
-    float threshold;      // 基础亮度阈值
-    float knee;          // 软阈值范围
-    float exposure;      // 曝光调整
-} pc;
+// Common parameters for all bloom passes
+layout(set = 0, binding = 2) uniform CommonUniforms {
+    uvec2 resolution;           
+    vec2 inv_resolution;        
+    vec2 inv_input_resolution;  
+} common_uniform;
 
-// 使用软阈值提取亮度
-vec3 softThreshold(vec3 color) {
-    // 计算亮度
-    float brightness = dot(color * pc.exposure, vec3(0.2126, 0.7152, 0.0722));
-    
-    // 应用软阈值
-    float soft = brightness - pc.threshold;
-    soft = clamp(soft, 0.0, pc.knee);
-    soft = (soft * soft) * (3.0 - 2.0 * soft / pc.knee) / pc.knee;
-    
-    return color * soft / max(brightness, 0.00001);
+// Extract pass specific parameters
+layout(push_constant) uniform Registers {
+    float threshold;           
+    float soft_threshold;      
+    float intensity;          
+    float saturation;         
+} registers;
+
+// Calculate luminance from RGB
+float get_luminance(vec3 color) {
+    return dot(color, vec3(0.2126, 0.7152, 0.0722));
+}
+
+// Adjust color saturation
+vec3 adjust_saturation(vec3 color, float adjustment) {
+    float luminance = get_luminance(color);
+    return mix(vec3(luminance), color, adjustment);
 }
 
 void main() {
-    ivec2 gid = ivec2(gl_GlobalInvocationID.xy);
-    ivec2 outputSize = imageSize(outputImage);
-    
-    if (gid.x >= outputSize.x || gid.y >= outputSize.y) {
+    // Check if within output resolution bounds
+    if (any(greaterThanEqual(gl_GlobalInvocationID.xy, common_uniform.resolution))) {
         return;
     }
 
-    // 2x2 downsample with box filter
-    ivec2 inputSize = imageSize(inputImage);
-    ivec2 basePos = gid * 2;
+    // Calculate input UV with proper scaling
+    vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * common_uniform.inv_resolution;
     
-    vec3 color = vec3(0.0);
-    for (int y = 0; y < 2; y++) {
-        for (int x = 0; x < 2; x++) {
-            ivec2 pos = basePos + ivec2(x, y);
-            if (pos.x < inputSize.x && pos.y < inputSize.y) {
-                color += imageLoad(inputImage, pos).rgb;
-            }
-        }
-    }
-    color *= 0.25; // average
+    // Sample input texture
+    vec3 rgb = textureLod(in_tex, uv, 0.0).rgb;
     
-    // Apply threshold
-    vec3 bright = softThreshold(color);
+    // Calculate luminance and apply threshold with smooth transition
+    float luminance = get_luminance(rgb);
+    float brightness = smoothstep(registers.threshold, 
+                                registers.threshold + registers.soft_threshold, 
+                                luminance);
     
-    imageStore(outputImage, gid, vec4(bright, 1.0));
+    // Extract bright areas
+    vec3 bright_color = rgb * brightness;
+    
+    // Apply saturation adjustment
+    bright_color = adjust_saturation(bright_color, registers.saturation);
+    
+    // Apply intensity
+    bright_color *= registers.intensity;
+    
+    // Store result
+    imageStore(out_tex, ivec2(gl_GlobalInvocationID.xy), vec4(bright_color, 1.0));
 }

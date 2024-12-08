@@ -1,9 +1,11 @@
 #pragma once
-#include "buffer.h"
+// #include "buffer.h"
 #include "vk_mem_alloc.h"
 
 #include <memory>
 #include <vector>
+
+#include "buffer.h"
 
 #include <vulkan/vulkan.hpp>
 
@@ -11,8 +13,7 @@ namespace xihe::backend
 {
 
 class Device;
-
-/**
+    /**
  * \brief An allocation of vulkan memory; different buffer allocations,
  *        with different offset and size, may come from the same Vulkan buffer
  */

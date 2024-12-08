@@ -38,6 +38,9 @@ void main() {
     vec3 originalColor = texture(originalImage, inUV).rgb;
     vec3 bloomColor = texture(blurredImage, inUV).rgb;
     
+    outColor = vec4(bloomColor, 1.0);
+    return;
+    
     // ¥¶¿Ì∑∫π‚
     bloomColor = adjustSaturation(bloomColor, pc.saturation);
     bloomColor *= vec3(pc.tint_r, pc.tint_g, pc.tint_b);

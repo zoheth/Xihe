@@ -73,12 +73,12 @@ bool TempApp::prepare(Window *window)
 		auto extract_pass = std::make_unique<rendering::BloomExtractPass>();
 
 		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
-		    .bindables({{rendering::BindableType::kStorageRead, "lighting"},
+		    .bindables({{rendering::BindableType::kSampled, "lighting"},
 		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640,320,1}}})
 		    .shader({"post_processing/bloom_extract.comp"})
 		    .finalize();
 
-		auto blur_h_pass = std::make_unique<rendering::BloomBlurPass>(true);
+		/*auto blur_h_pass = std::make_unique<rendering::BloomBlurPass>(true);
 		graph_builder_->add_pass("Bloom Blur Horizontal", std::move(blur_h_pass))
 		    .bindables({{rendering::BindableType::kStorageRead, "bloom_extract"},
 		                {rendering::BindableType::kStorageWrite, "bloom_blur_h", vk::Format::eR16G16B16A16Sfloat}})
@@ -90,7 +90,7 @@ bool TempApp::prepare(Window *window)
 		    .bindables({{rendering::BindableType::kStorageRead, "bloom_blur_h"},
 		                {rendering::BindableType::kStorageWrite, "bloom_blur_v", vk::Format::eR16G16B16A16Sfloat}})
 		    .shader({"post_processing/bloom_blur.comp"})
-		    .finalize();
+		    .finalize();*/
 	}
 
 	// composite pass
@@ -98,7 +98,7 @@ bool TempApp::prepare(Window *window)
 		auto composite_pass = std::make_unique<rendering::BloomCompositePass>();
 		graph_builder_->add_pass("Bloom Composite", std::move(composite_pass))
 		    .bindables({{rendering::BindableType::kSampled, "lighting"},
-		                {rendering::BindableType::kSampled, "bloom_blur_v"}})
+		                {rendering::BindableType::kSampled, "bloom_extract"}})
 		    .shader({"post_processing/bloom_composite.vert", "post_processing/bloom_composite.frag"})
 		    .present()
 		    .finalize();
