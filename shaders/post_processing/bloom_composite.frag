@@ -9,34 +9,40 @@ layout(push_constant) uniform Registers {
     float exposure;         
 } registers;
 
-// Improved tone mapping with shoulder strength control
-vec3 improved_reinhard(vec3 hdr_color, float shoulder_strength) {
-    vec3 numerator = hdr_color * (1.0 + (hdr_color / vec3(shoulder_strength * shoulder_strength)));
-    return numerator / (1.0 + hdr_color);
+vec3 reinhard_tone_mapping(vec3 hdr_color) {
+    // 使用改进的Reinhard，保持更多细节
+    return hdr_color / (vec3(1.0) + hdr_color);
+}
+
+// 简单的锐化函数
+vec3 sharpen(sampler2D tex, vec2 uv, float strength) {
+    vec2 texelSize = 1.0 / textureSize(tex, 0);
+    
+    vec3 center = textureLod(tex, uv, 0.0).rgb;
+    vec3 blur = textureLod(tex, uv + vec2(texelSize.x, 0.0), 0.0).rgb +
+                textureLod(tex, uv - vec2(texelSize.x, 0.0), 0.0).rgb +
+                textureLod(tex, uv + vec2(0.0, texelSize.y), 0.0).rgb +
+                textureLod(tex, uv - vec2(0.0, texelSize.y), 0.0).rgb;
+    blur *= 0.25;
+    
+    return center + (center - blur) * strength;
 }
 
 void main() {
-    // Sample with bilinear filtering for both textures
-    vec2 texelSize = 1.0 / textureSize(hdr_tex, 0);
+    // 采样原始HDR，不做额外的模糊
+    vec3 hdr = textureLod(hdr_tex, in_uv, 0.0).rgb;
     
-    // Apply 2x2 box filter for HDR texture
-    vec3 hdr = vec3(0.0);
-    hdr += textureOffset(hdr_tex, in_uv, ivec2(-1, -1)).rgb * 0.25;
-    hdr += textureOffset(hdr_tex, in_uv, ivec2(1, -1)).rgb * 0.25;
-    hdr += textureOffset(hdr_tex, in_uv, ivec2(-1, 1)).rgb * 0.25;
-    hdr += textureOffset(hdr_tex, in_uv, ivec2(1, 1)).rgb * 0.25;
+    // 对bloom进行适度锐化
+    vec3 bloom = sharpen(bloom_tex, in_uv, 0.5);
     
-    // Sample bloom with smooth bilinear filtering
-    vec3 bloom = textureLod(bloom_tex, in_uv, 0.0).rgb;
+    // 使用更精确的混合
+    vec3 combined = hdr + bloom * registers.bloom_strength;
     
-    // Combine with smooth interpolation
-    vec3 combined = mix(hdr, hdr + bloom, smoothstep(0.0, 1.0, registers.bloom_strength));
+    // 应用曝光
+    combined *= registers.exposure;
     
-    // Apply exposure with smoothing
-    combined *= max(0.0, registers.exposure);
-    
-    // Improved tone mapping
-    vec3 tone_mapped = improved_reinhard(combined, 0.8);
+    // 色调映射
+    vec3 tone_mapped = reinhard_tone_mapping(combined);
     
     o_color = vec4(tone_mapped, 1.0);
 }

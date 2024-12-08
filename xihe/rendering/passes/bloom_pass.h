@@ -21,8 +21,8 @@ struct ExtractPush
 
 struct CompositePush
 {
-	float bloom_strength = 0.8;
-	float exposure       = 1.1;
+	float bloom_strength = 0.6f;
+	float exposure       = 1.0f;
 };
 
 class BloomComputePass : public RenderPass
