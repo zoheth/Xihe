@@ -128,16 +128,16 @@ enum class BindableType
 	kUniformBuffer,                // uniform buffer
 	kStorageBufferRead,            // layout(std430) readonly buffer
 	kStorageBufferWrite,           // layout(std430) writeonly buffer
-	kStorageBufferReadWrite        // layout(std430) buffer
+	kStorageBufferReadWrite,        // layout(std430) buffer
 };
 
 enum class AttachmentType
 {
-	kColor,              // layout(location = X) out vec4
-	kDepth,              // depth attachment
-	kDepthStencil        // depth stencil attachment
+	kColor,               // layout(location = X) out vec4
+	kDepth,               // depth attachment
+	kDepthStencil,        // depth stencil attachment
+	kReference            // reference attachment: This attachment is created elsewhere, such as being part of an array
 };
-
 
 struct ResourceUsageState
 {
@@ -149,6 +149,5 @@ struct ResourceUsageState
 void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageState &state);
 
 void update_attachment_state(AttachmentType type, ResourceUsageState &state);
-
 
 }        // namespace xihe::rendering

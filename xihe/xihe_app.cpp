@@ -159,6 +159,9 @@ bool XiheApp::prepare(Window *window)
 	render_graph_ = std::make_unique<rendering::RenderGraph>(*render_context_);
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
+	stats_ = std::make_unique<stats::Stats>(*render_context_);
+	stats_->request_stats({stats::StatIndex::kFrameTimes});
+
 	return true;
 }
 

@@ -21,7 +21,7 @@ const RenderTarget::CreateFunc RenderTarget::kDefaultCreateFunc = [](backend::Im
 	return std::make_unique<RenderTarget>(std::move(images));
 };
 
-RenderTarget::RenderTarget(std::vector<backend::Image> &&images) :
+RenderTarget::RenderTarget(std::vector<backend::Image> &&images, uint32_t base_layer, uint32_t layer_count) :
     device_{images.front().get_device()}, images_{std::move(images)}
 {
 	assert(!images_.empty() && "Should specify at least 1 image");
@@ -43,12 +43,12 @@ RenderTarget::RenderTarget(std::vector<backend::Image> &&images) :
 	// todo: determine if this check is necessary
 	/*if (it != images_.end())
 	{
-		throw VulkanException{VK_ERROR_INITIALIZATION_FAILED, "Extent size is not unique"};
+	    throw VulkanException{VK_ERROR_INITIALIZATION_FAILED, "Extent size is not unique"};
 	}*/
 
 	for (auto &image : images_)
 	{
-		image_views_.emplace_back(image, vk::ImageViewType::e2D);
+		image_views_.emplace_back(image, vk::ImageViewType::e2D, vk::Format::eUndefined, 0, base_layer, 0, layer_count);
 		attachments_.emplace_back(image.get_format(), image.get_sample_count(), image.get_usage());
 	}
 }
@@ -58,16 +58,15 @@ const vk::Extent2D &RenderTarget::get_extent() const
 	return extent_;
 }
 
-std::vector<backend::ImageView> & RenderTarget::get_views()
+std::vector<backend::ImageView> &RenderTarget::get_views()
 {
 	return image_views_;
 }
 
-const std::vector<Attachment> & RenderTarget::get_attachments() const
+const std::vector<Attachment> &RenderTarget::get_attachments() const
 {
 	return attachments_;
 }
-
 
 void RenderTarget::set_first_bindless_descriptor_set_index(uint32_t index)
 {

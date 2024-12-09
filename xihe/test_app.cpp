@@ -32,9 +32,6 @@ bool xihe::TestApp::prepare(Window *window)
 		return false;
 	}
 
-	stats_ = std::make_unique<stats::Stats>(*render_context_);
-	stats_->request_stats({stats::StatIndex::kFrameTimes});
-
 	gui_ = std::make_unique<Gui>(*this, *window, stats_.get());
 
 	get_render_context().update_swapchain(

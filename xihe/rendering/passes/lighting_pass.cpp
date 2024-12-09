@@ -34,7 +34,7 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 	std::ranges::copy(lighting_state_.point_lights, light_info.point_lights);
 	std::ranges::copy(lighting_state_.spot_lights, light_info.spot_lights);
 
-	lighting_state_.light_buffer = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(DeferredLights), 0);
+	lighting_state_.light_buffer = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(DeferredLights), thread_index_);
 	lighting_state_.light_buffer.update(light_info);
 
 	bind_lighting(command_buffer, lighting_state_, 0, 4);
@@ -65,7 +65,7 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 	light_uniform.inv_view_proj = glm::inverse(vulkan_style_projection(camera_.get_projection()) * camera_.get_view());
 
-	auto  allocation   = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), 0);
+	auto  allocation   = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), thread_index_);
 	allocation.update(light_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
 

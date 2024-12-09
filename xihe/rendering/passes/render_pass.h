@@ -3,8 +3,8 @@
 #include "backend/command_buffer.h"
 #include "backend/shader_module.h"
 #include "rendering/render_frame.h"
-#include "shared_uniform.h"
 #include "rendering/render_graph/render_resource.h"
+#include "shared_uniform.h"
 
 #include <optional>
 #include <variant>
@@ -38,6 +38,9 @@ class RenderPass
 	 * \param input_bindables The order of input_bindables corresponds to the order of inputs passed during add_pass
 	 */
 	virtual void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables);
+
+  protected:
+	uint32_t thread_index_{0};
 
   private:
 	PassType type_{};

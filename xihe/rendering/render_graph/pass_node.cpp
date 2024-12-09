@@ -54,6 +54,11 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 
 	render_pass_->execute(command_buffer, render_frame, shader_bindable);
 
+	if (gui_)
+	{
+		gui_->draw(command_buffer);
+	}
+
 	if (type_ == PassType::kRaster)
 	{
 		command_buffer.end_rendering();
@@ -102,6 +107,11 @@ void PassNode::set_render_target(std::unique_ptr<RenderTarget> &&render_target)
 RenderTarget *PassNode::get_render_target()
 {
 	return render_target_.get();
+}
+
+void PassNode::set_gui(Gui *gui)
+{
+	gui_ = gui;
 }
 
 void PassNode::set_batch_index(uint64_t batch_index)

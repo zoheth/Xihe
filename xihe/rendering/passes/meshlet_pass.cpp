@@ -1,6 +1,7 @@
 #include "meshlet_pass.h"
 
 #include "scene_graph/node.h"
+#include "scene_graph/scene.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/image.h"
 #include "scene_graph/components/material.h"
@@ -50,6 +51,48 @@ void MeshletPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &a
 	}
 
 	command_buffer.set_has_mesh_shader(false);
+}
+
+void MeshletPass::show_meshlet_view(bool show, sg::Scene &scene)
+{
+	if (show == show_debug_view_)
+	{
+		return;
+	}
+	show_debug_view_ = show;
+	for (auto mshader_mesh : scene.get_components<sg::MshaderMesh>())
+	{
+		auto &variant = mshader_mesh->get_mut_shader_variant();
+		if (show)
+		{
+			variant.add_define("SHOW_MESHLET_VIEW");
+		}
+		else
+		{
+			variant.remove_define("SHOW_MESHLET_VIEW");
+		}
+	}
+}
+
+void MeshletPass::freeze_frustum(bool freeze, sg::Camera *camera)
+{
+	assert(camera);
+	if (freeze == freeze_frustum_)
+	{
+		return;
+	}
+	freeze_frustum_ = freeze;
+	if (freeze)
+	{
+		frozen_view_              = camera->get_view();
+		glm::mat4 m               = glm::transpose(camera->get_pre_rotation() * camera->get_projection());
+		frozen_frustum_planes_[0] = normalize_plane(m[3] + m[0]);
+		frozen_frustum_planes_[1] = normalize_plane(m[3] - m[0]);
+		frozen_frustum_planes_[2] = normalize_plane(m[3] + m[1]);
+		frozen_frustum_planes_[3] = normalize_plane(m[3] - m[1]);
+		frozen_frustum_planes_[4] = normalize_plane(m[3] + m[2]);
+		frozen_frustum_planes_[5] = normalize_plane(m[3] - m[2]);
+	}
 }
 
 void MeshletPass::update_uniform(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, sg::Node &node, size_t thread_index)

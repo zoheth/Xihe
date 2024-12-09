@@ -1,10 +1,11 @@
 #include "temp_app.h"
 
 #include "backend/shader_compiler/glsl_compiler.h"
-#include "rendering/passes/geometry_pass.h"
-#include "rendering/passes/meshlet_pass.h"
-#include "rendering/passes/lighting_pass.h"
 #include "rendering/passes/bloom_pass.h"
+#include "rendering/passes/cascade_shadow_pass.h"
+#include "rendering/passes/geometry_pass.h"
+#include "rendering/passes/lighting_pass.h"
+#include "rendering/passes/meshlet_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
 #include "scene_graph/components/mesh.h"
@@ -36,6 +37,42 @@ bool TempApp::prepare(Window *window)
 
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
+	camera_           = camera;
+
+	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
+	auto *p_cascade_script = cascade_script.get();
+
+	// shadow pass
+	{
+		rendering::PassAttachment shadow_attachment_0{rendering::AttachmentType::kDepth, "shadowmap"};
+		shadow_attachment_0.extent                         = vk::Extent3D{rendering::kShadowmapResolution, rendering::kShadowmapResolution, 1};
+		shadow_attachment_0.image_properties.array_layers  = 3;
+		shadow_attachment_0.image_properties.current_layer = 0;
+
+		rendering::PassAttachment shadow_attachment_1      = shadow_attachment_0;
+		shadow_attachment_1.image_properties.current_layer = 1;
+
+		rendering::PassAttachment shadow_attachment_2      = shadow_attachment_0;
+		shadow_attachment_2.image_properties.current_layer = 2;
+
+		auto shadow_pass_0 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 0);
+		graph_builder_->add_pass("Shadow 0", std::move(shadow_pass_0))
+		    .attachments({{shadow_attachment_0}})
+		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .finalize();
+
+		auto shadow_pass_1 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 1);
+		graph_builder_->add_pass("Shadow 1", std::move(shadow_pass_1))
+		    .attachments({{shadow_attachment_1}})
+		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .finalize();
+
+		auto shadow_pass_2 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 2);
+		graph_builder_->add_pass("Shadow 2", std::move(shadow_pass_2))
+		    .attachments({{shadow_attachment_2}})
+		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .finalize();
+	}
 
 	// geometry pass
 	{
@@ -74,11 +111,11 @@ bool TempApp::prepare(Window *window)
 		                {rendering::BindableType::kSampled, "albedo"},
 		                {rendering::BindableType::kSampled, "normal"}})
 
-			.attachments({{rendering::AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
+		    .attachments({{rendering::AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
 
 		    .shader({"deferred/lighting.vert", "deferred/lighting_simple.frag"})
 
-			.finalize();
+		    .finalize();
 	}
 
 	// bloom pass
@@ -87,7 +124,7 @@ bool TempApp::prepare(Window *window)
 
 		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
 		    .bindables({{rendering::BindableType::kSampled, "lighting"},
-		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640,360,1}}})
+		                {rendering::BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, vk::Extent3D{640, 360, 1}}})
 		    .shader({"post_processing/bloom_extract.comp"})
 		    .finalize();
 
@@ -134,6 +171,7 @@ bool TempApp::prepare(Window *window)
 		    .finalize();
 	}
 
+	gui_ = std::make_unique<Gui>(*this, *window, stats_.get());
 	// composite pass
 	{
 		auto composite_pass = std::make_unique<rendering::BloomCompositePass>();
@@ -141,11 +179,11 @@ bool TempApp::prepare(Window *window)
 		    .bindables({{rendering::BindableType::kSampled, "lighting"},
 		                {rendering::BindableType::kSampled, "bloom_up_sample_2"}})
 		    .shader({"post_processing/bloom_composite.vert", "post_processing/bloom_composite.frag"})
+		    .gui(gui_.get())
 		    .present()
 		    .finalize();
 	}
 	{
-		
 	}
 
 	graph_builder_->build();
@@ -155,6 +193,8 @@ bool TempApp::prepare(Window *window)
 
 void TempApp::update(float delta_time)
 {
+	rendering::MeshletPass::show_meshlet_view(show_meshlet_view_, *scene_);
+	rendering::MeshletPass::freeze_frustum(freeze_frustum_, camera_);
 	XiheApp::update(delta_time);
 }
 
@@ -167,6 +207,18 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
+}
+
+void TempApp::draw_gui()
+{
+	gui_->show_stats(*stats_);
+
+	gui_->show_views_window(
+	    /* body = */ [this]() {
+		    ImGui::Checkbox("Meshlet", &show_meshlet_view_);
+		    ImGui::Checkbox("视域静留", &freeze_frustum_);
+	    },
+	    /* lines = */ 2);
 }
 }        // namespace xihe
 

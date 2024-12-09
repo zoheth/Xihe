@@ -37,6 +37,10 @@ class MeshletPass : public RenderPass
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
+	static void show_meshlet_view(bool show, sg::Scene &scene);
+
+	static void freeze_frustum(bool freeze, sg::Camera *camera);
+
   private:
 	void update_uniform(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, sg::Node &node, size_t thread_index);
 

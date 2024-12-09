@@ -44,23 +44,46 @@ GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::shader(std::initializer_li
 	return *this;
 }
 
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::bindables(const std::vector<PassBindable> &bindables)
+{
+	pass_info_.bindables = bindables;
+	return *this;
+}
+
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::attachments(const std::vector<PassAttachment> &attachments)
+{
+	pass_info_.attachments = attachments;
+	return *this;
+}
+
 GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::present()
 {
 	is_present_ = true;
 	return *this;
 }
 
+GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::gui(Gui *gui)
+{
+	gui_ = gui;
+	return *this;
+}
+
 void GraphBuilder::PassBuilder::finalize()
 {
 	graph_builder_.add_pass(pass_name_, std::move(pass_info_),
-	                        std::move(render_pass_), is_present_);
+	                        std::move(render_pass_), is_present_, gui_);
 }
 
-void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass, bool is_present)
+void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass, bool is_present, Gui *gui)
 {
 	is_dirty_ = true;
 
 	PassNode pass_node{render_graph_, name, std::move(pass_info), std::move(render_pass)};
+
+	if (gui)
+	{
+		pass_node.set_gui(gui);
+	}
 
 	if (is_present)
 	{
@@ -88,10 +111,22 @@ void GraphBuilder::create_resources()
 		vk::ImageUsageFlags  image_usage{};
 		vk::Format           format = vk::Format::eUndefined;
 		vk::Extent3D         extent{};
+		uint32_t             array_layers{1};
 	};
 
 	// First: Collect all resource information
 	std::unordered_map<std::string, ResourceCreateInfo> resource_infos;
+
+	// 记录每个pass需要的view
+	struct PassViewInfo
+	{
+		std::string resource_name;
+		uint32_t    base_layer;
+		uint32_t    layer_count;
+	};
+	std::vector<std::pair<PassNode &, PassViewInfo>> pass_view_infos;
+
+	
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
 		auto &info = pass.get_pass_info();
@@ -115,6 +150,13 @@ void GraphBuilder::create_resources()
 					res_info.extent = bindable.extent;
 					break;
 			}
+
+			PassViewInfo view_info{
+			    .resource_name = bindable.name,
+			    .base_layer    = 0,
+			    .layer_count   = res_info.array_layers};
+
+			pass_view_infos.emplace_back(pass, view_info);
 		}
 
 		// Collect attachment info
@@ -142,6 +184,14 @@ void GraphBuilder::create_resources()
 					res_info.format = vk::Format::eD32Sfloat;
 				}
 			}
+
+			res_info.array_layers = attachment.image_properties.array_layers;
+
+			PassViewInfo view_info{
+			    .resource_name = attachment.name,
+			    .base_layer    = attachment.image_properties.current_layer,
+			    .layer_count   = 1};
+			pass_view_infos.emplace_back(pass, view_info);
 		}
 	}
 

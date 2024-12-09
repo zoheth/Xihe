@@ -37,7 +37,7 @@ void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 		for (const auto &[node, sub_mesh] : opaque_nodes | std::views::values)
 		{
-			update_uniform(command_buffer,active_frame, *node, 0);
+			update_uniform(command_buffer,active_frame, *node, thread_index_);
 
 			draw_submesh(command_buffer, *sub_mesh);
 		}
@@ -66,7 +66,7 @@ void GeometryPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 		for (const auto &[node, sub_mesh] : transparent_nodes | std::views::values | std::views::reverse)
 		{
-			update_uniform(command_buffer, active_frame, *node, 0);
+			update_uniform(command_buffer, active_frame, *node, thread_index_);
 
 			draw_submesh(command_buffer, *sub_mesh);
 		}

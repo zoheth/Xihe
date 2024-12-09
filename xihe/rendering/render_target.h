@@ -37,7 +37,7 @@ class RenderTarget
 	using CreateFunc = std::function<std::unique_ptr<RenderTarget>(backend::Image &&)>;
 	static const CreateFunc kDefaultCreateFunc;
 
-	RenderTarget(std::vector<backend::Image> &&images);
+	RenderTarget(std::vector<backend::Image> &&images, uint32_t base_layer=0, uint32_t layer_count=0);
 
 	const vk::Extent2D                    &get_extent() const;
 	// todo need const?

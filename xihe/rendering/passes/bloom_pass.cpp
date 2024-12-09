@@ -42,7 +42,7 @@ void BloomComputePass::execute(backend::CommandBuffer &command_buffer, RenderFra
 	uniforms.inv_resolution       = {1.0f / static_cast<float>(extent.width), 1.0f / static_cast<float>(extent.height)};
 	uniforms.inv_input_resolution = {1.0f / static_cast<float>(src_extent.width), 1.0f / static_cast<float>(src_extent.height)};
 
-	auto allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(CommonUniforms), 0);
+	auto allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(CommonUniforms), thread_index_);
 	allocation.update(uniforms);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 

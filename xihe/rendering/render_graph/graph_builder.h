@@ -39,12 +39,15 @@ class GraphBuilder
 		PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass);
 
 		PassBuilder &bindables(std::initializer_list<PassBindable> bindables);
-
 		PassBuilder &attachments(std::initializer_list<PassAttachment> attachments);
-
 		PassBuilder &shader(std::initializer_list<std::string> file_names);
 
+		PassBuilder &bindables(const std::vector<PassBindable> &bindables);
+		PassBuilder &attachments(const std::vector<PassAttachment> &attachments);
+
 		PassBuilder &present();
+
+		PassBuilder &gui(Gui *gui);
 
 		void finalize();
 
@@ -54,6 +57,7 @@ class GraphBuilder
 		PassInfo                    pass_info_;
 		std::unique_ptr<RenderPass> render_pass_;
 		bool                        is_present_{false};
+		Gui                        *gui_{nullptr};
 	};
 
 	GraphBuilder(RenderGraph &render_graph, RenderContext &render_context) :
@@ -87,7 +91,8 @@ private:
 	void add_pass(const std::string            &name,
 	              PassInfo                    &&pass_info,
 	              std::unique_ptr<RenderPass> &&render_pass,
-	              bool is_present);
+	              bool is_present,
+	              Gui* gui=nullptr);
 
 	void create_resources();
 
