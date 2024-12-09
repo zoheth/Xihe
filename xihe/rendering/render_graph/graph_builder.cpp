@@ -32,7 +32,7 @@ GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::bindables(std::initializer
 	return *this;
 }
 
-GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::attachments(std::initializer_list<PassAttachment> attachments)
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::attachments(std::initializer_list<PassAttachment> attachments)
 {
 	pass_info_.attachments = attachments;
 	return *this;
@@ -56,13 +56,13 @@ GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::attachments(const std::vec
 	return *this;
 }
 
-GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::present()
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::present()
 {
 	is_present_ = true;
 	return *this;
 }
 
-GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::gui(Gui *gui)
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::gui(Gui *gui)
 {
 	gui_ = gui;
 	return *this;
@@ -126,7 +126,6 @@ void GraphBuilder::create_resources()
 	};
 	std::vector<std::pair<PassNode &, PassViewInfo>> pass_view_infos;
 
-	
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
 		auto &info = pass.get_pass_info();
@@ -146,7 +145,7 @@ void GraphBuilder::create_resources()
 				case BindableType::kStorageReadWrite:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
 					res_info.format = bindable.format;
-				//todo
+					// todo
 					res_info.extent = bindable.extent;
 					break;
 			}
@@ -197,73 +196,10 @@ void GraphBuilder::create_resources()
 
 	backend::Device &device = render_context_.get_device();
 
-	// Second: Create RenderTargets for passes with attachments
-	for (auto &pass : render_graph_.pass_nodes_)
-	{
-		auto &info = pass.get_pass_info();
-		if (info.attachments.empty())
-		{
-			continue;
-		}
+	std::unordered_map<std::string, backend::Image *> base_images;
 
-		// Prepare images and resource infos together
-		std::vector<backend::Image> rt_images;
-		rt_images.reserve(info.attachments.size());
-		std::vector<ResourceInfo> resource_infos_to_update;
-		resource_infos_to_update.reserve(info.attachments.size());
-
-		for (const auto &attachment : info.attachments)
-		{
-			auto &res_info = resource_infos[attachment.name];
-
-			vk::Extent3D extent = res_info.extent;
-			// Create image
-			if (extent == vk::Extent3D{})
-			{
-				extent.height = render_context_.get_swapchain().get_extent().height;
-				extent.width  = render_context_.get_swapchain().get_extent().width;
-				extent.depth  = 1;
-			}
-			backend::ImageBuilder image_builder{extent};
-			image_builder.with_format(res_info.format)
-			    .with_usage(res_info.image_usage)
-			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
-			rt_images.push_back(image_builder.build(device));
-
-			// Prepare resource info (except image_view which we'll set later)
-			ResourceInfo resource_info;
-			resource_info.external = res_info.is_external;
-			ResourceInfo::ImageDesc image_desc;
-			image_desc.format  = res_info.format;
-			image_desc.extent  = extent;
-			image_desc.usage   = res_info.image_usage;
-			resource_info.desc = image_desc;
-			resource_infos_to_update.push_back(resource_info);
-
-			res_info.is_handled = true;
-		}
-
-		// Create RenderTarget
-		auto render_target = std::make_unique<RenderTarget>(std::move(rt_images));
-
-		// Update resource infos with image views
-		for (size_t i = 0; i < info.attachments.size(); ++i)
-		{
-			std::get_if<ResourceInfo::ImageDesc>(&resource_infos_to_update[i].desc)->image_view = &render_target->get_views()[i];
-			render_graph_.resources_[info.attachments[i].name] = resource_infos_to_update[i];
-		}
-
-		pass.set_render_target(std::move(render_target));
-	}
-
-	// Third: Create remaining resources
 	for (const auto &[name, info] : resource_infos)
 	{
-		if (info.is_handled)
-		{
-			continue;
-		}
-
 		ResourceInfo resource_info;
 		resource_info.external = info.is_external;
 
@@ -285,15 +221,44 @@ void GraphBuilder::create_resources()
 			backend::ImageBuilder image_builder{image_desc.extent};
 			image_builder.with_format(info.format)
 			    .with_usage(info.image_usage)
+			    .with_array_layers(info.array_layers)
 			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
 			render_graph_.images_.push_back(image_builder.build_unique(device));
-			render_graph_.image_views_.emplace_back(std::make_unique<backend::ImageView>(*render_graph_.images_.back(), vk::ImageViewType::e2D));
-			image_desc.image_view = render_graph_.image_views_.back().get();
-			resource_info.desc    = image_desc;
+			base_images[name] = render_graph_.images_.back().get();
+		}
+	}
+
+	// Create RenderTarget
+	for (auto &pass : render_graph_.pass_nodes_)
+	{
+		auto &info = pass.get_pass_info();
+		if (info.attachments.empty())
+		{
+			continue;
 		}
 
-		render_graph_.resources_[name] = resource_info;
+		for (const auto &attachment : info.attachments)
+		{
+			auto &res_info = resource_infos[attachment.name];
+			if (res_info.is_handled)
+			{
+				continue;
+			}
+			backend::Image *image = base_images[attachment.name];
+			if (!image)
+			{
+				throw std::runtime_error("Image not found.");
+			}
+			std::vector<backend::ImageView> image_views;
+			for (uint32_t i = 0; i < res_info.array_layers; ++i)
+			{
+				image_views.emplace_back(*image, vk::ImageViewType::e2D, attachment.format, 0, i, 0, 1);
+			}
+			render_graph_.render_targets_.emplace_back(std::make_unique<RenderTarget>(std::move(image_views)));
+			res_info.is_handled = true;
+		}
+
 	}
 }
 
@@ -442,7 +407,6 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 			auto &prev_pass = render_graph_.pass_nodes_[state.last_user];
 			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
 
-
 			if (pass.get_type() == PassType::kCompute)
 			{
 				release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
@@ -459,7 +423,7 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
 				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
 			}
-			release_barrier.old_layout = state.usage_state.layout;
+			release_barrier.old_layout      = state.usage_state.layout;
 			release_barrier.src_stage_mask  = state.usage_state.stage_mask;
 			release_barrier.src_access_mask = state.usage_state.access_mask;
 
@@ -474,8 +438,8 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
 		}
 
-		pass.add_bindable(i, bindable.name, barrier);	
-		
+		pass.add_bindable(i, bindable.name, barrier);
+
 		tracker.track_resource(bindable.name, node, new_state);
 	}
 
@@ -493,7 +457,7 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 		barrier.old_layout      = state.usage_state.layout;
 		barrier.new_layout      = new_state.layout;
 		tracker.track_resource(attachment.name, node, new_state);
-		pass.add_attachment_memory_barrier(i,std::move(barrier));
+		pass.add_attachment_memory_barrier(i, std::move(barrier));
 	}
 }
 
@@ -501,7 +465,7 @@ void GraphBuilder::build()
 {
 	if (is_dirty_)
 	{
-		build_pass_batches();	
+		build_pass_batches();
 	}
 	is_dirty_ = false;
 }

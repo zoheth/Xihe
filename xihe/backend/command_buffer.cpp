@@ -3,7 +3,6 @@
 #include "backend/command_pool.h"
 #include "backend/device.h"
 #include "rendering/render_frame.h"
-#include "rendering/subpass.h"
 #include "vulkan/vulkan_format_traits.hpp"
 
 namespace xihe::backend
@@ -61,7 +60,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 
 	for (size_t i = 0; i < render_target.get_views().size(); i++)
 	{
-		if (common::is_depth_format(render_target.get_attachments()[i].format))
+		if (common::is_depth_format(render_target.get_views()[i].get_format()))
 		{
 			depth_attachment_ = vk::RenderingAttachmentInfo(
 			    render_target.get_views()[i].get_handle(),
@@ -72,7 +71,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 			    vk::AttachmentLoadOp::eClear,
 			    vk::AttachmentStoreOp::eStore,
 			    i < clear_values.size() ? clear_values[i] : vk::ClearValue{});
-			attachments_state.depth_attachment_format = render_target.get_attachments()[i].format;
+			attachments_state.depth_attachment_format = render_target.get_views()[i].get_format();
 		}
 		else
 		{
@@ -86,7 +85,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 			    vk::AttachmentStoreOp::eStore,
 			    i < clear_values.size() ? clear_values[i] : vk::ClearValue{}));
 
-			attachments_state.color_attachment_formats.push_back(render_target.get_attachments()[i].format);
+			attachments_state.color_attachment_formats.push_back(render_target.get_views()[i].get_format());
 		}
 	}
 

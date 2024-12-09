@@ -8,7 +8,16 @@
 
 namespace xihe::rendering
 {
-typedef std::string ResourceHandle;
+// typedef std::string ResourceHandle;
+
+struct ResourceHandle
+{
+	std::string name;
+	uint32_t    base_layer  = 0;
+	uint32_t    layer_count = 1;
+
+	bool operator==(const ResourceHandle &) const = default;
+};
 
 class ShaderBindable
 {

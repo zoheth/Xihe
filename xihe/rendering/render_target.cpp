@@ -40,17 +40,30 @@ RenderTarget::RenderTarget(std::vector<backend::Image> &&images, uint32_t base_l
 	it = std::find_if(std::next(images_.begin()),
 	                  images_.end(),
 	                  [this](backend::Image const &image) { return (extent_.width != image.get_extent().width) || (extent_.height != image.get_extent().height); });
-	// todo: determine if this check is necessary
-	/*if (it != images_.end())
+
+	if (it != images_.end())
 	{
 	    throw VulkanException{VK_ERROR_INITIALIZATION_FAILED, "Extent size is not unique"};
-	}*/
+	}
 
 	for (auto &image : images_)
 	{
 		image_views_.emplace_back(image, vk::ImageViewType::e2D, vk::Format::eUndefined, 0, base_layer, 0, layer_count);
-		attachments_.emplace_back(image.get_format(), image.get_sample_count(), image.get_usage());
 	}
+}
+
+RenderTarget::RenderTarget(std::vector<backend::ImageView> &&image_views) :
+    device_{image_views.front().get_device()}
+{
+	assert(!image_views.empty() && "Should specify at least 1 image view");
+	extent_.height = image_views.front().get_image().get_extent().height;
+	extent_.width  = image_views.front().get_image().get_extent().width;
+
+	for (auto &image_view : image_views)
+	{
+		images_.push_back(image_view.get_image());
+	}
+	image_views_ = std::move(image_views);
 }
 
 const vk::Extent2D &RenderTarget::get_extent() const
@@ -61,11 +74,6 @@ const vk::Extent2D &RenderTarget::get_extent() const
 std::vector<backend::ImageView> &RenderTarget::get_views()
 {
 	return image_views_;
-}
-
-const std::vector<Attachment> &RenderTarget::get_attachments() const
-{
-	return attachments_;
 }
 
 void RenderTarget::set_first_bindless_descriptor_set_index(uint32_t index)

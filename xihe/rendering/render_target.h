@@ -39,11 +39,11 @@ class RenderTarget
 
 	RenderTarget(std::vector<backend::Image> &&images, uint32_t base_layer=0, uint32_t layer_count=0);
 
+	RenderTarget(std::vector<backend::ImageView> &&image_views);
+
 	const vk::Extent2D                    &get_extent() const;
 	// todo need const?
 	std::vector<backend::ImageView> &get_views();
-
-	const std::vector<Attachment> &get_attachments() const;
 
 	void     set_first_bindless_descriptor_set_index(uint32_t index);
 	uint32_t get_first_bindless_descriptor_set_index() const;
@@ -51,9 +51,9 @@ class RenderTarget
   private:
 	backend::Device                &device_;
 	vk::Extent2D                    extent_;
-	std::vector<backend::Image>     images_;
+	std::vector<backend::Image>     images_; // Can be empty. Ownership is managed externally (e.g., by Render Graph)
+
 	std::vector<backend::ImageView> image_views_;
-	std::vector<Attachment>         attachments_;
 
 
 	uint32_t first_bindless_descriptor_set_index_ = 0;
