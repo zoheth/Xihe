@@ -186,11 +186,6 @@ void GraphBuilder::create_resources()
 
 			res_info.array_layers = attachment.image_properties.array_layers;
 
-			PassViewInfo view_info{
-			    .resource_name = attachment.name,
-			    .base_layer    = attachment.image_properties.current_layer,
-			    .layer_count   = 1};
-			pass_view_infos.emplace_back(pass, view_info);
 		}
 	}
 
@@ -237,7 +232,7 @@ void GraphBuilder::create_resources()
 		{
 			continue;
 		}
-
+		std::vector<backend::ImageView> image_views;
 		for (const auto &attachment : info.attachments)
 		{
 			auto &res_info = resource_infos[attachment.name];
@@ -250,16 +245,13 @@ void GraphBuilder::create_resources()
 			{
 				throw std::runtime_error("Image not found.");
 			}
-			std::vector<backend::ImageView> image_views;
-			for (uint32_t i = 0; i < res_info.array_layers; ++i)
-			{
-				image_views.emplace_back(*image, vk::ImageViewType::e2D, attachment.format, 0, i, 0, 1);
-			}
-			render_graph_.render_targets_.emplace_back(std::make_unique<RenderTarget>(std::move(image_views)));
-			res_info.is_handled = true;
+			image_views.emplace_back(*image, vk::ImageViewType::e2D, res_info.format,0,attachment.image_properties.current_layer,0,1);
 		}
-
+		auto render_target = std::make_unique<RenderTarget>(std::move(image_views));
+		pass.set_render_target(std::move(render_target));
 	}
+
+	for
 }
 
 void GraphBuilder::build_pass_batches()
