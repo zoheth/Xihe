@@ -2,10 +2,24 @@
 
 namespace xihe::rendering
 {
-namespace 
+namespace
 {
 vk::SamplerCreateInfo g_buffer_sampler{};
+
+vk::SamplerCreateInfo get_shadowmap_sampler()
+{
+	vk::SamplerCreateInfo shadowmap_sampler_create_info{};
+	shadowmap_sampler_create_info.minFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.magFilter     = vk::Filter::eLinear;
+	shadowmap_sampler_create_info.addressModeU  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeV  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.addressModeW  = vk::SamplerAddressMode::eClampToBorder;
+	shadowmap_sampler_create_info.borderColor   = vk::BorderColor::eFloatOpaqueWhite;
+	shadowmap_sampler_create_info.compareEnable = VK_TRUE;
+	shadowmap_sampler_create_info.compareOp     = vk::CompareOp::eGreaterOrEqual;
+	return shadowmap_sampler_create_info;
 }
+}        // namespace
 
 void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &lighting_state, uint32_t set, uint32_t binding)
 {
@@ -18,10 +32,16 @@ void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &
 	command_buffer.set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
 }
 
-LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera) :
-    lights_{std::move(lights)}, camera_(camera)
+LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script) :
+    lights_{std::move(lights)}, camera_(camera), cascade_script_{cascade_script}
 {
 	shader_variant_.add_define({"MAX_LIGHT_COUNT " + std::to_string(kMaxLightCount)});
+	shader_variant_cascade_.add_define({"MAX_LIGHT_COUNT " + std::to_string(kMaxLightCount)});
+
+	shader_variant_.add_definitions(kLightTypeDefinitions);
+	shader_variant_cascade_.add_definitions(kLightTypeDefinitions);
+
+	shader_variant_cascade_.add_define("SHOW_CASCADE_VIEW");
 }
 
 void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
@@ -41,10 +61,19 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 	auto &resource_cache = command_buffer.get_device().get_resource_cache();
 
-	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
-
-	std::vector<backend::ShaderModule *> shader_modules = {&vert_shader_module, &frag_shader_module};
+	std::vector<backend::ShaderModule *> shader_modules;
+	if (show_cascade_view_)
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_cascade_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_cascade_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
+	else
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
 
 	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
 	command_buffer.bind_pipeline_layout(pipeline_layout);
@@ -65,11 +94,34 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 	light_uniform.inv_view_proj = glm::inverse(vulkan_style_projection(camera_.get_projection()) * camera_.get_view());
 
-	auto  allocation   = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), thread_index_);
+	auto allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), thread_index_);
 	allocation.update(light_uniform);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 3, 0);
 
+	if (cascade_script_)
+	{
+		ShadowUniform shadow_uniform{};
+
+		for (uint32_t i = 0; i < kCascadeCount; ++i)
+		{
+			auto &cascade_camera                          = cascade_script_->get_cascade_camera(i);
+			shadow_uniform.cascade_split_depth[i]         = cascade_script_->get_cascade_splits()[i];
+			shadow_uniform.shadowmap_projection_matrix[i] = vulkan_style_projection(cascade_camera.get_projection()) * cascade_camera.get_view();
+		}
+
+		allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(ShadowUniform), thread_index_);
+		allocation.update(shadow_uniform);
+		command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
+
+		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
+	}
+
 	command_buffer.draw(3, 1, 0, 0);
+}
+
+void LightingPass::show_cascade_view(bool show)
+{
+	show_cascade_view_ = show;
 }
 
 void LightingPass::set_lighting_state(size_t light_count)

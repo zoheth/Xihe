@@ -55,6 +55,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 	pipeline_state_.reset();
 
 	color_attachments_.clear();
+	depth_attachment_ = std::nullopt;
 
 	AttachmentsState attachments_state;
 

@@ -22,12 +22,12 @@ class ResourceStateTracker
 		int32_t                 last_user{-1};
 		backend::ImageView     *image_view{nullptr};
 	};
-	State get_or_create_state(const std::string &name);
+	State get_or_create_state(const ResourceHandle &handle);
 
-	void track_resource(const std::string &name, uint32_t node, const ResourceUsageState &state);
+	void track_resource(const ResourceHandle &handle, uint32_t node, const ResourceUsageState &state);
 
   private:
-	std::unordered_map<std::string, State> states_;
+	std::unordered_map<ResourceHandle, State> states_;
 };
 
 class GraphBuilder

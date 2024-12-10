@@ -2,24 +2,24 @@
 
 namespace xihe::rendering
 {
-ResourceStateTracker::State ResourceStateTracker::get_or_create_state(const std::string &name)
+ResourceStateTracker::State ResourceStateTracker::get_or_create_state(const ResourceHandle &handle)
 {
-	if (!states_.contains(name))
+	if (!states_.contains(handle))
 	{
-		states_[name] = {};
+		states_[handle] = {};
 	}
-	return states_[name];
+	return states_[handle];
 }
 
-void ResourceStateTracker::track_resource(const std::string &name, uint32_t node, const ResourceUsageState &state)
+void ResourceStateTracker::track_resource(const ResourceHandle &handle, uint32_t node, const ResourceUsageState &state)
 {
-	if (!states_.contains(name))
+	if (!states_.contains(handle))
 	{
 		throw std::runtime_error("Resource state not found.");
 	}
-	states_[name].usage_state = state;
+	states_[handle].usage_state = state;
 
-	states_[name].last_user = node;
+	states_[handle].last_user = node;
 }
 
 GraphBuilder::PassBuilder::PassBuilder(GraphBuilder &graph_builder, std::string name, std::unique_ptr<RenderPass> &&render_pass) :
@@ -114,6 +114,8 @@ void GraphBuilder::create_resources()
 		uint32_t             array_layers{1};
 	};
 
+	vk::Extent2D swapchain_extent = render_context_.get_swapchain().get_extent();
+
 	// First: Collect all resource information
 	std::unordered_map<std::string, ResourceCreateInfo> resource_infos;
 
@@ -137,7 +139,7 @@ void GraphBuilder::create_resources()
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
 					res_info.format = bindable.format;
 					// todo
-					res_info.extent = bindable.extent;
+					res_info.extent = bindable.extent_desc.calculate(swapchain_extent);
 					break;
 			}
 		}
@@ -147,10 +149,8 @@ void GraphBuilder::create_resources()
 		{
 			auto &res_info  = resource_infos[attachment.name];
 			res_info.format = attachment.format;
-			if (attachment.extent.width > 0)
-			{
-				res_info.extent = attachment.extent;
-			}
+			res_info.extent = attachment.extent_desc.calculate(swapchain_extent);
+			
 			if (attachment.type == AttachmentType::kColor)
 			{
 				res_info.image_usage |= vk::ImageUsageFlagBits::eColorAttachment;
@@ -401,14 +401,14 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 		ResourceUsageState new_state;
 		update_bindable_state(bindable.type, pass.get_type(), new_state);
 
-		auto state = tracker.get_or_create_state(bindable.name);
-
-		// todo buffer barrier
-
 		ResourceHandle handle{
 		    .name        = bindable.name,
 		    .base_layer  = bindable.image_properties.current_layer,
 		    .layer_count = bindable.image_properties.n_use_layer};
+
+		auto state = tracker.get_or_create_state(handle);
+
+		// todo buffer barrier
 
 		common::ImageMemoryBarrier barrier;
 		barrier.src_stage_mask  = state.usage_state.stage_mask;
@@ -459,15 +459,20 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		pass.add_bindable(i, handle, barrier);
 
-		tracker.track_resource(bindable.name, node, new_state);
+		tracker.track_resource(handle, node, new_state);
 	}
 
 	for (size_t i = 0; i < pass_info.attachments.size(); ++i)
 	{
 		const auto        &attachment = pass_info.attachments[i];
+
+		ResourceHandle handle{
+		    .name        = attachment.name,
+		    .base_layer  = attachment.image_properties.current_layer,
+		    .layer_count = attachment.image_properties.n_use_layer};
 		ResourceUsageState new_state;
 		update_attachment_state(attachment.type, new_state);
-		auto                       state = tracker.get_or_create_state(attachment.name);
+		auto                       state = tracker.get_or_create_state(handle);
 		common::ImageMemoryBarrier barrier;
 		barrier.src_stage_mask  = state.usage_state.stage_mask;
 		barrier.src_access_mask = state.usage_state.access_mask;
@@ -475,7 +480,7 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 		barrier.dst_access_mask = new_state.access_mask;
 		barrier.old_layout      = state.usage_state.layout;
 		barrier.new_layout      = new_state.layout;
-		tracker.track_resource(attachment.name, node, new_state);
+		tracker.track_resource(handle, node, new_state);
 		pass.add_attachment_memory_barrier(i, barrier);
 	}
 }

@@ -1,21 +1,18 @@
 #pragma once
 
-#include "gui.h"
 #include "backend/buffer.h"
 #include "common/vk_common.h"
+#include "gui.h"
 #include "render_resource.h"
 #include "rendering/passes/render_pass.h"
 
-#include <variant>
 #include <optional>
+#include <variant>
 
 namespace xihe::rendering
 {
 class RenderGraph;
-}
 
-namespace xihe::rendering
-{
 using Barrier = std::variant<common::ImageMemoryBarrier, common::BufferMemoryBarrier>;
 
 struct ImageProperties
@@ -25,24 +22,56 @@ struct ImageProperties
 	uint32_t n_use_layer   = 0;        // 0 means use all layers.
 };
 
+class ExtentDescriptor
+{
+  public:
+	enum class Type
+	{
+		kFixed,
+		kSwapchainRelative,
+		kCustom
+	};
+
+	ExtentDescriptor() = default;
+
+	static ExtentDescriptor Fixed(const vk::Extent3D &extent)
+	{
+		return {Type::kFixed, extent};
+	}
+
+	static ExtentDescriptor SwapchainRelative(float    width_scale  = 1.0f,
+	                                          float    height_scale = 1.0f,
+	                                          uint32_t depth       = 1);
+
+	vk::Extent3D calculate(const vk::Extent2D &swapchain_extent) const;
+
+private:
+	Type         type_{Type::kSwapchainRelative};
+	vk::Extent3D extent_;
+	float        scale_x_ = 1.0f;
+	float        scale_y_ = 1.0f;
+	uint32_t     depth_   = 1;
+
+	ExtentDescriptor(Type t, const vk::Extent3D &e);
+};
+
 struct PassBindable
 {
 	BindableType type;
 	std::string  name;
 	vk::Format   format;
-	vk::Extent3D extent{};
+	ExtentDescriptor extent_desc{};
 
 	ImageProperties image_properties;
 };
 struct PassAttachment
 {
-	AttachmentType   type;
-	std::string  name;
-	vk::Format   format;
-	vk::Extent3D extent{};        // 0 means use the swapchain extent.
+	AttachmentType type;
+	std::string    name;
+	vk::Format     format;
+	ExtentDescriptor extent_desc{};
 
 	ImageProperties image_properties;
-
 };
 struct PassInfo
 {
@@ -55,7 +84,7 @@ class PassNode
   public:
 	struct BindableInfo
 	{
-		ResourceHandle handle;
+		ResourceHandle         handle;
 		std::optional<Barrier> barrier;
 	};
 	PassNode(RenderGraph &render_graph, std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);

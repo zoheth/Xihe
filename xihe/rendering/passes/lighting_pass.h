@@ -1,13 +1,19 @@
 #pragma once
 
 #include "render_pass.h"
-#include "scene_graph/components/light.h"
 #include "scene_graph/components/camera.h"
+#include "scene_graph/components/light.h"
 #include "scene_graph/node.h"
+#include "scene_graph/scripts/cascade_script.h"
 
 namespace xihe::rendering
 {
 constexpr uint32_t kMaxLightCount = 32;
+
+const std::vector<std::string> kLightTypeDefinitions = {
+    "DIRECTIONAL_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kDirectional)),
+    "POINT_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kPoint)),
+    "SPOT_LIGHT " + std::to_string(static_cast<float>(sg::LightType::kSpot))};
 
 struct alignas(16) LightUniform
 {
@@ -40,14 +46,22 @@ struct LightingState
 	backend::BufferAllocation light_buffer;
 };
 
+struct alignas(16) ShadowUniform
+{
+	float                                cascade_split_depth[4];             // Split depths in view space
+	std::array<glm::mat4, kCascadeCount> shadowmap_projection_matrix;        // Projection matrix used to render shadowmap
+};
+
 void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &lighting_state, uint32_t set, uint32_t binding);
 
 class LightingPass : public RenderPass
 {
   public:
-	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera);
+	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+
+	static void show_cascade_view(bool show);
 
   private:
 	void set_lighting_state(size_t light_count);
@@ -58,6 +72,12 @@ class LightingPass : public RenderPass
 
 	LightingState lighting_state_;
 
-	backend::ShaderVariant   shader_variant_;
+	backend::ShaderVariant shader_variant_;
+
+	backend::ShaderVariant shader_variant_cascade_;
+
+	sg::CascadeScript *cascade_script_;
+
+	inline static bool show_cascade_view_{false};
 };
 }        // namespace xihe::rendering

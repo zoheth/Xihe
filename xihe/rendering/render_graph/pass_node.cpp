@@ -4,6 +4,35 @@
 
 namespace xihe::rendering
 {
+ExtentDescriptor ExtentDescriptor::SwapchainRelative(float width_scale, float height_scale, uint32_t depth)
+{
+	ExtentDescriptor desc(Type::kSwapchainRelative, {});
+	desc.scale_x_ = width_scale;
+	desc.scale_y_ = height_scale;
+	desc.depth_   = depth;
+	return desc;
+}
+
+vk::Extent3D   ExtentDescriptor::calculate(const vk::Extent2D &swapchain_extent) const
+{
+	switch (type_)
+	{
+		case Type::kFixed:
+			return extent_;
+		case Type::kSwapchainRelative:
+			return vk::Extent3D{
+				static_cast<uint32_t>(swapchain_extent.width * scale_x_),
+				static_cast<uint32_t>(swapchain_extent.height * scale_y_),
+				depth_};
+		default:
+			return extent_;
+	}
+}
+
+ExtentDescriptor::ExtentDescriptor(Type t, const vk::Extent3D &e):
+	type_(t), extent_(e)
+{}
+
 PassNode::PassNode(RenderGraph &render_graph, std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass) :
     render_graph_{render_graph}, name_{std::move(name)}, type_{render_pass->get_type()}, pass_info_{std::move(pass_info)}, render_pass_{std::move(render_pass)}
 {
