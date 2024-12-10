@@ -437,10 +437,20 @@ bool RenderContext::handle_surface_changes(bool force_update)
 
 		surface_extent_ = surface_capabilities.currentExtent;
 
+		if (on_surface_change_)
+		{
+			on_surface_change_();
+		}
+
 		return true;
 	}
 
 	return false;
+}
+
+void RenderContext::set_on_surface_change(std::function<void()> on_surface_change)
+{
+	on_surface_change_ = std::move(on_surface_change);
 }
 
 void RenderContext::update_swapchain(const vk::Extent2D &extent)

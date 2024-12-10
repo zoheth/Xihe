@@ -102,22 +102,15 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::
 
 void GraphBuilder::create_resources()
 {
-	struct ResourceCreateInfo
-	{
-		bool                 is_buffer   = false;
-		bool                 is_external = false;
-		bool                 is_handled  = false;        // Track if resource has been created
-		vk::BufferUsageFlags buffer_usage{};
-		vk::ImageUsageFlags  image_usage{};
-		vk::Format           format = vk::Format::eUndefined;
-		vk::Extent3D         extent{};
-		uint32_t             array_layers{1};
-	};
 
-	vk::Extent2D swapchain_extent = render_context_.get_swapchain().get_extent();
+	collect_resource_create_info();
 
-	// First: Collect all resource information
-	std::unordered_map<std::string, ResourceCreateInfo> resource_infos;
+	create_graph_resource();
+}
+
+void GraphBuilder::collect_resource_create_info()
+{
+	resource_create_infos_.clear();
 
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
@@ -125,7 +118,7 @@ void GraphBuilder::create_resources()
 
 		for (auto &bindable : info.bindables)
 		{
-			auto &res_info = resource_infos[bindable.name];
+			auto &res_info = resource_create_infos_[bindable.name];
 			switch (bindable.type)
 			{
 				case BindableType::kSampled:
@@ -138,8 +131,7 @@ void GraphBuilder::create_resources()
 				case BindableType::kStorageReadWrite:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
 					res_info.format = bindable.format;
-					// todo
-					res_info.extent = bindable.extent_desc.calculate(swapchain_extent);
+					res_info.extent_desc = bindable.extent_desc;
 					break;
 			}
 		}
@@ -147,10 +139,10 @@ void GraphBuilder::create_resources()
 		// Collect attachment info
 		for (const auto &attachment : info.attachments)
 		{
-			auto &res_info  = resource_infos[attachment.name];
+			auto &res_info  = resource_create_infos_[attachment.name];
 			res_info.format = attachment.format;
-			res_info.extent = attachment.extent_desc.calculate(swapchain_extent);
-			
+			res_info.extent_desc = attachment.extent_desc;
+
 			if (attachment.type == AttachmentType::kColor)
 			{
 				res_info.image_usage |= vk::ImageUsageFlagBits::eColorAttachment;
@@ -169,14 +161,17 @@ void GraphBuilder::create_resources()
 			}
 
 			res_info.array_layers = attachment.image_properties.array_layers;
-
 		}
 	}
+}
 
-	// Second: Create resources
-	backend::Device &device = render_context_.get_device();
+void GraphBuilder::create_graph_resource()
+{
+	vk::Extent2D swapchain_extent = render_context_.get_swapchain().get_extent();
+
+	backend::Device                                  &device = render_context_.get_device();
 	std::unordered_map<std::string, backend::Image *> base_images;
-	for (const auto &[name, info] : resource_infos)
+	for (const auto &[name, info] : resource_create_infos_)
 	{
 		ResourceInfo resource_info;
 		resource_info.external = info.is_external;
@@ -193,10 +188,10 @@ void GraphBuilder::create_resources()
 			ResourceInfo::ImageDesc image_desc;
 			image_desc.format = info.format;
 			// todo
-			image_desc.extent = info.extent;
+			image_desc.extent = info.extent_desc.calculate(swapchain_extent);
 			image_desc.usage  = info.image_usage;
 
-			vk::Extent3D extent = info.extent;
+			vk::Extent3D extent = image_desc.extent;
 			if (extent == vk::Extent3D{})
 			{
 				extent = vk::Extent3D{
@@ -204,7 +199,6 @@ void GraphBuilder::create_resources()
 				    render_context_.get_swapchain().get_extent().height,
 				    1};
 			}
-        
 
 			backend::ImageBuilder image_builder{extent};
 			image_builder.with_format(info.format)
@@ -220,11 +214,11 @@ void GraphBuilder::create_resources()
 	// Third: Create image views
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
-		auto &info = pass.get_pass_info();
+		auto                           &info = pass.get_pass_info();
 		std::vector<backend::ImageView> rt_image_views;
 		for (const auto &attachment : info.attachments)
 		{
-			auto &res_info = resource_infos[attachment.name];
+			auto &res_info = resource_create_infos_[attachment.name];
 			if (res_info.is_handled)
 			{
 				continue;
@@ -245,7 +239,7 @@ void GraphBuilder::create_resources()
 		for (const auto &bindable : info.bindables)
 		{
 			auto       *base_image = base_images[bindable.name];
-			const auto &res_info   = resource_infos[bindable.name];
+			const auto &res_info   = resource_create_infos_[bindable.name];
 
 			ResourceHandle handle{
 			    .name        = bindable.name,
@@ -265,7 +259,7 @@ void GraphBuilder::create_resources()
 			resource_info.external = res_info.is_external;
 			ResourceInfo::ImageDesc image_desc;
 			image_desc.format     = res_info.format;
-			image_desc.extent     = res_info.extent;
+			image_desc.extent     = res_info.extent_desc.calculate(swapchain_extent);
 			image_desc.usage      = res_info.image_usage;
 			image_desc.image_view = image_view.get();
 			resource_info.desc    = image_desc;
@@ -485,6 +479,14 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 	}
 }
 
+GraphBuilder::GraphBuilder(RenderGraph &render_graph, RenderContext &render_context):
+	render_graph_(render_graph), render_context_(render_context)
+{
+	render_context.set_on_surface_change([this]() {
+		recreate_resources();
+	});
+}
+
 void GraphBuilder::build()
 {
 	if (is_dirty_)
@@ -492,6 +494,15 @@ void GraphBuilder::build()
 		build_pass_batches();
 	}
 	is_dirty_ = false;
+}
+
+void GraphBuilder::recreate_resources()
+{
+	render_graph_.image_views_.clear();
+	render_graph_.images_.clear();
+	render_graph_.resources_.clear();
+
+	create_graph_resource();
 }
 
 void GraphBuilder::PassBatchBuilder::process_pass(PassNode *pass)

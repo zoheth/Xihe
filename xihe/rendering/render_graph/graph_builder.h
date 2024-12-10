@@ -30,6 +30,18 @@ class ResourceStateTracker
 	std::unordered_map<ResourceHandle, State> states_;
 };
 
+struct ResourceCreateInfo
+{
+	bool                 is_buffer   = false;
+	bool                 is_external = false;
+	bool                 is_handled  = false;        // Track if resource has been created
+	vk::BufferUsageFlags buffer_usage{};
+	vk::ImageUsageFlags  image_usage{};
+	vk::Format           format = vk::Format::eUndefined;
+	ExtentDescriptor     extent_desc{};
+	uint32_t             array_layers{1};
+};
+
 class GraphBuilder
 {
   public:
@@ -60,15 +72,15 @@ class GraphBuilder
 		Gui                        *gui_{nullptr};
 	};
 
-	GraphBuilder(RenderGraph &render_graph, RenderContext &render_context) :
-	    render_graph_(render_graph), render_context_(render_context)
-	{}
+	GraphBuilder(RenderGraph &render_graph, RenderContext &render_context);
 
 	PassBuilder add_pass(const std::string &name, std::unique_ptr<RenderPass> &&render_pass)
 	{
 		return {*this, name, std::move(render_pass)};
 	}
 	void build();
+
+	void recreate_resources();
 
 private:
 
@@ -96,6 +108,10 @@ private:
 
 	void create_resources();
 
+	void collect_resource_create_info();
+
+	void create_graph_resource();
+
 	void build_pass_batches();
 
 	std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>>
@@ -110,6 +126,8 @@ private:
 
 	RenderGraph   &render_graph_;
 	RenderContext &render_context_;
+
+	std::unordered_map<std::string, ResourceCreateInfo> resource_create_infos_;
 
 	std::unordered_map<std::string, ResourceHandle> resource_handles_;
 

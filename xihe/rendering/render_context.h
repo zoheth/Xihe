@@ -76,6 +76,8 @@ class RenderContext
 
 	bool handle_surface_changes(bool force_update = false);
 
+	void set_on_surface_change(std::function<void()> on_surface_change);
+
 	void update_swapchain(const vk::Extent2D &extent);
 
 	void update_swapchain(const std::set<vk::ImageUsageFlagBits> &image_usage_flags);
@@ -98,6 +100,9 @@ class RenderContext
 	const backend::Queue *compute_queue_{nullptr};
 
 	std::unique_ptr<backend::Swapchain> swapchain_;
+
+	// If multiple observers are needed in the future, consider using the Observer pattern
+	std::function<void()> on_surface_change_;
 
 	std::vector<std::unique_ptr<RenderFrame>> frames_;
 
