@@ -22,6 +22,7 @@ struct ImageProperties
 {
 	uint32_t array_layers  = 1;
 	uint32_t current_layer = 0;
+	uint32_t n_use_layer   = 0;        // 0 means use all layers.
 };
 
 struct PassBindable
@@ -30,6 +31,8 @@ struct PassBindable
 	std::string  name;
 	vk::Format   format;
 	vk::Extent3D extent{};
+
+	ImageProperties image_properties;
 };
 struct PassAttachment
 {

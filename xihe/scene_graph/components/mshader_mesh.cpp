@@ -3,8 +3,7 @@
 #include "meshoptimizer.h"
 #include <glm/glm.hpp>
 
-#include "rendering/subpass.h"
-#include "rendering/subpasses/meshlet_subpass.h"
+#include "backend/device.h"
 #include "scene_graph/components/material.h"
 
 namespace

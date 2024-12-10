@@ -23,10 +23,13 @@ void CascadeShadowPass::execute(backend::CommandBuffer &command_buffer, RenderFr
 	// In this framework, you can enable the depthClamp feature by setting it to VK_TRUE
 	// using: gpu.get_mutable_requested_features().depthClamp = VK_TRUE;
 	rasterization_state.depth_clamp_enable = VK_TRUE;
-
 	command_buffer.set_rasterization_state(rasterization_state);
 	command_buffer.set_depth_bias(-1.4f, 0.0f, -1.7f);
 
+	DepthStencilState depth_stencil_state{};
+	depth_stencil_state.depth_test_enable  = true;
+	depth_stencil_state.depth_write_enable = true;
+	command_buffer.set_depth_stencil_state(depth_stencil_state);
 
 	auto vertex_input_resources = pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex);
 

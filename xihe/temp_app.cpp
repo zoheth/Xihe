@@ -41,6 +41,7 @@ bool TempApp::prepare(Window *window)
 
 	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
 	auto *p_cascade_script = cascade_script.get();
+	scene_->add_component(std::move(cascade_script));
 
 	// shadow pass
 	{
@@ -58,19 +59,19 @@ bool TempApp::prepare(Window *window)
 		auto shadow_pass_0 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 0);
 		graph_builder_->add_pass("Shadow 0", std::move(shadow_pass_0))
 		    .attachments({{shadow_attachment_0}})
-		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
 		    .finalize();
 
 		auto shadow_pass_1 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 1);
 		graph_builder_->add_pass("Shadow 1", std::move(shadow_pass_1))
 		    .attachments({{shadow_attachment_1}})
-		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
 		    .finalize();
 
 		auto shadow_pass_2 = std::make_unique<rendering::CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 2);
 		graph_builder_->add_pass("Shadow 2", std::move(shadow_pass_2))
 		    .attachments({{shadow_attachment_2}})
-		    .shader({"shadow/shadow.vert", "shadow/shadow.frag"})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
 		    .finalize();
 	}
 

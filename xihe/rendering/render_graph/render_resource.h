@@ -160,3 +160,14 @@ void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageS
 void update_attachment_state(AttachmentType type, ResourceUsageState &state);
 
 }        // namespace xihe::rendering
+
+template <>
+struct std::hash<xihe::rendering::ResourceHandle>
+{
+	size_t operator()(const xihe::rendering::ResourceHandle &handle) const
+	{
+		return std::hash<std::string>{}(handle.name) ^
+		       std::hash<uint32_t>{}(handle.base_layer) ^
+		       std::hash<uint32_t>{}(handle.layer_count);
+	}
+};

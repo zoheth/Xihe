@@ -117,20 +117,11 @@ void GraphBuilder::create_resources()
 	// First: Collect all resource information
 	std::unordered_map<std::string, ResourceCreateInfo> resource_infos;
 
-	// 记录每个pass需要的view
-	struct PassViewInfo
-	{
-		std::string resource_name;
-		uint32_t    base_layer;
-		uint32_t    layer_count;
-	};
-	std::vector<std::pair<PassNode &, PassViewInfo>> pass_view_infos;
-
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
 		auto &info = pass.get_pass_info();
 
-		for (const auto &bindable : info.bindables)
+		for (auto &bindable : info.bindables)
 		{
 			auto &res_info = resource_infos[bindable.name];
 			switch (bindable.type)
@@ -149,13 +140,6 @@ void GraphBuilder::create_resources()
 					res_info.extent = bindable.extent;
 					break;
 			}
-
-			PassViewInfo view_info{
-			    .resource_name = bindable.name,
-			    .base_layer    = 0,
-			    .layer_count   = res_info.array_layers};
-
-			pass_view_infos.emplace_back(pass, view_info);
 		}
 
 		// Collect attachment info
@@ -189,10 +173,9 @@ void GraphBuilder::create_resources()
 		}
 	}
 
+	// Second: Create resources
 	backend::Device &device = render_context_.get_device();
-
 	std::unordered_map<std::string, backend::Image *> base_images;
-
 	for (const auto &[name, info] : resource_infos)
 	{
 		ResourceInfo resource_info;
@@ -213,7 +196,17 @@ void GraphBuilder::create_resources()
 			image_desc.extent = info.extent;
 			image_desc.usage  = info.image_usage;
 
-			backend::ImageBuilder image_builder{image_desc.extent};
+			vk::Extent3D extent = info.extent;
+			if (extent == vk::Extent3D{})
+			{
+				extent = vk::Extent3D{
+				    render_context_.get_swapchain().get_extent().width,
+				    render_context_.get_swapchain().get_extent().height,
+				    1};
+			}
+        
+
+			backend::ImageBuilder image_builder{extent};
 			image_builder.with_format(info.format)
 			    .with_usage(info.image_usage)
 			    .with_array_layers(info.array_layers)
@@ -224,15 +217,11 @@ void GraphBuilder::create_resources()
 		}
 	}
 
-	// Create RenderTarget
+	// Third: Create image views
 	for (auto &pass : render_graph_.pass_nodes_)
 	{
 		auto &info = pass.get_pass_info();
-		if (info.attachments.empty())
-		{
-			continue;
-		}
-		std::vector<backend::ImageView> image_views;
+		std::vector<backend::ImageView> rt_image_views;
 		for (const auto &attachment : info.attachments)
 		{
 			auto &res_info = resource_infos[attachment.name];
@@ -245,13 +234,46 @@ void GraphBuilder::create_resources()
 			{
 				throw std::runtime_error("Image not found.");
 			}
-			image_views.emplace_back(*image, vk::ImageViewType::e2D, res_info.format,0,attachment.image_properties.current_layer,0,1);
+			rt_image_views.emplace_back(*image, vk::ImageViewType::e2D, res_info.format, 0, attachment.image_properties.current_layer, 0, 1);
 		}
-		auto render_target = std::make_unique<RenderTarget>(std::move(image_views));
-		pass.set_render_target(std::move(render_target));
-	}
+		if (!rt_image_views.empty())
+		{
+			auto render_target = std::make_unique<RenderTarget>(std::move(rt_image_views));
+			pass.set_render_target(std::move(render_target));
+		}
 
-	for
+		for (const auto &bindable : info.bindables)
+		{
+			auto       *base_image = base_images[bindable.name];
+			const auto &res_info   = resource_infos[bindable.name];
+
+			ResourceHandle handle{
+			    .name        = bindable.name,
+			    .base_layer  = bindable.image_properties.current_layer,
+			    .layer_count = bindable.image_properties.n_use_layer};
+
+			if (render_graph_.resources_.contains(handle))
+			{
+				continue;
+			}
+
+			vk::ImageViewType view_type = res_info.array_layers > 1 ? vk::ImageViewType::e2DArray : vk::ImageViewType::e2D;
+
+			auto image_view = std::make_unique<backend::ImageView>(*base_image, view_type, res_info.format, 0, handle.base_layer, 0, handle.layer_count);
+
+			ResourceInfo resource_info;
+			resource_info.external = res_info.is_external;
+			ResourceInfo::ImageDesc image_desc;
+			image_desc.format     = res_info.format;
+			image_desc.extent     = res_info.extent;
+			image_desc.usage      = res_info.image_usage;
+			image_desc.image_view = image_view.get();
+			resource_info.desc    = image_desc;
+
+			render_graph_.resources_[handle] = resource_info;
+			render_graph_.image_views_.push_back(std::move(image_view));
+		}
+	}
 }
 
 void GraphBuilder::build_pass_batches()
@@ -383,6 +405,11 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		// todo buffer barrier
 
+		ResourceHandle handle{
+		    .name        = bindable.name,
+		    .base_layer  = bindable.image_properties.current_layer,
+		    .layer_count = bindable.image_properties.n_use_layer};
+
 		common::ImageMemoryBarrier barrier;
 		barrier.src_stage_mask  = state.usage_state.stage_mask;
 		barrier.src_access_mask = state.usage_state.access_mask;
@@ -423,14 +450,14 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 			release_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
 			release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
 
-			prev_pass.add_release_barrier(bindable.name, release_barrier);
+			prev_pass.add_release_barrier(handle, release_barrier);
 
 			// barrier.old_layout      = new_state.layout;
 			barrier.src_stage_mask  = new_state.stage_mask;
 			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
 		}
 
-		pass.add_bindable(i, bindable.name, barrier);
+		pass.add_bindable(i, handle, barrier);
 
 		tracker.track_resource(bindable.name, node, new_state);
 	}
@@ -449,7 +476,7 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 		barrier.old_layout      = state.usage_state.layout;
 		barrier.new_layout      = new_state.layout;
 		tracker.track_resource(attachment.name, node, new_state);
-		pass.add_attachment_memory_barrier(i, std::move(barrier));
+		pass.add_attachment_memory_barrier(i, barrier);
 	}
 }
 

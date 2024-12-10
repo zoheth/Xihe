@@ -59,10 +59,6 @@ RenderTarget::RenderTarget(std::vector<backend::ImageView> &&image_views) :
 	extent_.height = image_views.front().get_image().get_extent().height;
 	extent_.width  = image_views.front().get_image().get_extent().width;
 
-	for (auto &image_view : image_views)
-	{
-		images_.push_back(image_view.get_image());
-	}
 	image_views_ = std::move(image_views);
 }
 
