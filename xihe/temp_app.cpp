@@ -117,7 +117,7 @@ bool TempApp::prepare(Window *window)
 
 		    .attachments({{AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
 
-		    .shader({"deferred/lighting.vert", "deferred/lighting_simple.frag"})
+		    .shader({"deferred/lighting.vert", "deferred/lighting.frag"})
 
 		    .finalize();
 	}

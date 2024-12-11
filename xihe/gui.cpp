@@ -48,23 +48,48 @@ Gui::Gui(XiheApp &app, Window &window, const stats::Stats *stats, const float fo
 
 	ImGuiStyle &style = ImGui::GetStyle();
 
-	// Color scheme
-	style.Colors[ImGuiCol_WindowBg]         = ImVec4(0.005f, 0.005f, 0.005f, 0.94f);
-	style.Colors[ImGuiCol_TitleBg]          = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-	style.Colors[ImGuiCol_TitleBgActive]    = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
-	style.Colors[ImGuiCol_MenuBarBg]        = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_Header]           = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_HeaderActive]     = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_HeaderHovered]    = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_FrameBg]          = ImVec4(0.0f, 0.0f, 0.0f, 0.8f);
-	style.Colors[ImGuiCol_CheckMark]        = ImVec4(0.0f, 1.0f, 0.0f, 1.0f);
-	style.Colors[ImGuiCol_SliderGrab]       = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
-	style.Colors[ImGuiCol_FrameBgHovered]   = ImVec4(1.0f, 1.0f, 1.0f, 0.1f);
-	style.Colors[ImGuiCol_FrameBgActive]    = ImVec4(1.0f, 1.0f, 1.0f, 0.2f);
-	style.Colors[ImGuiCol_Button]           = ImVec4(1.0f, 0.0f, 0.0f, 0.4f);
-	style.Colors[ImGuiCol_ButtonHovered]    = ImVec4(1.0f, 0.0f, 0.0f, 0.6f);
-	style.Colors[ImGuiCol_ButtonActive]     = ImVec4(1.0f, 0.0f, 0.0f, 0.8f);
+// Main colors
+	style.Colors[ImGuiCol_WindowBg]      = ImVec4(0.06f, 0.06f, 0.08f, 0.97f);
+	style.Colors[ImGuiCol_TitleBg]       = ImVec4(0.15f, 0.13f, 0.18f, 0.98f);
+	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.20f, 0.17f, 0.24f, 1.00f);
+	style.Colors[ImGuiCol_MenuBarBg]     = ImVec4(0.15f, 0.13f, 0.18f, 0.98f); 
+
+	// Headers
+	style.Colors[ImGuiCol_Header]        = ImVec4(0.25f, 0.22f, 0.32f, 0.45f);
+	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.30f, 0.26f, 0.37f, 0.55f); 
+	style.Colors[ImGuiCol_HeaderActive]  = ImVec4(0.35f, 0.30f, 0.42f, 0.65f);
+
+	// Frames
+	style.Colors[ImGuiCol_FrameBg]        = ImVec4(0.11f, 0.11f, 0.13f, 0.54f);
+	style.Colors[ImGuiCol_FrameBgHovered] = ImVec4(0.15f, 0.15f, 0.17f, 0.54f);
+	style.Colors[ImGuiCol_FrameBgActive]  = ImVec4(0.18f, 0.18f, 0.21f, 0.67f);
+
+	// Interactive elements
+	style.Colors[ImGuiCol_CheckMark]        = ImVec4(0.43f, 0.35f, 0.58f, 1.00f);
+	style.Colors[ImGuiCol_SliderGrab]       = ImVec4(0.43f, 0.35f, 0.58f, 0.54f);
+	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.43f, 0.35f, 0.58f, 0.84f); 
+
+	// Buttons
+	style.Colors[ImGuiCol_Button]        = ImVec4(0.25f, 0.22f, 0.32f, 0.54f);
+	style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.30f, 0.26f, 0.37f, 0.65f);
+	style.Colors[ImGuiCol_ButtonActive]  = ImVec4(0.35f, 0.30f, 0.42f, 0.84f);
+
+	// Border and rounding
+	style.FrameRounding     = 4.0f;
+	style.GrabRounding      = 4.0f;
+	style.WindowRounding    = 6.0f;
+	style.ChildRounding     = 4.0f;
+	style.PopupRounding     = 4.0f;
+	style.ScrollbarRounding = 4.0f;
+	style.TabRounding       = 4.0f;
+
+	// Spacing and padding
+	style.WindowPadding    = ImVec2(8, 8);
+	style.FramePadding     = ImVec2(5, 3);
+	style.ItemSpacing      = ImVec2(6, 6);
+	style.ItemInnerSpacing = ImVec2(4, 4);
+	style.IndentSpacing    = 20.0f;
+	style.ScrollbarSize    = 12.0f;
 
 	// Borderless window
 	style.WindowBorderSize = 0.0f;
