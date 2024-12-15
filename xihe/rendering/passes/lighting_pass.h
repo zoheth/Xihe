@@ -8,6 +8,9 @@
 
 namespace xihe::rendering
 {
+vk::SamplerCreateInfo get_shadowmap_sampler();
+vk::SamplerCreateInfo get_g_buffer_sampler();
+
 constexpr uint32_t kMaxLightCount = 32;
 
 const std::vector<std::string> kLightTypeDefinitions = {
@@ -59,12 +62,15 @@ class LightingPass : public RenderPass
   public:
 	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
 
+
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
 	static void show_cascade_view(bool show);
 
-  private:
+  protected:
 	void set_lighting_state(size_t light_count);
+
+	void set_pipeline_state(backend::CommandBuffer &command_buffer);
 
 	std::vector<sg::Light *> lights_;
 

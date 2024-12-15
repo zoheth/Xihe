@@ -2,9 +2,11 @@
 
 namespace xihe::rendering
 {
-namespace
+
+vk::SamplerCreateInfo get_g_buffer_sampler()
 {
-vk::SamplerCreateInfo g_buffer_sampler{};
+	return {};
+}
 
 vk::SamplerCreateInfo get_shadowmap_sampler()
 {
@@ -19,7 +21,6 @@ vk::SamplerCreateInfo get_shadowmap_sampler()
 	shadowmap_sampler_create_info.compareOp     = vk::CompareOp::eGreaterOrEqual;
 	return shadowmap_sampler_create_info;
 }
-}        // namespace
 
 void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &lighting_state, uint32_t set, uint32_t binding)
 {
@@ -47,6 +48,7 @@ LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, 
 void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
 {
 	set_lighting_state(kMaxLightCount);
+	set_pipeline_state(command_buffer);
 
 	DeferredLights light_info;
 
@@ -61,34 +63,11 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 
 	auto &resource_cache = command_buffer.get_device().get_resource_cache();
 
-	std::vector<backend::ShaderModule *> shader_modules;
-	if (show_cascade_view_)
-	{
-		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_cascade_);
-		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_cascade_);
-		shader_modules           = {&vert_shader_module, &frag_shader_module};
-	}
-	else
-	{
-		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
-		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
-		shader_modules           = {&vert_shader_module, &frag_shader_module};
-	}
+	
 
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
-	command_buffer.bind_pipeline_layout(pipeline_layout);
-
-	// we know, that the lighting subpass does not have any vertex stage input -> reset the vertex input state
-	assert(pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex).empty());
-	command_buffer.set_vertex_input_state({});
-
-	command_buffer.bind_image(input_bindables[0].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 0, 0);
-	command_buffer.bind_image(input_bindables[1].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 1, 0);
-	command_buffer.bind_image(input_bindables[2].image_view(), resource_cache.request_sampler(g_buffer_sampler), 0, 2, 0);
-
-	RasterizationState rasterization_state;
-	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
-	command_buffer.set_rasterization_state(rasterization_state);
+	command_buffer.bind_image(input_bindables[0].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 0, 0);
+	command_buffer.bind_image(input_bindables[1].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 1, 0);
+	command_buffer.bind_image(input_bindables[2].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 2, 0);
 
 	LightUniform light_uniform;
 
@@ -173,4 +152,35 @@ void LightingPass::set_lighting_state(size_t light_count)
 		}
 	}
 }
+
+void LightingPass::set_pipeline_state(backend::CommandBuffer &command_buffer)
+{
+	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+
+	std::vector<backend::ShaderModule *> shader_modules;
+	if (show_cascade_view_)
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_cascade_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_cascade_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
+	else
+	{
+		auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader(), shader_variant_);
+		auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
+		shader_modules           = {&vert_shader_module, &frag_shader_module};
+	}
+
+	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
+	command_buffer.bind_pipeline_layout(pipeline_layout);
+
+	// we know, that the lighting subpass does not have any vertex stage input -> reset the vertex input state
+	assert(pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex).empty());
+	command_buffer.set_vertex_input_state({});
+
+	RasterizationState rasterization_state;
+	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
+	command_buffer.set_rasterization_state(rasterization_state);
+}
+
 }        // namespace xihe::rendering

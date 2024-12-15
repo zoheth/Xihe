@@ -3,8 +3,8 @@
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/passes/bloom_pass.h"
 #include "rendering/passes/cascade_shadow_pass.h"
+#include "rendering/passes/clustered_lighting_pass.h"
 #include "rendering/passes/geometry_pass.h"
-#include "rendering/passes/lighting_pass.h"
 #include "rendering/passes/meshlet_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
@@ -37,6 +37,37 @@ bool TempApp::prepare(Window *window)
 
 	update_bindless_descriptor_sets();
 
+	auto light_pos   = glm::vec3(0.0f, 128.0f, -225.0f);
+	auto light_color = glm::vec3(1.0, 1.0, 1.0);
+
+	// Magic numbers used to offset lights in the Sponza scene
+	for (int i = -4; i < 4; ++i)
+	{
+		for (int j = 0; j < 2; ++j)
+		{
+			glm::vec3 pos = light_pos;
+			pos.x += i * 400;
+			pos.z += j * (225 + 140);
+			pos.y = 8;
+
+			for (int k = 0; k < 3; ++k)
+			{
+				pos.y = pos.y + (k * 100);
+
+				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
+				light_color.y = static_cast<float>(rand()) / (RAND_MAX);
+				light_color.z = static_cast<float>(rand()) / (RAND_MAX);
+
+				sg::LightProperties props;
+				props.color     = light_color;
+				props.intensity = 0.2f;
+				props.range     = 100.f;
+
+				add_point_light(*scene_, pos, props);
+			}
+		}
+	}
+
 	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
 	camera_           = camera;
@@ -48,14 +79,14 @@ bool TempApp::prepare(Window *window)
 	// shadow pass
 	{
 		PassAttachment shadow_attachment_0{AttachmentType::kDepth, "shadowmap"};
-		shadow_attachment_0.extent_desc                         = ExtentDescriptor::Fixed({kShadowmapResolution, kShadowmapResolution, 1});
+		shadow_attachment_0.extent_desc                    = ExtentDescriptor::Fixed({kShadowmapResolution, kShadowmapResolution, 1});
 		shadow_attachment_0.image_properties.array_layers  = 3;
 		shadow_attachment_0.image_properties.current_layer = 0;
 
-		PassAttachment shadow_attachment_1      = shadow_attachment_0;
+		PassAttachment shadow_attachment_1                 = shadow_attachment_0;
 		shadow_attachment_1.image_properties.current_layer = 1;
 
-		PassAttachment shadow_attachment_2      = shadow_attachment_0;
+		PassAttachment shadow_attachment_2                 = shadow_attachment_0;
 		shadow_attachment_2.image_properties.current_layer = 2;
 
 		auto shadow_pass_0 = std::make_unique<CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 0);
@@ -106,7 +137,7 @@ bool TempApp::prepare(Window *window)
 
 	// lighting pass
 	{
-		auto lighting_pass = std::make_unique<LightingPass>(scene_->get_components<sg::Light>(), *camera, p_cascade_script);
+		auto lighting_pass = std::make_unique<ClusteredLightingPass>(scene_->get_components<sg::Light>(), *camera, *device_, render_context_->get_swapchain().get_extent().width, render_context_->get_swapchain().get_extent().height, p_cascade_script);
 
 		graph_builder_->add_pass("Lighting", std::move(lighting_pass))
 
@@ -117,7 +148,7 @@ bool TempApp::prepare(Window *window)
 
 		    .attachments({{AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
 
-		    .shader({"deferred/lighting.vert", "deferred/lighting.frag"})
+		    .shader({"deferred/lighting.vert", "deferred/clustered_lighting.frag"})
 
 		    .finalize();
 	}
@@ -128,7 +159,7 @@ bool TempApp::prepare(Window *window)
 
 		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
 		    .bindables({{BindableType::kSampled, "lighting"},
-		                {BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5,0.5)}})
+		                {BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5, 0.5)}})
 		    .shader({"post_processing/bloom_extract.comp"})
 		    .finalize();
 

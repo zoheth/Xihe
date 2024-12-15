@@ -1,6 +1,6 @@
 #pragma once
 
-#include "render_pass.h"
+#include "lighting_pass.h"
 
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
@@ -8,6 +8,7 @@
 
 namespace xihe::rendering
 {
+constexpr uint32_t kMaxPointLightCount = 256;
 
 struct SortedLight
 {
@@ -17,19 +18,61 @@ struct SortedLight
 	float    projected_max;
 };
 
-class ClusteredLightingPass : public RenderPass
+struct alignas(16) ClusteredLights
+{
+	Light directional_lights[kMaxLightCount];
+	Light point_lights[kMaxPointLightCount];
+	Light spot_lights[kMaxLightCount];
+};
+
+struct alignas(16) ClusteredLightUniform
+{
+	glm::mat4 inv_view_proj;
+	glm::mat4 view;
+	float     near_plane;
+	float     far_plane;
+};
+
+class ClusteredLightingPass : public LightingPass
 {
   public:
-	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
+	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, backend::Device &device, uint32_t width, uint32_t height, sg::CascadeScript *cascade_script = nullptr);
+
+	~ClusteredLightingPass() override = default;
+
+	void generate_lighting_data();
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
-	void sort_lights();
+	void create_persistent_buffers(backend::Device &device);
 
-	sg::PerspectiveCamera &camera_;
+	void collect_and_sort_lights();
 
-	std::vector<sg::Light *> lights_;
+	void generate_bins();
+
+	void generate_tiles();
+
 	std::vector<SortedLight> sorted_lights_;
+
+	std::vector<uint32_t> light_indices_;
+	std::vector<uint32_t> bins_;         // 16 bit min, 16 bit max
+	std::vector<uint32_t> tiles_;        // bitfield for each tile
+
+	std::unique_ptr<backend::Buffer> light_buffer_;
+	std::unique_ptr<backend::Buffer> tile_buffer_;
+	std::unique_ptr<backend::Buffer> bin_buffer_;
+
+	static constexpr uint32_t num_bins_   = 16;
+	static constexpr uint32_t tile_size_  = 8;
+	static constexpr uint32_t num_lights_ = 256;
+	static constexpr uint32_t num_words_  = (num_lights_ + 31) / 32;
+
+	uint32_t width_;
+	uint32_t height_;
+	uint32_t last_width_;
+	uint32_t last_height_;
+	uint32_t num_tiles_x_;
+	uint32_t num_tiles_y_;
 };
 }        // namespace xihe::rendering

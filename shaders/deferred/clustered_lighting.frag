@@ -1,6 +1,11 @@
 #version 450
 
 #define SHADOW_MAP_CASCADE_COUNT 3
+#define NUM_BINS 16.0
+#define BIN_WIDTH ( 1.0 / NUM_BINS )
+#define TILE_SIZE 8
+#define NUM_LIGHTS 256
+#define NUM_WORDS ( ( NUM_LIGHTS + 31 ) / 32 )
 
 precision highp float;
 
@@ -14,15 +19,30 @@ layout(location = 0) out vec4 o_color;
 layout(set = 0, binding = 3) uniform GlobalUniform
 {
     mat4 inv_view_proj;
+    mat4 view;                   // 新增: 需要view矩阵来计算相机空间深度
+    float near_plane;            // 新增: 需要近平面距离
+    float far_plane;             // 新增: 需要远平面距离
 }
 global_uniform;
+
+layout(set = 0, binding = 7) readonly buffer ZBins {
+    uint bins[];
+};
+
+layout(set = 0, binding = 8) readonly buffer Tiles {
+    uint tiles[];
+};
+
+layout(set = 0, binding = 9) readonly buffer LightIndices {
+    uint light_indices[];
+};
 
 #include "lighting.h"
 
 layout(set = 0, binding = 4) uniform LightsInfo
 {
 	Light directional_lights[MAX_LIGHT_COUNT];
-	Light point_lights[MAX_LIGHT_COUNT];
+	Light point_lights[NUM_LIGHTS];
 	Light spot_lights[MAX_LIGHT_COUNT];
 }
 lights_info;
@@ -97,6 +117,27 @@ void main()
 //    o_color = vec4(vec3(texture(i_depth, screen_uv).x), 1.0);
 //    return;
 
+    // 2. 计算相机空间深度和bin index
+    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
+    float linear_d = (view_pos.z - global_uniform.near_plane) / 
+                    (global_uniform.far_plane - global_uniform.near_plane);
+    int bin_index = int(linear_d / BIN_WIDTH);
+    
+    // 3. 获取当前bin的light范围
+    uint bin_value = bins[bin_index];
+    uint min_light_id = bin_value & 0xFFFF;
+    uint max_light_id = (bin_value >> 16) & 0xFFFF;
+
+    // 4. 计算tile index
+    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
+    position.y = textureSize(i_depth, 0).y - position.y;
+    uvec2 tile = position / uint(TILE_SIZE);
+
+    uint screen_width = uint(textureSize(i_depth, 0).x);
+    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
+    uint stride = uint(NUM_WORDS) * num_tiles_x;
+    uint tile_base = tile.y * stride + tile.x;
+
     // Calculate shadow
 	uint cascade_i = 0;
 	for(uint i = 0; i < SHADOW_MAP_CASCADE_COUNT; ++i) {
@@ -117,7 +158,15 @@ void main()
 	}
 	for (uint i = 0U; i < POINT_LIGHT_COUNT; ++i)
 	{
-		L += apply_point_light(lights_info.point_lights[i], pos, normal);
+//		for(uint i = min_light_id; i <= max_light_id; ++i) {
+//            uint word_index = i / 32;
+//            uint bit_index = i % 32;
+//            
+//            if((tiles[tile_base + word_index] & (1u << bit_index)) != 0u) {
+//                uint global_light_index = light_indices[i];
+//                L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
+//            }
+//        }
 	}
 	for (uint i = 0U; i < SPOT_LIGHT_COUNT; ++i)
 	{

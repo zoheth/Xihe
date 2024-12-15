@@ -48,6 +48,16 @@ void Camera::set_pre_rotation(const glm::mat4 &pr)
 	pre_rotation_ = pr;
 }
 
+float Camera::get_far_plane() const
+{
+	throw std::runtime_error("Not implemented");
+}
+
+float Camera::get_near_plane() const
+{
+	throw std::runtime_error("Not implemented");
+}
+
 
 PerspectiveCamera::PerspectiveCamera(const std::string &name) :
     Camera{name}

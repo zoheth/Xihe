@@ -32,6 +32,10 @@ class Camera : public Component
 
 	void set_pre_rotation(const glm::mat4 &pre_rotation);
 
+	virtual float get_far_plane() const;
+
+	virtual float get_near_plane() const;
+
   private:
 	Node *node_{nullptr};
 
@@ -50,11 +54,11 @@ class PerspectiveCamera : public Camera
 
 	void set_field_of_view(float fov);
 
-	float get_far_plane() const;
+	float get_far_plane() const override;
 
 	void set_far_plane(float zfar);
 
-	float get_near_plane() const;
+	float get_near_plane() const override;
 
 	void set_near_plane(float znear);
 
@@ -109,11 +113,11 @@ class OrthographicCamera : public Camera
 
 	void set_near_plane(float near_plane);
 
-	float get_near_plane() const;
+	float get_near_plane() const override;
 
 	void set_far_plane(float far_plane);
 
-	float get_far_plane() const;
+	float get_far_plane() const override;
 
 	virtual glm::mat4 get_projection() override;
 

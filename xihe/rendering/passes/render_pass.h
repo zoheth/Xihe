@@ -21,6 +21,8 @@ class RenderPass
   public:
 	RenderPass() = default;
 
+	virtual ~RenderPass() = default;
+
 	PassType get_type() const;
 
 	void set_shader(std::initializer_list<std::string> file_names);
