@@ -41,28 +41,24 @@ bool TempApp::prepare(Window *window)
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
 
 	// Magic numbers used to offset lights in the Sponza scene
-	for (int i = -4; i < 4; ++i)
+	for (int i = -4; i < 4; ++i)        // 8 positions in x
 	{
-		for (int j = 0; j < 2; ++j)
+		for (int j = 0; j < 5; ++j)        // 5 positions in z (increased from 2)
 		{
 			glm::vec3 pos = light_pos;
-			pos.x += i * 400;
-			pos.z += j * (225 + 140);
+			pos.x += i * 400;        // keep same x spacing
+			pos.z += j * 150;        // adjusted z spacing to maintain similar density
 			pos.y = 8;
-
-			for (int k = 0; k < 3; ++k)
+			for (int k = 0; k < 6; ++k)        // 6 height levels (increased from 3)
 			{
-				pos.y = pos.y + (k * 100);
-
+				pos.y         = pos.y + (k * 50);        // adjusted y spacing for more height levels
 				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
 				light_color.y = static_cast<float>(rand()) / (RAND_MAX);
 				light_color.z = static_cast<float>(rand()) / (RAND_MAX);
-
 				sg::LightProperties props;
 				props.color     = light_color;
-				props.intensity = 0.2f;
-				props.range     = 1000.f;
-
+				props.intensity = 1.0f;
+				props.range     = 500.f;
 				add_point_light(*scene_, pos, props);
 			}
 		}

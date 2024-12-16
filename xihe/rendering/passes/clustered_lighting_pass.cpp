@@ -250,8 +250,8 @@ void ClusteredLightingPass::generate_bins()
 		{
 			continue;
 		}
-		const uint32_t min_bin = std::max(0u, static_cast<uint32_t>(std::floor(light.projected_z_min / bin_width)));
-		const uint32_t max_bin = std::max(0u, static_cast<uint32_t>(std::ceil(light.projected_z_max / bin_width)));
+		const uint32_t min_bin = std::max(0, static_cast<int>(std::floor(light.projected_z_min / bin_width)));
+		const uint32_t max_bin = std::max(0, static_cast<int>(std::ceil(light.projected_z_max / bin_width)));
 
 		bin_range_per_light[i] = (min_bin & 0xffff) | ((max_bin & 0xffff) << 16);
 	}
@@ -314,7 +314,7 @@ void ClusteredLightingPass::generate_tiles()
 		glm::vec4   view_space_pos = camera_view * light_pos;
 		float       range          = light->get_properties().range;
 
-		if (-view_space_pos.z - range < camera_.get_near_plane())
+		if (-view_space_pos.z + range < camera_.get_near_plane())
 		{
 			continue;
 		}
@@ -339,7 +339,11 @@ void ClusteredLightingPass::generate_tiles()
 		    -proj_bottom.y        // max y
 		);
 
-		// todo : check if camera is inside the light volume
+		const float position_len = glm::length(glm::vec3(view_space_pos));
+		if(position_len - range < camera_.get_near_plane())
+		{
+			aabb = glm::vec4(-1.0f, -1.0f, 1.0f, 1.0f);
+		}
 
 		glm::vec4 aabb_screen{
 		    (aabb.x * 0.5f + 0.5f) * (width_ - 1),

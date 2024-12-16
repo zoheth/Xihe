@@ -20,9 +20,9 @@ layout(location = 0) out vec4 o_color;
 layout(set = 0, binding = 3) uniform GlobalUniform
 {
     mat4 inv_view_proj;
-    mat4 view;                   // 新增: 需要view矩阵来计算相机空间深度
-    float near_plane;            // 新增: 需要近平面距离
-    float far_plane;             // 新增: 需要远平面距离
+    mat4 view; 
+    float near_plane;
+    float far_plane;
 }
 global_uniform;
 
@@ -113,7 +113,7 @@ vec4 get_debug_visualization(vec3 pos, vec2 screen_uv, vec3 normal) {
         for(uint i = min_light_id; i <= max_light_id; ++i) {
             uint word_index = i / 32;
             uint bit_index = i % 32;
-            if((tiles[tile_base + word_index] ) != 0) {
+            if((tiles[tile_base + word_index] & ( 1u << bit_index )) != 0) {
                 light_count++;
             }
         }
@@ -215,29 +215,7 @@ void main()
 			cascade_i = i;
 		}
 	}
-
-    // 1. 计算相机空间深度和bin index
-    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
-    float linear_d = (-view_pos.z - global_uniform.near_plane) / 
-                    (global_uniform.far_plane - global_uniform.near_plane);
-    int bin_index = int(linear_d / BIN_WIDTH);
-    
-    // 2. 获取当前bin的light范围
-    uint bin_value = bins[bin_index];
-    uint min_light_id = bin_value & 0xFFFF;
-    uint max_light_id = (bin_value >> 16) & 0xFFFF;
-
-    // 3. 计算tile index
-    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
-    // position.y = textureSize(i_depth, 0).y - position.y;
-    uvec2 tile = position / uint(TILE_SIZE);
-
-    uint screen_width = uint(textureSize(i_depth, 0).x);
-    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
-    uint stride = uint(NUM_WORDS) * num_tiles_x;
-    uint tile_base = tile.y * stride + tile.x;
-
-	// Calculate lighting
+    // Calculate directional light
 	vec3 L = vec3(0.0);
 	for (uint i = 0U; i < DIRECTIONAL_LIGHT_COUNT; ++i)
 	{
@@ -247,16 +225,40 @@ void main()
 			L *= calculate_shadow(pos, cascade_i);
 		}
 	}
+    
+    // Calculate view space depth and bin index
+    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
+    float linear_d = (-view_pos.z - global_uniform.near_plane) / 
+                    (global_uniform.far_plane - global_uniform.near_plane);
+    int bin_index = int(linear_d / BIN_WIDTH);
+    
+    uint bin_value = bins[bin_index];
+    uint min_light_id = bin_value & 0xFFFF;
+    uint max_light_id = (bin_value >> 16) & 0xFFFF;
 
+    // Calculate tile coordinates
+    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
+    position.y = textureSize(i_depth, 0).y - position.y;
+    uvec2 tile = position / uint(TILE_SIZE);
+
+    uint screen_width = uint(textureSize(i_depth, 0).x);
+    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
+    uint stride = uint(NUM_WORDS) * num_tiles_x;
+    uint tile_base = tile.y * stride + tile.x;
+
+    // Point Light
     if(min_light_id != NUM_LIGHTS + 1) {
 	    for(uint i = min_light_id; i <= max_light_id; ++i) {
             uint word_index = i / 32;
             uint bit_index = i % 32;
             
-            if((tiles[tile_base + word_index] & bins[bit_index] ) != 0) {
+            if((tiles[tile_base + word_index] & ( 1u << bit_index ) ) != 0) {
                 uint global_light_index = light_indices[i];
                 L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
             }
+
+//            uint global_light_index = light_indices[i];
+//            L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
 
         }
     }
@@ -265,7 +267,7 @@ void main()
 	{
 		L += apply_spot_light(lights_info.spot_lights[i], pos, normal);
 	}
-	vec3 ambient_color = vec3(0.1) * albedo.xyz;
+	vec3 ambient_color = vec3(0.05) * albedo.xyz;
 
 	vec3 final_color = ambient_color + L * albedo.xyz;
 
