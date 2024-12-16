@@ -123,7 +123,7 @@ void main()
 	{
 		L += apply_spot_light(lights_info.spot_lights[i], pos, normal);
 	}
-	vec3 ambient_color = vec3(0.2) * albedo.xyz;
+	vec3 ambient_color = vec3(0.1) * albedo.xyz;
 
 	vec3 final_color = ambient_color + L * albedo.xyz;
 

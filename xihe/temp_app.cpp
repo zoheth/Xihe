@@ -61,7 +61,7 @@ bool TempApp::prepare(Window *window)
 				sg::LightProperties props;
 				props.color     = light_color;
 				props.intensity = 0.2f;
-				props.range     = 100.f;
+				props.range     = 1000.f;
 
 				add_point_light(*scene_, pos, props);
 			}

@@ -5,6 +5,73 @@
 
 namespace xihe::rendering
 {
+namespace
+{
+
+glm::vec3 project_to_ndc(const glm::mat4 &projection_matrix, const glm::vec3 &camera_space_point)
+{
+	glm::vec4 projected = projection_matrix * glm::vec4(camera_space_point, 1.0f);
+	return glm::vec3(projected) / projected.w;
+}
+
+// Implementation of McGuire's method for computing sphere bounds along an axis
+void get_axis_bounds(const glm::vec3 &axis,                 // Camera space axis
+                     const glm::vec3 &sphere_center,        // Camera space sphere center
+                     float            sphere_radius,        // Sphere radius
+                     float            near_z,               // Near plane distance (negative)
+                     glm::vec3       &min_bound,            // Output min bound point
+                     glm::vec3       &max_bound)
+{        // Output max bound point
+
+	glm::vec2 center_proj(glm::dot(axis, sphere_center), sphere_center.z);
+	glm::vec2 bounds[2];
+
+	float t_squared        = glm::dot(center_proj, center_proj) - (sphere_radius * sphere_radius);
+	bool  is_camera_inside = (t_squared <= 0);
+
+	glm::vec2 tangent_angles;
+	if (is_camera_inside)
+	{
+		tangent_angles = glm::vec2(0.0f);
+	}
+	else
+	{
+		float norm     = glm::length(center_proj);
+		tangent_angles = glm::vec2(sqrt(t_squared), sphere_radius) / norm;
+	}
+
+	bool  sphere_intersects_near = (center_proj.y + sphere_radius >= near_z);
+	float discriminant           = sqrt(glm::max(0.0f,
+	                                             sphere_radius * sphere_radius -
+	                                                 (near_z - center_proj.y) * (near_z - center_proj.y)));
+
+	for (auto &bound : bounds)
+	{
+		if (!is_camera_inside)
+		{
+			glm::mat2 transform(
+			    tangent_angles.x, -tangent_angles.y,
+			    tangent_angles.y, tangent_angles.x);
+			bound = transform * (center_proj * tangent_angles.x);
+		}
+
+		bool bound_needs_clip = is_camera_inside || (bound.y > near_z);
+		if (sphere_intersects_near && bound_needs_clip)
+		{
+			bound = glm::vec2(center_proj.x + discriminant, near_z);
+		}
+
+		tangent_angles.y = -tangent_angles.y;
+		discriminant     = -discriminant;
+	}
+
+	min_bound   = axis * bounds[1].x;
+	min_bound.z = bounds[1].y;
+	max_bound   = axis * bounds[0].x;
+	max_bound.z = bounds[0].y;
+}
+}        // namespace
+
 ClusteredLightingPass::ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, backend::Device &device, uint32_t width, uint32_t height, sg::CascadeScript *cascade_script) :
     LightingPass(std::move(lights), camera, cascade_script), width_(width), height_(height), last_width_(width), last_height_(height)
 {
@@ -81,13 +148,13 @@ void ClusteredLightingPass::execute(backend::CommandBuffer &command_buffer, Rend
 		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
 	}
 
-	//bin_buffer_->update(bins_);
+	// bin_buffer_->update(bins_);
 	command_buffer.bind_buffer(*bin_buffer_, 0, bin_buffer_->get_size(), 0, 7, 0);
 
-	//tile_buffer_->update(tiles_);
+	// tile_buffer_->update(tiles_);
 	command_buffer.bind_buffer(*tile_buffer_, 0, tile_buffer_->get_size(), 0, 8, 0);
 
-	//light_buffer_->update(light_indices_);
+	// light_buffer_->update(light_indices_);
 	command_buffer.bind_buffer(*light_buffer_, 0, light_buffer_->get_size(), 0, 9, 0);
 
 	command_buffer.draw(3, 1, 0, 0);
@@ -127,8 +194,7 @@ void ClusteredLightingPass::create_persistent_buffers(backend::Device &device)
 void ClusteredLightingPass::collect_and_sort_lights()
 {
 	sorted_lights_.clear();
-	auto camera_view_proj = camera_.get_pre_rotation() *
-	                        camera_.get_view();
+	auto camera_view_mat = camera_.get_view();
 
 	for (uint32_t i = 0; i < lights_.size(); ++i)
 	{
@@ -139,19 +205,20 @@ void ClusteredLightingPass::collect_and_sort_lights()
 		}
 
 		glm::vec4 light_pos         = glm::vec4(light->get_node()->get_transform().get_translation(), 1.0f);
-		glm::vec4 projected_pos     = camera_view_proj * light_pos;
+		glm::vec4 projected_pos     = camera_view_mat * light_pos;
 		float     range             = light->get_properties().range;
-		glm::vec4 projected_pos_min = projected_pos - glm::vec4(0.0f, 0.0f, range, 0.0f);
-		glm::vec4 projected_pos_max = projected_pos + glm::vec4(0.0f, 0.0f, range, 0.0f);
+		projected_pos.z             = projected_pos.z;
+		glm::vec4 projected_pos_min = projected_pos + glm::vec4(0.0f, 0.0f, range, 0.0f);
+		glm::vec4 projected_pos_max = projected_pos - glm::vec4(0.0f, 0.0f, range, 0.0f);
 
 		SortedLight sorted_light;
 		sorted_light.light_index = i;
-		sorted_light.projected_z = (projected_pos.z - camera_.get_near_plane()) /
+		sorted_light.projected_z = (-projected_pos.z - camera_.get_near_plane()) /
 		                           (camera_.get_far_plane() - camera_.get_near_plane());
-		sorted_light.projected_min = (projected_pos_min.z - camera_.get_near_plane()) /
-		                             (camera_.get_far_plane() - camera_.get_near_plane());
-		sorted_light.projected_max = (projected_pos_max.z - camera_.get_near_plane()) /
-		                             (camera_.get_far_plane() - camera_.get_near_plane());
+		sorted_light.projected_z_min = (-projected_pos_min.z - camera_.get_near_plane()) /
+		                               (camera_.get_far_plane() - camera_.get_near_plane());
+		sorted_light.projected_z_max = (-projected_pos_max.z - camera_.get_near_plane()) /
+		                               (camera_.get_far_plane() - camera_.get_near_plane());
 
 		sorted_lights_.push_back(sorted_light);
 	}
@@ -174,82 +241,151 @@ void ClusteredLightingPass::generate_bins()
 
 	constexpr float bin_width = 1.0f / num_bins_;
 
-	for (size_t i = 0; i < sorted_lights_.size(); ++i)
+	std::vector<uint32_t> bin_range_per_light(sorted_lights_.size(), 0xffffffffui32);
+
+	for (uint32_t i = 0; i < sorted_lights_.size(); ++i)
 	{
-		const auto &light = sorted_lights_[i];
-		// calculate the bin range affected by light
-		int start_bin = std::max(0, static_cast<int>(light.projected_min / bin_width));
-		int end_bin   = std::min(static_cast<int>(num_bins_ - 1),
-		                         static_cast<int>(light.projected_max / bin_width));
-		// update min/max light index for each affected bin
-		for (int bin = start_bin; bin <= end_bin; ++bin)
+		const SortedLight &light = sorted_lights_[i];
+		if (light.projected_z_min < 0.0f && light.projected_z_max < 0.0f)
 		{
-			uint32_t current_min = (bins_[bin] & 0xFFFF);
-			uint32_t current_max = (bins_[bin] >> 16) & 0xFFFF;
-			if (current_min == 0xFFFF || i < current_min)
-			{
-				current_min = i;
-			}
-			current_max = std::max<size_t>(i, current_max);
-			bins_[bin]  = (current_max << 16) | current_min;
+			continue;
 		}
+		const uint32_t min_bin = std::max(0u, static_cast<uint32_t>(std::floor(light.projected_z_min / bin_width)));
+		const uint32_t max_bin = std::max(0u, static_cast<uint32_t>(std::ceil(light.projected_z_max / bin_width)));
+
+		bin_range_per_light[i] = (min_bin & 0xffff) | ((max_bin & 0xffff) << 16);
+	}
+
+	for (uint32_t bin = 0; bin < num_bins_; ++bin)
+	{
+		uint32_t min_light_id = num_lights_ + 1;
+		uint32_t max_light_id = 0;
+
+		float bin_min = bin * bin_width;
+		float bin_max = bin_min + bin_width;
+
+		for (uint32_t i = 0; i < sorted_lights_.size(); ++i)
+		{
+			const SortedLight &light      = sorted_lights_[i];
+			const uint32_t     light_bins = bin_range_per_light[i];
+
+			if (light_bins == 0xffffffff)
+			{
+				continue;
+			}
+
+			const uint32_t min_bin = light_bins & 0xffff;
+			const uint32_t max_bin = light_bins >> 16;
+
+			if (bin >= min_bin && bin <= max_bin)
+			{
+				if (i < min_light_id)
+				{
+					min_light_id = i;
+				}
+
+				if (i > max_light_id)
+				{
+					max_light_id = i;
+				}
+			}
+		}
+		bins_[bin] = min_light_id | (max_light_id << 16);
 	}
 }
 
 void ClusteredLightingPass::generate_tiles()
 {
-	num_tiles_x_ = (width_ + tile_size_ - 1) / tile_size_;
-	num_tiles_y_ = (height_ + tile_size_ - 1) / tile_size_;
-	// 每个tile需要num_words_个uint32来存储所有light的bitfield
+	num_tiles_x_ = width_ / tile_size_;
+	num_tiles_y_ = height_ / tile_size_;
+
 	tiles_.resize(num_tiles_x_ * num_tiles_y_ * num_words_, 0);
 
-	auto camera_view_proj = camera_.get_pre_rotation() *
-	                        vulkan_style_projection(camera_.get_projection()) *
-	                        camera_.get_view();
+	float tile_size_inv = 1.0f / tile_size_;
+
+	uint32_t tile_stride = num_tiles_x_ * num_words_;
+
+	auto camera_view = camera_.get_view();
 
 	for (size_t sorted_idx = 0; sorted_idx < sorted_lights_.size(); ++sorted_idx)
 	{
-		const auto &light         = lights_[sorted_lights_[sorted_idx].light_index];
-		glm::vec4   light_pos     = glm::vec4(light->get_node()->get_transform().get_translation(), 1.0f);
-		glm::vec4   projected_pos = camera_view_proj * light_pos;
-		projected_pos /= projected_pos.w;
+		const auto &light          = lights_[sorted_lights_[sorted_idx].light_index];
+		glm::vec4   light_pos      = glm::vec4(light->get_node()->get_transform().get_translation(), 1.0f);
+		glm::vec4   view_space_pos = camera_view * light_pos;
+		float       range          = light->get_properties().range;
 
-		float range         = light->get_properties().range;
-
-		if (projected_pos.z < -range)
+		if (-view_space_pos.z - range < camera_.get_near_plane())
 		{
 			continue;
 		}
 
-		float screen_radius = range / projected_pos.z;
+		glm::vec3 left, right, bottom, top;
+		get_axis_bounds(glm::vec3(1.0f, 0.0f, 0.0f), view_space_pos, range, camera_.get_near_plane(), left, right);
+		get_axis_bounds(glm::vec3(0.0f, 1.0f, 0.0f), view_space_pos, range, camera_.get_near_plane(), top, bottom);
 
-		// 计算screen space bounds
-		int min_x = std::max(0, static_cast<int>((projected_pos.x - screen_radius) * width_ * 0.5f + width_ * 0.5f));
-		int max_x = std::min(static_cast<int>(width_ - 1),
-		                     static_cast<int>((projected_pos.x + screen_radius) * width_ * 0.5f + width_ * 0.5f));
-		int min_y = std::max(0, static_cast<int>((projected_pos.y - screen_radius) * height_ * 0.5f + height_ * 0.5f));
-		int max_y = std::min(static_cast<int>(height_ - 1),
-		                     static_cast<int>((projected_pos.y + screen_radius) * height_ * 0.5f + height_ * 0.5f));
+		sg::PerspectiveCamera *perspective_camera = dynamic_cast<sg::PerspectiveCamera *>(&camera_);
 
-		// 转换到tile坐标
-		int start_tile_x = std::max(0u, min_x / tile_size_);
-		int end_tile_x   = std::min(num_tiles_x_ - 1, max_x / tile_size_);
-		int start_tile_y = std::max(0u, min_y / tile_size_);
-		int end_tile_y   = std::min(num_tiles_y_ - 1, max_y / tile_size_);
+		auto projection_mat = glm::perspective(perspective_camera->get_field_of_view(), perspective_camera->get_aspect_ratio(), perspective_camera->get_near_plane(), perspective_camera->get_far_plane());
 
-		// 计算这个light在bitfield中的位置
-		uint32_t word_idx = sorted_idx / 32;
-		uint32_t bit_idx  = sorted_idx % 32;
+		glm::vec3 proj_left   = project_to_ndc(projection_mat, left);
+		glm::vec3 proj_right  = project_to_ndc(projection_mat, right);
+		glm::vec3 proj_top    = project_to_ndc(projection_mat, top);
+		glm::vec3 proj_bottom = project_to_ndc(projection_mat, bottom);
 
-		// 更新所有受这个light影响的tiles
-		for (int tile_y = start_tile_y; tile_y <= end_tile_y; ++tile_y)
+		auto aabb = glm::vec4(
+		    proj_right.x,         // min x
+		    -proj_top.y,          // min y
+		    proj_left.x,          // max x
+		    -proj_bottom.y        // max y
+		);
+
+		// todo : check if camera is inside the light volume
+
+		glm::vec4 aabb_screen{
+		    (aabb.x * 0.5f + 0.5f) * (width_ - 1),
+		    (aabb.y * 0.5f + 0.5f) * (height_ - 1),
+		    (aabb.z * 0.5f + 0.5f) * (width_ - 1),
+		    (aabb.w * 0.5f + 0.5f) * (height_ - 1)};
+
+		float width  = aabb_screen.z - aabb_screen.x;
+		float height = aabb_screen.w - aabb_screen.y;
+
+		if (width < 0.0001f || height < 0.0001f)
 		{
-			for (int tile_x = start_tile_x; tile_x <= end_tile_x; ++tile_x)
+			continue;
+		}
+
+		float min_x = aabb_screen.x;
+		float min_y = aabb_screen.y;
+
+		float max_x = min_x + width;
+		float max_y = min_y + height;
+
+		if (min_x > width_ || min_y > height_ || max_x < 0 || max_y < 0)
+		{
+			continue;
+		}
+
+		min_x = std::max(min_x, 0.0f);
+		min_y = std::max(min_y, 0.0f);
+		max_x = std::min(max_x, static_cast<float>(width_));
+		max_y = std::min(max_y, static_cast<float>(height_));
+
+		uint32_t first_tile_x = static_cast<uint32_t>(min_x * tile_size_inv);
+		uint32_t first_tile_y = static_cast<uint32_t>(min_y * tile_size_inv);
+		uint32_t last_tile_x  = std::min(static_cast<uint32_t>(max_x * tile_size_inv), num_tiles_x_ - 1);
+		uint32_t last_tile_y  = std::min(static_cast<uint32_t>(max_y * tile_size_inv), num_tiles_y_ - 1);
+
+		for (uint32_t y = first_tile_y; y <= last_tile_y; ++y)
+		{
+			for (uint32_t x = first_tile_x; x <= last_tile_x; ++x)
 			{
-				uint32_t tile_idx = tile_y * num_tiles_x_ + tile_x;
-				// tile_idx决定基础偏移，word_idx决定在该tile的哪个uint32中设置bit
-				uint32_t offset = tile_idx * num_words_ + word_idx;
-				tiles_[offset] |= (1u << bit_idx);
+				uint32_t array_index = y * tile_stride + x;
+
+				uint32_t word_index = sorted_idx / 32;
+				uint32_t bit_index  = sorted_idx % 32;
+
+				tiles_[array_index + word_index] |= (1 << bit_index);
 			}
 		}
 	}

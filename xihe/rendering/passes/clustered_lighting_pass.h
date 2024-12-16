@@ -14,8 +14,8 @@ struct SortedLight
 {
 	uint32_t light_index;
 	float    projected_z;
-	float    projected_min;
-	float    projected_max;
+	float    projected_z_min;
+	float    projected_z_max;
 };
 
 struct alignas(16) ClusteredLights

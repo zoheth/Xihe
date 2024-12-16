@@ -6,6 +6,7 @@
 #define TILE_SIZE 8
 #define NUM_LIGHTS 256
 #define NUM_WORDS ( ( NUM_LIGHTS + 31 ) / 32 )
+#define DEBUG_MODE 0
 
 precision highp float;
 
@@ -62,6 +63,90 @@ layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;
 #extension GL_EXT_nonuniform_qualifier : require
 layout (set = 1, binding = 10 ) uniform sampler2DShadow global_textures[];
 
+vec3 get_debug_bin_color(int bin_index) {
+    // Create distinct colors for different bins
+    float hue = float(bin_index) / NUM_BINS;
+    
+    // Simple HSV to RGB conversion for distinct colors
+    vec3 rgb;
+    float h = hue * 6.0;
+    float i = floor(h);
+    float f = h - i;
+    float p = 0.0;
+    float q = 1.0 - f;
+    float t = f;
+
+    if (i == 0.0) rgb = vec3(1.0, t, p);
+    else if (i == 1.0) rgb = vec3(q, 1.0, p);
+    else if (i == 2.0) rgb = vec3(p, 1.0, t);
+    else if (i == 3.0) rgb = vec3(p, q, 1.0);
+    else if (i == 4.0) rgb = vec3(t, p, 1.0);
+    else rgb = vec3(1.0, p, q);
+
+    return rgb;
+}
+
+vec4 get_debug_visualization(vec3 pos, vec2 screen_uv, vec3 normal) {
+    // Calculate view space depth and bin index
+    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
+    float linear_d = (view_pos.z - global_uniform.near_plane) / 
+                    (global_uniform.far_plane - global_uniform.near_plane);
+    int bin_index = int(linear_d / BIN_WIDTH);
+    
+    // Get light range for current bin
+    uint bin_value = bins[bin_index];
+    uint min_light_id = bin_value & 0xFFFF;
+    uint max_light_id = (bin_value >> 16) & 0xFFFF;
+    
+    // Calculate tile coordinates
+    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
+    uvec2 tile = position / uint(TILE_SIZE);
+    
+    uint screen_width = uint(textureSize(i_depth, 0).x);
+    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
+    uint stride = uint(NUM_WORDS) * num_tiles_x;
+    uint tile_base = tile.y * stride + tile.x;
+    
+    // Count actual lights affecting this pixel
+    uint light_count = 0;
+    if(min_light_id != NUM_LIGHTS + 1) {
+        for(uint i = min_light_id; i <= max_light_id; ++i) {
+            uint word_index = i / 32;
+            uint bit_index = i % 32;
+            if((tiles[tile_base + word_index] ) != 0) {
+                light_count++;
+            }
+        }
+    }
+
+    switch(DEBUG_MODE) {
+        case 1: // Visualize bins
+            return vec4(get_debug_bin_color(bin_index), 1.0);
+            
+        case 2: // Visualize tiles
+            bool tile_edge = (position.x % TILE_SIZE < 1) || (position.y % TILE_SIZE < 1);
+            return tile_edge ? vec4(1.0, 1.0, 0.0, 1.0) : vec4(0.2, 0.2, 0.2, 1.0);
+            
+        case 3: // Visualize light counts
+            float intensity = float(light_count) / 32.0; // Assume max 32 lights per tile
+            return vec4(intensity, intensity * 0.5, 0.0, 1.0);
+            
+        case 4: // Visualize light index range
+            if(min_light_id == NUM_LIGHTS + 1) {
+                return vec4(1.0, 0.0, 0.0, 1.0); // Red for invalid
+            }
+            return vec4(
+                float(min_light_id) / float(NUM_LIGHTS),
+                float(max_light_id) / float(NUM_LIGHTS),
+                float(max_light_id - min_light_id) / float(NUM_LIGHTS),
+                1.0
+            );
+            
+        default: // Normal rendering
+            return vec4(0.0); // Will be ignored in main()
+    }
+}
+
 float calculate_shadow(highp vec3 pos, uint cascade_index)
 {
     vec4 projected_coord = shadow_uniform.light_matrix[cascade_index] * vec4(pos, 1.0);
@@ -117,26 +202,11 @@ void main()
 //    o_color = vec4(vec3(texture(i_depth, screen_uv).x), 1.0);
 //    return;
 
-    // 2. 计算相机空间深度和bin index
-    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
-    float linear_d = (view_pos.z - global_uniform.near_plane) / 
-                    (global_uniform.far_plane - global_uniform.near_plane);
-    int bin_index = int(linear_d / BIN_WIDTH);
-    
-    // 3. 获取当前bin的light范围
-    uint bin_value = bins[bin_index];
-    uint min_light_id = bin_value & 0xFFFF;
-    uint max_light_id = (bin_value >> 16) & 0xFFFF;
-
-    // 4. 计算tile index
-    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
-    position.y = textureSize(i_depth, 0).y - position.y;
-    uvec2 tile = position / uint(TILE_SIZE);
-
-    uint screen_width = uint(textureSize(i_depth, 0).x);
-    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
-    uint stride = uint(NUM_WORDS) * num_tiles_x;
-    uint tile_base = tile.y * stride + tile.x;
+    vec4 debug_color = get_debug_visualization(pos, screen_uv, normal);
+    if(DEBUG_MODE > 0) {
+        o_color = debug_color;
+        return;
+    }
 
     // Calculate shadow
 	uint cascade_i = 0;
@@ -145,6 +215,27 @@ void main()
 			cascade_i = i;
 		}
 	}
+
+    // 1. 计算相机空间深度和bin index
+    vec4 view_pos = global_uniform.view * vec4(pos, 1.0);
+    float linear_d = (-view_pos.z - global_uniform.near_plane) / 
+                    (global_uniform.far_plane - global_uniform.near_plane);
+    int bin_index = int(linear_d / BIN_WIDTH);
+    
+    // 2. 获取当前bin的light范围
+    uint bin_value = bins[bin_index];
+    uint min_light_id = bin_value & 0xFFFF;
+    uint max_light_id = (bin_value >> 16) & 0xFFFF;
+
+    // 3. 计算tile index
+    uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
+    // position.y = textureSize(i_depth, 0).y - position.y;
+    uvec2 tile = position / uint(TILE_SIZE);
+
+    uint screen_width = uint(textureSize(i_depth, 0).x);
+    uint num_tiles_x = uint(screen_width) / uint(TILE_SIZE);
+    uint stride = uint(NUM_WORDS) * num_tiles_x;
+    uint tile_base = tile.y * stride + tile.x;
 
 	// Calculate lighting
 	vec3 L = vec3(0.0);
@@ -156,23 +247,25 @@ void main()
 			L *= calculate_shadow(pos, cascade_i);
 		}
 	}
-	for (uint i = 0U; i < POINT_LIGHT_COUNT; ++i)
-	{
-//		for(uint i = min_light_id; i <= max_light_id; ++i) {
-//            uint word_index = i / 32;
-//            uint bit_index = i % 32;
-//            
-//            if((tiles[tile_base + word_index] & (1u << bit_index)) != 0u) {
-//                uint global_light_index = light_indices[i];
-//                L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
-//            }
-//        }
-	}
+
+    if(min_light_id != NUM_LIGHTS + 1) {
+	    for(uint i = min_light_id; i <= max_light_id; ++i) {
+            uint word_index = i / 32;
+            uint bit_index = i % 32;
+            
+            if((tiles[tile_base + word_index] & bins[bit_index] ) != 0) {
+                uint global_light_index = light_indices[i];
+                L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
+            }
+
+        }
+    }
+	
 	for (uint i = 0U; i < SPOT_LIGHT_COUNT; ++i)
 	{
 		L += apply_spot_light(lights_info.spot_lights[i], pos, normal);
 	}
-	vec3 ambient_color = vec3(0.2) * albedo.xyz;
+	vec3 ambient_color = vec3(0.1) * albedo.xyz;
 
 	vec3 final_color = ambient_color + L * albedo.xyz;
 
