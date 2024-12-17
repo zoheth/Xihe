@@ -57,8 +57,8 @@ bool TempApp::prepare(Window *window)
 				light_color.z = static_cast<float>(rand()) / (RAND_MAX);
 				sg::LightProperties props;
 				props.color     = light_color;
-				props.intensity = 1.0f;
-				props.range     = 500.f;
+				props.intensity = 2.0f;
+				props.range     = 700.f;
 				add_point_light(*scene_, pos, props);
 			}
 		}
@@ -133,7 +133,7 @@ bool TempApp::prepare(Window *window)
 
 	// lighting pass
 	{
-		auto lighting_pass = std::make_unique<ClusteredLightingPass>(scene_->get_components<sg::Light>(), *camera, *device_, render_context_->get_swapchain().get_extent().width, render_context_->get_swapchain().get_extent().height, p_cascade_script);
+		auto lighting_pass = std::make_unique<ClusteredLightingPass>(scene_->get_components<sg::Light>(), *camera, p_cascade_script);
 
 		graph_builder_->add_pass("Lighting", std::move(lighting_pass))
 

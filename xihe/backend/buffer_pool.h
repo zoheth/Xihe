@@ -40,6 +40,22 @@ class BufferAllocation
 		update(to_bytes(value), offset);
 	}
 
+	template <typename T>
+	void update(const std::vector<T> &values, uint32_t offset = 0)
+	{
+		size_t total_size = values.size() * sizeof(T);
+
+		if (values.empty())
+		{
+			return;
+		}
+
+		update(std::vector<uint8_t>{
+		           reinterpret_cast<const uint8_t *>(values.data()),
+		           reinterpret_cast<const uint8_t *>(values.data()) + total_size},
+		       offset);
+	}
+
 	bool empty() const;
 
 	vk::DeviceSize get_size() const;

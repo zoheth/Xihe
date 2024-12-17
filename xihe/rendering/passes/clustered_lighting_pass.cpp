@@ -72,11 +72,9 @@ void get_axis_bounds(const glm::vec3 &axis,                 // Camera space axis
 }
 }        // namespace
 
-ClusteredLightingPass::ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, backend::Device &device, uint32_t width, uint32_t height, sg::CascadeScript *cascade_script) :
-    LightingPass(std::move(lights), camera, cascade_script), width_(width), height_(height), last_width_(width), last_height_(height)
+ClusteredLightingPass::ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script) :
+    LightingPass(std::move(lights), camera, cascade_script)
 {
-	generate_lighting_data();
-	create_persistent_buffers(device);
 }
 
 void ClusteredLightingPass::generate_lighting_data()
@@ -91,13 +89,6 @@ void ClusteredLightingPass::execute(backend::CommandBuffer &command_buffer, Rend
 	width_  = input_bindables[0].image_view().get_image().get_extent().width;
 	height_ = input_bindables[0].image_view().get_image().get_extent().height;
 	generate_lighting_data();
-
-	if (width_ != last_width_ || height_ != last_height_)
-	{
-		create_persistent_buffers(command_buffer.get_device());
-		last_width_  = width_;
-		last_height_ = height_;
-	}
 
 	set_lighting_state(kMaxPointLightCount);
 	set_pipeline_state(command_buffer);
@@ -148,47 +139,23 @@ void ClusteredLightingPass::execute(backend::CommandBuffer &command_buffer, Rend
 		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
 	}
 
-	// bin_buffer_->update(bins_);
-	command_buffer.bind_buffer(*bin_buffer_, 0, bin_buffer_->get_size(), 0, 7, 0);
-
-	// tile_buffer_->update(tiles_);
-	command_buffer.bind_buffer(*tile_buffer_, 0, tile_buffer_->get_size(), 0, 8, 0);
-
-	// light_buffer_->update(light_indices_);
-	command_buffer.bind_buffer(*light_buffer_, 0, light_buffer_->get_size(), 0, 9, 0);
+	{
+		auto storage_allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eStorageBuffer, bins_.size() * 4, thread_index_);
+		storage_allocation.update(bins_);
+		command_buffer.bind_buffer(storage_allocation.get_buffer(), storage_allocation.get_offset(), storage_allocation.get_size(), 0, 7, 0);
+	}
+	{
+		auto storage_allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eStorageBuffer, tiles_.size() * 4, thread_index_);
+		storage_allocation.update(tiles_);
+		command_buffer.bind_buffer(storage_allocation.get_buffer(), storage_allocation.get_offset(), storage_allocation.get_size(), 0, 8, 0);
+	}
+	{
+		auto storage_allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eStorageBuffer, light_indices_.size() * 4, thread_index_);
+		storage_allocation.update(light_indices_);
+		command_buffer.bind_buffer(storage_allocation.get_buffer(), storage_allocation.get_offset(), storage_allocation.get_size(), 0, 9, 0);
+	}
 
 	command_buffer.draw(3, 1, 0, 0);
-}
-
-void ClusteredLightingPass::create_persistent_buffers(backend::Device &device)
-{
-	assert(!bins_.empty());
-	{
-		backend::BufferBuilder buffer_builder{bins_.size() * 4};
-		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
-		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-
-		bin_buffer_ = buffer_builder.build_unique(device);
-		bin_buffer_->set_debug_name("ClusteredLightingPass::bins");
-		bin_buffer_->update(bins_);
-	}
-	{
-		backend::BufferBuilder buffer_builder{tiles_.size() * 4};
-		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
-		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		tile_buffer_ = buffer_builder.build_unique(device);
-		tile_buffer_->set_debug_name("ClusteredLightingPass::tiles");
-		tile_buffer_->update(tiles_);
-	}
-
-	{
-		backend::BufferBuilder buffer_builder{light_indices_.size() * 4};
-		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
-		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		light_buffer_ = buffer_builder.build_unique(device);
-		light_buffer_->set_debug_name("ClusteredLightingPass::light_indices");
-		light_buffer_->update(light_indices_);
-	}
 }
 
 void ClusteredLightingPass::collect_and_sort_lights()

@@ -238,7 +238,7 @@ void main()
 
     // Calculate tile coordinates
     uvec2 position = uvec2(gl_FragCoord.x - 0.5, gl_FragCoord.y - 0.5);
-    position.y = textureSize(i_depth, 0).y - position.y;
+    // position.y = textureSize(i_depth, 0).y - position.y;
     uvec2 tile = position / uint(TILE_SIZE);
 
     uint screen_width = uint(textureSize(i_depth, 0).x);

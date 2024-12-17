@@ -20,13 +20,12 @@
 
 #### 渲染功能
 - **延迟渲染**
+- **分簇延迟光照**
 - **级联阴影映射**
 - **泛光**
 
-
 ### 待实现功能
 
-- 聚簇延迟渲染
 - Mesh Shader 阴影
 - 可变速率着色 (VRS)
 - 体积雾
@@ -35,7 +34,9 @@
 
 ## 效果展示
 
-![Meshlet 可视化](./assets/images/meshlet.png)
+![Meshlet](./assets/images/meshlet.png)
+
+![Clustered Lighting](./assets/images/clustered_lighting.png)
 
 ## 许可证
 

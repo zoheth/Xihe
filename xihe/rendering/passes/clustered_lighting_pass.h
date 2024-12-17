@@ -36,7 +36,7 @@ struct alignas(16) ClusteredLightUniform
 class ClusteredLightingPass : public LightingPass
 {
   public:
-	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, backend::Device &device, uint32_t width, uint32_t height, sg::CascadeScript *cascade_script = nullptr);
+	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
 
 	~ClusteredLightingPass() override = default;
 
@@ -45,7 +45,6 @@ class ClusteredLightingPass : public LightingPass
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
-	void create_persistent_buffers(backend::Device &device);
 
 	void collect_and_sort_lights();
 
@@ -59,20 +58,14 @@ class ClusteredLightingPass : public LightingPass
 	std::vector<uint32_t> bins_;         // 16 bit min, 16 bit max
 	std::vector<uint32_t> tiles_;        // bitfield for each tile
 
-	std::unique_ptr<backend::Buffer> light_buffer_;
-	std::unique_ptr<backend::Buffer> tile_buffer_;
-	std::unique_ptr<backend::Buffer> bin_buffer_;
-
 	static constexpr uint32_t num_bins_   = 16;
 	static constexpr uint32_t tile_size_  = 8;
 	static constexpr uint32_t num_lights_ = 256;
 	static constexpr uint32_t num_words_  = (num_lights_ + 31) / 32;
 
-	uint32_t width_;
-	uint32_t height_;
-	uint32_t last_width_;
-	uint32_t last_height_;
-	uint32_t num_tiles_x_;
-	uint32_t num_tiles_y_;
+	uint32_t width_{};
+	uint32_t height_{};
+	uint32_t num_tiles_x_{};
+	uint32_t num_tiles_y_{};
 };
 }        // namespace xihe::rendering
