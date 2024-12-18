@@ -46,6 +46,11 @@ const std::vector<MshaderMesh *> &Mesh::get_mshader_meshes() const
 	return mshader_meshes_;
 }
 
+const std::vector<SubMeshData> & Mesh::get_submeshes_data() const
+{
+	return submeshes_data_;
+}
+
 void Mesh::add_node(Node &node)
 {
 	nodes_.push_back(&node);

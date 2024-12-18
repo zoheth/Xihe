@@ -246,15 +246,9 @@ void ClusteredLightingPass::generate_bins()
 
 			if (bin >= min_bin && bin <= max_bin)
 			{
-				if (i < min_light_id)
-				{
-					min_light_id = i;
-				}
+				min_light_id = std::min(i, min_light_id);
 
-				if (i > max_light_id)
-				{
-					max_light_id = i;
-				}
+				max_light_id = std::max(i, max_light_id);
 			}
 		}
 		bins_[bin] = min_light_id | (max_light_id << 16);

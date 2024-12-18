@@ -1,6 +1,219 @@
 #include "gpu_scene.h"
 
+#include "meshoptimizer.h"
+
+#include "scene_graph/scene.h"
+#include "scene_graph/node.h"
+#include "scene_graph/components/mesh.h"
+
+namespace
+{
+glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset, float padding = 1.0f)
+{
+	if (data.size() < offset + 3 * sizeof(float))
+		throw std::runtime_error("Data size is too small for conversion to vec4.");
+
+	float x, y, z;
+	std::memcpy(&x, &data[offset], sizeof(float));
+	std::memcpy(&y, &data[offset + sizeof(float)], sizeof(float));
+	std::memcpy(&z, &data[offset + 2 * sizeof(float)], sizeof(float));
+
+	return glm::vec4(x, y, z, padding);
+}
+}        // namespace
+
 namespace xihe
 {
+MeshData::MeshData(const MeshPrimitiveData &primitive_data)
+{
+	auto pos_it    = primitive_data.attributes.find("position");
+	auto normal_it = primitive_data.attributes.find("normal");
+	auto uv_it     = primitive_data.attributes.find("texcoord_0");
 
+	if (pos_it == primitive_data.attributes.end() || normal_it == primitive_data.attributes.end() || uv_it == primitive_data.attributes.end())
+	{
+		throw std::runtime_error("Position, Normal or UV attribute not found.");
+	}
+
+	const VertexAttributeData &pos_attr    = pos_it->second;
+	const VertexAttributeData &normal_attr = normal_it->second;
+	const VertexAttributeData &uv_attr     = uv_it->second;
+
+	if (pos_attr.stride == 0 || normal_attr.stride == 0)
+	{
+		throw std::runtime_error("Stride for position or normal attribute is zero.");
+	}
+	uint32_t                  vertex_count = primitive_data.vertex_count;
+
+	vertices.reserve(vertex_count);
+
+	for (size_t i = 0; i < vertex_count; i++)
+	{
+		uint32_t pos_offset    = i * pos_attr.stride;
+		uint32_t normal_offset = i * normal_attr.stride;
+		uint32_t uv_offset     = i * uv_attr.stride;
+		float    u, v;
+		std::memcpy(&u, &uv_attr.data[uv_offset], sizeof(float));
+		std::memcpy(&v, &uv_attr.data[uv_offset + sizeof(float)], sizeof(float));
+		glm::vec4 pos    = convert_to_vec4(pos_attr.data, pos_offset, u);
+		glm::vec4 normal = convert_to_vec4(normal_attr.data, normal_offset, v);
+		vertices.push_back({pos, normal});
+	}
+
+
+	prepare_meshlets(primitive_data);
+
+}
+
+void MeshData::prepare_meshlets(const MeshPrimitiveData &primitive_data)
+{
+	std::vector<uint32_t> index_data_32;
+	if (primitive_data.index_type == vk::IndexType::eUint16)
+	{
+		const uint16_t *index_data_16 = reinterpret_cast<const uint16_t *>(primitive_data.indices.data());
+		index_data_32.resize(primitive_data.index_count);
+		for (size_t i = 0; i < primitive_data.index_count; ++i)
+		{
+			index_data_32[i] = static_cast<uint32_t>(index_data_16[i]);
+		}
+	}
+	else if (primitive_data.index_type == vk::IndexType::eUint32)
+	{
+		index_data_32.assign(
+		    reinterpret_cast<const uint32_t *>(primitive_data.indices.data()),
+		    reinterpret_cast<const uint32_t *>(primitive_data.indices.data()) + primitive_data.index_count);
+	}
+
+	// Use meshoptimizer to generate meshlets
+	constexpr size_t max_vertices  = 64;
+	constexpr size_t max_triangles = 124;
+	constexpr float  cone_weight   = 0.0f;
+
+	const size_t max_meshlets = meshopt_buildMeshletsBound(index_data_32.size(), max_vertices, max_triangles);
+
+	std::vector<meshopt_Meshlet> local_meshlets(max_meshlets);
+	std::vector<uint32_t>        meshlet_vertex_indices(max_meshlets * max_vertices);
+	std::vector<uint8_t>         meshlet_triangle_indices(max_meshlets * max_triangles * 3);
+
+	auto vertex_positions = reinterpret_cast<const float *>(primitive_data.attributes.at("position").data.data());
+
+	meshlet_count = meshopt_buildMeshlets(
+	    local_meshlets.data(),
+	    meshlet_vertex_indices.data(),
+	    meshlet_triangle_indices.data(),
+	    index_data_32.data(),
+	    index_data_32.size(),
+	    vertex_positions,
+	    primitive_data.vertex_count,
+	    sizeof(float) * 3,
+	    max_vertices,
+	    max_triangles,
+	    cone_weight);
+
+	local_meshlets.resize(meshlet_count);
+
+	// Convert meshopt_Meshlet to our Meshlet structure
+	for (size_t i = 0; i < meshlet_count; ++i)
+	{
+		const meshopt_Meshlet &local_meshlet = local_meshlets[i];
+
+		Meshlet meshlet;
+		meshlet.vertex_offset   = static_cast<uint32_t>(meshlet_vertices.size());
+		meshlet.triangle_offset = static_cast<uint32_t>(meshlet_triangles.size());
+		meshlet.vertex_count    = static_cast<uint32_t>(local_meshlet.vertex_count);
+		meshlet.triangle_count  = static_cast<uint32_t>(local_meshlet.triangle_count);
+
+		for (size_t j = 0; j < local_meshlet.vertex_count; ++j)
+		{
+			uint32_t vertex_index = meshlet_vertex_indices[local_meshlet.vertex_offset + j];
+			meshlet_vertices.push_back(vertex_index);
+		}
+
+		size_t triangle_count = local_meshlet.triangle_count;
+		size_t triangle_base  = local_meshlet.triangle_offset;
+
+		for (size_t j = 0; j < triangle_count; ++j)
+		{
+			uint8_t idx0 = meshlet_triangle_indices[triangle_base + j * 3 + 0];
+			uint8_t idx1 = meshlet_triangle_indices[triangle_base + j * 3 + 1];
+			uint8_t idx2 = meshlet_triangle_indices[triangle_base + j * 3 + 2];
+
+			// Pack three uint8_t indices into one uint32_t
+			uint32_t packed_triangle = idx0 | (idx1 << 8) | (idx2 << 16);
+			meshlet_triangles.push_back(packed_triangle);
+		}
+
+		meshopt_Bounds meshlet_bounds = meshopt_computeMeshletBounds(
+		    meshlet_vertex_indices.data() + local_meshlet.vertex_offset,
+		    meshlet_triangle_indices.data() + local_meshlet.triangle_offset,
+		    local_meshlet.triangle_count, vertex_positions, primitive_data.vertex_count, sizeof(float) * 3);
+
+		meshlet.center = glm::vec3(meshlet_bounds.center[0], meshlet_bounds.center[1], meshlet_bounds.center[2]);
+		meshlet.radius = meshlet_bounds.radius;
+
+		meshlet.cone_axis   = glm::vec3(meshlet_bounds.cone_axis[0], meshlet_bounds.cone_axis[1], meshlet_bounds.cone_axis[2]);
+		meshlet.cone_cutoff = meshlet_bounds.cone_cutoff;
+
+		meshlets.push_back(meshlet);
+	}
+}
+
+void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
+{
+	auto                      meshes = scene.get_components<sg::Mesh>();
+	std::vector<PackedVertex> packed_vertices;
+	std::vector<Meshlet>      meshlets;
+	std::vector<uint32_t>     meshlet_vertices;
+	std::vector<uint32_t>     meshlet_triangles;
+	for (const auto &mesh : meshes)
+	{
+		for (const auto &submesh_data : mesh->get_submeshes_data())
+		{
+			auto &primitive_data = submesh_data.primitive_data;
+			MeshData mesh_data{primitive_data};
+
+			Offsets offsets;
+			offsets.vertex_offset = packed_vertices.size();
+			offsets.meshlet_offset = meshlets.size();
+			offsets.meshlet_vertices_offset = meshlet_vertices.size();
+			offsets.meshlet_triangles_offset = meshlet_triangles.size();
+
+			packed_vertices.insert(packed_vertices.end(), mesh_data.vertices.begin(), mesh_data.vertices.end());
+			meshlets.insert(meshlets.end(), mesh_data.meshlets.begin(), mesh_data.meshlets.end());
+			meshlet_vertices.insert(meshlet_vertices.end(), mesh_data.meshlet_vertices.begin(), mesh_data.meshlet_vertices.end());
+			meshlet_triangles.insert(meshlet_triangles.end(), mesh_data.meshlet_triangles.begin(), mesh_data.meshlet_triangles.end());
+
+
+			for (const auto &node : mesh->get_nodes())
+			{
+				auto node_transform = node->get_transform().get_world_matrix();
+
+			}
+		}
+	}
+	{
+		backend::BufferBuilder buffer_builder{packed_vertices.size() * sizeof(PackedVertex)};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		global_vertex_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_vertex_buffer_->set_debug_name("global vertex buffer");
+		global_vertex_buffer_->update(packed_vertices);
+	}
+	{
+		backend::BufferBuilder buffer_builder{meshlets.size() * sizeof(Meshlet)};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		global_meshlet_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_meshlet_buffer_->set_debug_name("global meshlet buffer");
+		global_meshlet_buffer_->update(meshlets);
+	}
+	{
+		backend::BufferBuilder buffer_builder{meshlet_vertices.size() * sizeof(uint32_t)};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		global_meshlet_vertices_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_meshlet_vertices_buffer_->set_debug_name("global meshlet vertices buffer");
+		global_meshlet_vertices_buffer_->update(meshlet_vertices);
+	}
+}
 }

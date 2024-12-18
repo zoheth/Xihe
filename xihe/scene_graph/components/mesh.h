@@ -34,6 +34,8 @@ class Mesh : public Component
 
 	const std::vector<MshaderMesh *> &get_mshader_meshes() const;
 
+	const std::vector<SubMeshData> &get_submeshes_data() const;
+
 	void add_node(Node &node);
 
 	const std::vector<Node *> &get_nodes() const;

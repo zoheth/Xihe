@@ -10,6 +10,15 @@ struct Meshlet
 	float cone_cutoff;
 };
 
+struct MeshInstanceDraw
+{
+	mat4 model;
+	mat4 model_inverse;
+
+	uint mesh_id;
+	uint padding[3];
+};
+
 struct MeshDrawCommand
 {
 	uint draw_id;

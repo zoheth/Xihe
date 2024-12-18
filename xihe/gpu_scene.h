@@ -29,9 +29,8 @@ struct Meshlet
 	float     cone_cutoff;
 };
 
-class MeshData
+struct MeshData
 {
-public:
 	MeshData(const MeshPrimitiveData &primitive_data);
 
 	std::vector<PackedVertex> vertices;
@@ -40,14 +39,8 @@ public:
 	std::vector<uint32_t>     meshlet_triangles;
 	uint32_t                  meshlet_count{0};
 
-	struct Offsets
-	{
-		uint32_t vertex_offset{0};
-		uint32_t meshlet_offset{0};
-		uint32_t meshlet_vertices_offset{0};
-		uint32_t meshlet_triangles_offset{0};
-	} offsets;
-
+private:
+	void prepare_meshlets(const MeshPrimitiveData &primitive_data);
 };
 
 class GpuScene
@@ -56,6 +49,14 @@ class GpuScene
 	GpuScene() = default;
 
 	void initialize(backend::Device &device, sg::Scene &scene);
+
+	struct Offsets
+	{
+		uint32_t vertex_offset{0};
+		uint32_t meshlet_offset{0};
+		uint32_t meshlet_vertices_offset{0};
+		uint32_t meshlet_triangles_offset{0};
+	};
 
   private:
 	std::unique_ptr<backend::Buffer> global_vertex_buffer_;
@@ -67,6 +68,6 @@ class GpuScene
 	std::unique_ptr<backend::Buffer> mesh_draws_buffer_;
 	std::unique_ptr<backend::Buffer> draw_counts_buffer_;
 
-	std::vector<MeshData::Offsets> mesh_offsets_;
+	std::vector<Offsets> mesh_offsets_;
 };
 }        // namespace xihe
