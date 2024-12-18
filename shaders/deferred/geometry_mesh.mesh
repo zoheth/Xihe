@@ -17,18 +17,7 @@ layout(set = 0, binding = 2) uniform GlobalUniform {
     vec3 camera_position;
 } global_uniform;
 
-
-struct s_meshlet
-{
-    uint vertex_offset;
-    uint triangle_offset;
-    uint vertex_count;
-    uint triangle_count;
-    vec3 center;
-    float radius;
-    vec3 cone_axis;
-    float cone_cutoff;
-};
+#include "mesh_shading/mesh.h"
 
 struct s_vertex
 {
@@ -38,7 +27,7 @@ struct s_vertex
 
 layout (std430, binding = 3) buffer _meshlets
 {
-  s_meshlet meshlets[];
+  Meshlet meshlets[];
 } mbuf;
 
 layout (std430, binding = 4) buffer _vertices
@@ -67,7 +56,7 @@ void main(void)
 {
     uint meshlet_index = taskData.meshletIndices[gl_WorkGroupID.x];
 
-    s_meshlet meshlet = mbuf.meshlets[meshlet_index];
+    Meshlet meshlet = mbuf.meshlets[meshlet_index];
     uint vertex_count = meshlet.vertex_count;
     uint triangle_count = meshlet.triangle_count;
 

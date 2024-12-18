@@ -60,8 +60,8 @@ class ClusteredLightingPass : public LightingPass
 
 	static constexpr uint32_t num_bins_   = 16;
 	static constexpr uint32_t tile_size_  = 8;
-	static constexpr uint32_t num_lights_ = 256;
-	static constexpr uint32_t num_words_  = (num_lights_ + 31) / 32;
+	static constexpr uint32_t max_point_light_count_ = 256;
+	static constexpr uint32_t num_words_  = (max_point_light_count_ + 31) / 32;
 
 	uint32_t width_{};
 	uint32_t height_{};

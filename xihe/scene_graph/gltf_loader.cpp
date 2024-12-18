@@ -689,7 +689,6 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 		// Used to generate meshlets
 		std::vector<float> vertex_positions;
-		std::vector<MeshPrimitiveData> mesh_primitives;
 
 		for (size_t i_primitive = 0; i_primitive < gltf_mesh.primitives.size(); i_primitive++)
 		{
@@ -738,24 +737,27 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 			auto submesh = std::make_unique<sg::SubMesh>(primitive_data, device_);
 			auto mshader_mesh = std::make_unique<sg::MshaderMesh>(primitive_data, device_);
 
+			sg::Material *material = nullptr;
 			if (gltf_primitive.material < 0)
 			{
-				submesh->set_material(*default_material);
-				mshader_mesh->set_material(*default_material);
+				material = default_material.get();
 			}
 			else
 			{
 				assert(gltf_primitive.material < materials.size());
-				submesh->set_material(*materials[gltf_primitive.material]);
-				mshader_mesh->set_material(*materials[gltf_primitive.material]);
+				material = materials[gltf_primitive.material];
 			}
+			submesh->set_material(*material);
+			mshader_mesh->set_material(*material);
 
 			mesh->add_submesh(*submesh);
 
 			scene.add_component(std::move(submesh));
 
-			
 			mesh->add_mshader_mesh(*mshader_mesh);
+
+			mesh->add_submesh_data(*material, std::move(primitive_data));
+
 			scene.add_component(std::move(mshader_mesh));
 		}
 

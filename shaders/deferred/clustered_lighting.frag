@@ -4,8 +4,8 @@
 #define NUM_BINS 16.0
 #define BIN_WIDTH ( 1.0 / NUM_BINS )
 #define TILE_SIZE 8
-#define NUM_LIGHTS 256
-#define NUM_WORDS ( ( NUM_LIGHTS + 31 ) / 32 )
+#define MAX_POINT_LIGHT_COUNT 256
+#define NUM_WORDS ( ( MAX_POINT_LIGHT_COUNT + 31 ) / 32 )
 #define DEBUG_MODE 0
 
 precision highp float;
@@ -43,7 +43,7 @@ layout(set = 0, binding = 9) readonly buffer LightIndices {
 layout(set = 0, binding = 4) uniform LightsInfo
 {
 	Light directional_lights[MAX_LIGHT_COUNT];
-	Light point_lights[NUM_LIGHTS];
+	Light point_lights[MAX_POINT_LIGHT_COUNT];
 	Light spot_lights[MAX_LIGHT_COUNT];
 }
 lights_info;
@@ -109,7 +109,7 @@ vec4 get_debug_visualization(vec3 pos, vec2 screen_uv, vec3 normal) {
     
     // Count actual lights affecting this pixel
     uint light_count = 0;
-    if(min_light_id != NUM_LIGHTS + 1) {
+    if(min_light_id != MAX_POINT_LIGHT_COUNT + 1) {
         for(uint i = min_light_id; i <= max_light_id; ++i) {
             uint word_index = i / 32;
             uint bit_index = i % 32;
@@ -132,13 +132,13 @@ vec4 get_debug_visualization(vec3 pos, vec2 screen_uv, vec3 normal) {
             return vec4(intensity, intensity * 0.5, 0.0, 1.0);
             
         case 4: // Visualize light index range
-            if(min_light_id == NUM_LIGHTS + 1) {
+            if(min_light_id == MAX_POINT_LIGHT_COUNT + 1) {
                 return vec4(1.0, 0.0, 0.0, 1.0); // Red for invalid
             }
             return vec4(
-                float(min_light_id) / float(NUM_LIGHTS),
-                float(max_light_id) / float(NUM_LIGHTS),
-                float(max_light_id - min_light_id) / float(NUM_LIGHTS),
+                float(min_light_id) / float(MAX_POINT_LIGHT_COUNT),
+                float(max_light_id) / float(MAX_POINT_LIGHT_COUNT),
+                float(max_light_id - min_light_id) / float(MAX_POINT_LIGHT_COUNT),
                 1.0
             );
             
@@ -247,7 +247,7 @@ void main()
     uint tile_base = tile.y * stride + tile.x;
 
     // Point Light
-    if(min_light_id != NUM_LIGHTS + 1) {
+    if(min_light_id != MAX_POINT_LIGHT_COUNT + 1) {
 	    for(uint i = min_light_id; i <= max_light_id; ++i) {
             uint word_index = i / 32;
             uint bit_index = i % 32;

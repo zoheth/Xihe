@@ -225,7 +225,7 @@ void ClusteredLightingPass::generate_bins()
 
 	for (uint32_t bin = 0; bin < num_bins_; ++bin)
 	{
-		uint32_t min_light_id = num_lights_ + 1;
+		uint32_t min_light_id = max_point_light_count_ + 1;
 		uint32_t max_light_id = 0;
 
 		float bin_min = bin * bin_width;

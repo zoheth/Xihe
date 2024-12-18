@@ -12,19 +12,10 @@ layout(set = 0, binding = 2) uniform GlobalUniform {
     vec3 camera_position;
 } global_uniform;
 
-struct s_meshlet {
-    uint vertex_offset;
-    uint triangle_offset;
-    uint vertex_count;
-    uint triangle_count;
-    vec3 center;
-    float radius;
-    vec3 cone_axis;
-    float cone_cutoff;
-};
+#include "mesh_shading/mesh.h"
 
 layout(std430, binding = 8) buffer Meshlets {
-    s_meshlet meshlets[];
+    Meshlet meshlets[];
 } mbuf;
 
 layout(std430, binding = 7) buffer MeshletCount {
@@ -65,7 +56,7 @@ void main()
     if (mi >= meshlet_count)
         return;
 
-    s_meshlet meshlet = mbuf.meshlets[mi];
+    Meshlet meshlet = mbuf.meshlets[mi];
 
     // Transform bounding sphere to world space
     vec4 world_center = global_uniform.model * vec4(meshlet.center, 1.0);

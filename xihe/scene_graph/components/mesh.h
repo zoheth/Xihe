@@ -6,6 +6,11 @@
 
 namespace xihe::sg
 {
+struct SubMeshData
+{
+	Material         *material;
+	MeshPrimitiveData primitive_data;
+};
 class Mesh : public Component
 {
   public:
@@ -23,6 +28,8 @@ class Mesh : public Component
 
 	void add_mshader_mesh(MshaderMesh &mshader_mesh);
 
+	void add_submesh_data(Material &material, MeshPrimitiveData &&primitive_data);
+
 	const std::vector<SubMesh *> &get_submeshes() const;
 
 	const std::vector<MshaderMesh *> &get_mshader_meshes() const;
@@ -32,12 +39,14 @@ class Mesh : public Component
 	const std::vector<Node *> &get_nodes() const;
 
   private:
-	AABB bounds;
+	AABB bounds_;
 
-	std::vector<SubMesh *> submeshes;
+	std::vector<SubMesh *> submeshes_;
 
-	std::vector<MshaderMesh *> mshader_meshes;
+	std::vector<MshaderMesh *> mshader_meshes_;
 
-	std::vector<Node *> nodes;
+	std::vector<SubMeshData> submeshes_data_; // used for gpu scene
+
+	std::vector<Node *> nodes_;
 };
-}
+}        // namespace xihe::sg

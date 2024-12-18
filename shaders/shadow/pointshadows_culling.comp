@@ -1,0 +1,71 @@
+#version 450
+
+#define MAX_POINT_LIGHT_COUNT 1
+
+struct Meshlet
+{
+	uint vertex_offset;
+	uint vertex_count;
+	uint primitive_offset;
+	uint primitive_count;
+	uint cull_data_offset;
+	uint cull_data_count;
+};
+
+layout(set = 0, binding = 0) readonly buffer Meshlets
+{
+	Meshlet meshlets[];
+};
+
+layout(set = 0, binding = 1) buffer MeshletInstances
+{
+	uvec2 meshlet_instances[];
+};
+
+layout(set =0, binding = 2) buffer PerLightMeshletIndices
+{
+	uint per_light_meshlet_indices[];
+};
+
+layout(constant_id = 0) const uint POINT_LIGHT_COUNT       = 0U;
+layout(constant_id = 1) const uint MESH_INSTANCE_COUNT           = 1U;
+
+struct Light {
+	vec3 world_position;
+	float radius;
+
+	vec3 color;
+	float intensity;
+};
+
+layout(set = 0, binding = 3) uniform Lights {
+	Light lights[];
+};
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+void main() 
+{
+	if(gl_GlobalInvocationID.x == 0) {
+		for(uint i = 0; i < MAX_POINT_LIGHT_COUNT; ++i) {
+			per_light_meshlet_indices[i*2] = 0;
+			per_light_meshlet_indices[i*2 + 1] = 0;
+		}
+	}
+
+    memoryBarrier();
+    barrier();
+
+	uint light_index = gl_GlobalInvocationID.x % POINT_LIGHT_COUNT;
+	if(light_index >= POINT_LIGHT_COUNT) {
+		return;
+	}
+
+	const Light light = lights[light_index];
+
+	uint mesh_instance_index = gl_GlobalInvocationID.x / POINT_LIGHT_COUNT;
+	if(mesh_instance_index >= MESH_INSTANCE_COUNT) {
+		return;
+	}
+	
+};

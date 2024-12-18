@@ -16,7 +16,6 @@ using namespace rendering;
 
 TempApp::TempApp()
 {
-	// Adding device extensions
 	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
@@ -41,17 +40,17 @@ bool TempApp::prepare(Window *window)
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
 
 	// Magic numbers used to offset lights in the Sponza scene
-	for (int i = -4; i < 4; ++i)        // 8 positions in x
+	for (int i = -4; i < 4; ++i)
 	{
-		for (int j = 0; j < 5; ++j)        // 5 positions in z (increased from 2)
+		for (int j = 0; j < 5; ++j)
 		{
 			glm::vec3 pos = light_pos;
-			pos.x += i * 400;        // keep same x spacing
-			pos.z += j * 150;        // adjusted z spacing to maintain similar density
+			pos.x += i * 400;
+			pos.z += j * 150;
 			pos.y = 8;
-			for (int k = 0; k < 6; ++k)        // 6 height levels (increased from 3)
+			for (int k = 0; k < 6; ++k)
 			{
-				pos.y         = pos.y + (k * 50);        // adjusted y spacing for more height levels
+				pos.y         = pos.y + (k * 50);
 				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
 				light_color.y = static_cast<float>(rand()) / (RAND_MAX);
 				light_color.z = static_cast<float>(rand()) / (RAND_MAX);
@@ -64,8 +63,8 @@ bool TempApp::prepare(Window *window)
 		}
 	}
 
-	auto &camera_node = xihe::sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
-	auto  camera      = &camera_node.get_component<xihe::sg::Camera>();
+	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
+	auto  camera      = &camera_node.get_component<sg::Camera>();
 	camera_           = camera;
 
 	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
