@@ -1,0 +1,92 @@
+#version 450
+#extension GL_EXT_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+layout(set = 0, binding = 2) uniform GlobalUniform {
+    mat4 view;
+    mat4 view_proj;
+    vec4 frustum_planes[6]; // Frustum planes in view space
+    vec3 camera_position;
+} global_uniform;
+
+#include "mesh_shading/mesh.h"
+
+layout(std430, binding = 8) buffer Meshlets {
+    Meshlet meshlets[];
+} mbuf;
+
+layout(std430, binding = 7) buffer MeshletCount {
+    uint meshlet_count;
+};
+
+// Task output payload
+struct TaskData {
+    uint meshletIndices[32];
+};
+
+taskPayloadSharedEXT TaskData taskData;
+
+// Cone culling function
+bool coneCull(vec3 center, float radius, vec3 cone_axis, float cone_cutoff, vec3 camera_position) {
+    vec3 to_center = center - camera_position;
+    float dist = length(to_center);
+    return dot(to_center, cone_axis) >= cone_cutoff * dist + radius;
+}
+
+// Frustum culling function
+bool frustumCull(vec3 center_view_space, float radius) {
+    for (int i = 0; i < 6; ++i) {
+        if (dot(global_uniform.frustum_planes[i], vec4(center_view_space, 1.0)) < -radius) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
+void main()
+{
+	uint ti = gl_LocalInvocationID.x;
+    uint mgi = gl_WorkGroupID.x;
+    uint mi = mgi * 32 + ti;
+
+    if (mi >= meshlet_count)
+        return;
+
+    Meshlet meshlet = mbuf.meshlets[mi];
+
+    // Transform bounding sphere to world space
+    vec4 world_center = global_uniform.model * vec4(meshlet.center, 1.0);
+    float scale = length(global_uniform.model[0]); // Assuming uniform scaling
+    float radius = meshlet.radius * scale * 1.1; // Slightly inflate the radius
+
+    // Transform center to view space for frustum culling
+    vec3 center_view_space = (global_uniform.view * world_center).xyz;
+
+    // Perform frustum culling
+    bool frustum_visible = frustumCull(center_view_space, radius);
+
+    // Perform cone culling
+    vec3 cone_axis_world = normalize(mat3(global_uniform.model) * meshlet.cone_axis);
+    float cone_cutoff = meshlet.cone_cutoff;
+    bool cone_cull_result = coneCull(world_center.xyz, radius, cone_axis_world, cone_cutoff, global_uniform.camera_position);
+
+    // Determine if the meshlet should be rendered
+    bool accept = frustum_visible && !cone_cull_result;
+
+    // Use subgroup operations for efficiency
+    uvec4 ballot = subgroupBallot(accept);
+    uint index = subgroupBallotExclusiveBitCount(ballot);
+
+    if (accept)
+        taskData.meshletIndices[index] = mi;
+
+    uint count = subgroupBallotBitCount(ballot);
+
+    // Emit mesh tasks if any meshlets are visible
+    if (gl_LocalInvocationID.x == 0 && count > 0) {
+        EmitMeshTasksEXT(count, 1, 1);
+    }
+}
