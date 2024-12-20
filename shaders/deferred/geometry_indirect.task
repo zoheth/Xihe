@@ -21,6 +21,14 @@ layout(std430, binding = 7) buffer MeshletCount {
     uint meshlet_count;
 };
 
+layout(std430, binding = 10) readonly buffer MeshDrawBuffer {
+    MeshDraw mesh_draws[];
+};
+
+layout(std430, binding = 11) buffer InstanceBuffer {
+    MeshInstanceDraw instances[];
+};
+
 // Task output payload
 struct TaskData {
     uint meshletIndices[32];
@@ -49,13 +57,19 @@ bool frustumCull(vec3 center_view_space, float radius) {
 void main()
 {
 	uint ti = gl_LocalInvocationID.x;
+    uint draw_id = gl_DrawID;
     uint mgi = gl_WorkGroupID.x;
+
+    uint base_meshlet_index = mesh_draws[draw_id].
+
     uint mi = mgi * 32 + ti;
 
     if (mi >= meshlet_count)
         return;
 
     Meshlet meshlet = mbuf.meshlets[mi];
+
+
 
     // Transform bounding sphere to world space
     vec4 world_center = global_uniform.model * vec4(meshlet.center, 1.0);

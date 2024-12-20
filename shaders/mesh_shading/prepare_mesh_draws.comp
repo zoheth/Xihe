@@ -1,0 +1,51 @@
+#version 450
+
+#define MESHLETS_PER_TASK 32
+
+#include "mesh_shading/mesh.h"
+
+layout(set = 0, binding = 1) readonly buffer MeshDrawBuffer
+{
+    MeshDraw mesh_draws[];
+};
+
+layout(set = 0, binding = 2) readonly buffer MeshInstanceDrawBuffer
+{
+    MeshInstanceDraw instances[];
+};
+
+layout(set = 0, binding = 3) buffer MeshDrawCommandBuffer
+{
+    MeshDrawCommand commands[];
+};
+
+layout(std430, binding = 4) buffer CounterBuffer {
+    uint draw_count;
+};
+
+layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    uint instance_index = gl_GlobalInvocationID.x;
+    if(instance_index >= instances.length())
+        return;
+
+    MeshInstanceDraw instance = instances[instance_index];
+    MeshDraw mesh_draw = mesh_draws[instance.mesh_draw_index];
+    
+    // todo: do instance culling here
+    bool is_visible = true;
+    
+    if(is_visible)
+    {
+        uint draw_index = atomicAdd(draw_count, 1);
+        
+        uint task_count = (mesh_draw.meshlet_count + MESHLETS_PER_TASK - 1) / MESHLETS_PER_TASK;
+        
+        commands[draw_index].group_count_x = task_count;
+        commands[draw_index].group_count_y = 1;
+        commands[draw_index].group_count_z = 1;
+        commands[draw_index].instance_index = instance_index;
+    }
+}

@@ -149,6 +149,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void draw_mesh_tasks_indirect(const backend::Buffer &buffer, vk::DeviceSize offset, uint32_t draw_count, uint32_t stride);
 
+	void draw_mesh_tasks_indirect_count(const backend::Buffer &buffer, vk::DeviceSize offset, const backend::Buffer &count_buffer, vk::DeviceSize count_buffer_offset, uint32_t max_draw_count, uint32_t stride);
+
 	void update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data);
 
 	void blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions);

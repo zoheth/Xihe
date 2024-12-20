@@ -33,17 +33,17 @@ struct MeshInstanceDraw
 
 struct MeshDrawCommand
 {
-	uint draw_id;
-
-	// VkDrawIndexedIndirectCommand
-	uint index_count;
-	uint instance_count;
-	uint first_index;
-	uint vertex_offset;
-	uint first_instance;
+	//// VkDrawIndexedIndirectCommand
+	//uint index_count;
+	//uint instance_count;
+	//uint first_index;
+	//uint vertex_offset;
+	//uint first_instance;
 
 	// VkDrawMeshTasksIndirectCommandEXT
 	uint group_count_x;
 	uint group_count_y;
 	uint group_count_z;
+
+	uint instance_index;
 };

@@ -231,6 +231,12 @@ void CommandBuffer::draw_mesh_tasks_indirect(const backend::Buffer &buffer, vk::
 	get_handle().drawMeshTasksIndirectEXT(buffer.get_handle(), offset, draw_count, stride);
 }
 
+void CommandBuffer::draw_mesh_tasks_indirect_count(const backend::Buffer &buffer, vk::DeviceSize offset, const backend::Buffer &count_buffer, vk::DeviceSize count_buffer_offset, uint32_t max_draw_count, uint32_t stride)
+{
+	flush(vk::PipelineBindPoint::eGraphics);
+	get_handle().drawMeshTasksIndirectCountEXT(buffer.get_handle(), offset, count_buffer.get_handle(), count_buffer_offset, max_draw_count, stride);
+}
+
 void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data)
 {
 	get_handle().updateBuffer(buffer.get_handle(), offset, data.size(), data.data());

@@ -29,6 +29,16 @@ struct Meshlet
 	float     cone_cutoff;
 };
 
+struct MeshDraw
+{
+	// x = diffuse index, y = roughness index, z = normal index, w = occlusion index.
+	glm::uvec4 texture_indices;
+	glm::vec4  base_color_factor;
+	glm::vec4  metallic_roughness_occlusion_factor;
+	uint32_t   meshlet_offset;
+	uint32_t   meshlet_count;
+};
+
 struct MeshData
 {
 	MeshData(const MeshPrimitiveData &primitive_data);
@@ -55,7 +65,7 @@ class GpuScene
 		uint32_t vertex_offset{0};
 		uint32_t meshlet_offset{0};
 		uint32_t meshlet_vertices_offset{0};
-		uint32_t meshlet_triangles_offset{0};
+		uint32_t meshlet_indices_offset{0};
 	};
 
   private:
