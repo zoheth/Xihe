@@ -1,20 +1,6 @@
-/* Copyright (c) 2023, Mobica Limited
- *
- * SPDX-License-Identifier: Apache-2.0
- *
- * Licensed under the Apache License, Version 2.0 the "License";
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 #version 450
+
+#define HAS_BASE_COLOR_TEXTURE
 
 precision highp float;
 
@@ -25,6 +11,7 @@ layout (location = 0) in PerVertexData
   vec4 pos;
   vec3 normal;
   vec2 uv;
+  uint mesh_draw_index;
 } v_in;
 
 layout (location = 0) out vec4 o_albedo;
@@ -32,14 +19,10 @@ layout (location = 1) out vec4 o_normal;
 
 layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
 
-layout(push_constant, std430) uniform PBRMaterialUniform {
-    // x = diffuse index, y = roughness index, z = normal index, w = occlusion index.
-	// Occlusion and roughness are encoded in the same texture
-	uvec4       texture_indices;
-    vec4 base_color_factor;
-    float metallic_factor;
-    float roughness_factor;
-} pbr_material_uniform;
+layout (std430, binding = 3) readonly buffer MeshDrawBuffer
+{
+    MeshDraw mesh_draws[];
+};
 
 void main(void)
 {
@@ -49,9 +32,9 @@ void main(void)
 
 	vec4 base_color = vec4(1.0, 0.0, 0.0, 1.0);
 #ifdef HAS_BASE_COLOR_TEXTURE
-    base_color = texture(global_textures[nonuniformEXT(pbr_material_uniform.texture_indices.x)], v_in.uv);
+    base_color = texture(global_textures[nonuniformEXT(mesh_draws[mesh_draw_index].texture_indices.x)], v_in.uv);
 #else
-    base_color = pbr_material_uniform.base_color_factor;
+    base_color = mesh_draws[mesh_draw_index].base_color_factor;
 #endif
     o_albedo = base_color;
 #ifdef SHOW_MESHLET_VIEW

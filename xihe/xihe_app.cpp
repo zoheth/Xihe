@@ -40,6 +40,7 @@ XiheApp::~XiheApp()
 	}
 
 	scene_.reset();
+	gpu_scene_.reset();
 
 	render_graph_.reset();
 	stats_.reset();

@@ -20,6 +20,8 @@ struct MeshDraw
 
 	uint meshlet_offset;
 	uint meshlet_count;
+	uint mesh_vertex_offset;
+	uint mesh_triangle_offset;
 };
 
 struct MeshInstanceDraw
@@ -27,7 +29,7 @@ struct MeshInstanceDraw
 	mat4 model;
 	mat4 model_inverse;
 
-	uint mesh_draw_id;
+	uint mesh_draw_index;
 	uint padding[3];
 };
 

@@ -4,17 +4,17 @@
 
 #include "mesh_shading/mesh.h"
 
-layout(set = 0, binding = 1) readonly buffer MeshDrawBuffer
+layout(std430, binding = 1) readonly buffer MeshDrawBuffer
 {
     MeshDraw mesh_draws[];
 };
 
-layout(set = 0, binding = 2) readonly buffer MeshInstanceDrawBuffer
+layout(std430, binding = 2) readonly buffer MeshInstanceDrawBuffer
 {
     MeshInstanceDraw instances[];
 };
 
-layout(set = 0, binding = 3) buffer MeshDrawCommandBuffer
+layout(std430, binding = 3) buffer MeshDrawCommandBuffer
 {
     MeshDrawCommand commands[];
 };
@@ -27,6 +27,13 @@ layout (local_size_x = 256, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
+    if (gl_GlobalInvocationID.x == 0) {
+        draw_count = 0;
+    }
+
+    memoryBarrierBuffer();
+    barrier();
+
     uint instance_index = gl_GlobalInvocationID.x;
     if(instance_index >= instances.length())
         return;

@@ -62,6 +62,9 @@ struct PassBindable
 	vk::Format   format;
 	ExtentDescriptor extent_desc{};
 
+	// only for buffer
+	uint32_t size;
+
 	ImageProperties image_properties;
 };
 struct PassAttachment

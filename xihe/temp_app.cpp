@@ -5,6 +5,7 @@
 #include "rendering/passes/cascade_shadow_pass.h"
 #include "rendering/passes/clustered_lighting_pass.h"
 #include "rendering/passes/geometry_pass.h"
+#include "rendering/passes/mesh_draw_preparation.h"
 #include "rendering/passes/meshlet_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
@@ -33,8 +34,9 @@ bool TempApp::prepare(Window *window)
 	load_scene("scenes/sponza/Sponza01.gltf");
 	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
-
 	update_bindless_descriptor_sets();
+	gpu_scene_ = std::make_unique<GpuScene>();
+	gpu_scene_->initialize(*device_, *scene_);
 
 	auto light_pos   = glm::vec3(0.0f, 128.0f, -225.0f);
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
@@ -116,6 +118,11 @@ bool TempApp::prepare(Window *window)
 		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
 
 		    .finalize();*/
+
+		auto mesh_preparation_pass = std::make_unique<MeshDrawPreparationPass>(*gpu_scene_);
+		graph_builder_->add_pass("Mesh Draw Preparation", std::move(mesh_preparation_pass))
+		    .shader({"mesh_shading/prepare_mesh_draws.comp"})
+		    .finalize();
 
 		auto geometry_pass = std::make_unique<MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
 

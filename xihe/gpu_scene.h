@@ -37,6 +37,30 @@ struct MeshDraw
 	glm::vec4  metallic_roughness_occlusion_factor;
 	uint32_t   meshlet_offset;
 	uint32_t   meshlet_count;
+	// Global offset into the vertex buffer for all meshlets in this mesh.
+	// Individual meshlet vertex offsets are stored in their respective Meshlet structs.
+	uint32_t mesh_vertex_offset;
+	// Global offset into the triangle buffer for all meshlets in this mesh.
+	// Individual meshlet triangle offsets are stored in their respective Meshlet structs.
+	uint32_t mesh_triangle_offset;
+};
+
+struct MeshInstanceDraw
+{
+	glm::mat4 model;
+	glm::mat4 model_inverse;
+	uint32_t  mesh_draw_id;
+	uint32_t  padding[3];
+};
+
+// This structure is only used to calculate size, with the specific values written by the GPU
+struct MeshDrawCommand
+{
+	// VkDrawMeshTasksIndirectCommandEXT
+	uint32_t group_count_x;
+	uint32_t group_count_y;
+	uint32_t group_count_z;
+	uint32_t instance_index;
 };
 
 struct MeshData
@@ -49,7 +73,7 @@ struct MeshData
 	std::vector<uint32_t>     meshlet_triangles;
 	uint32_t                  meshlet_count{0};
 
-private:
+  private:
 	void prepare_meshlets(const MeshPrimitiveData &primitive_data);
 };
 
@@ -60,15 +84,21 @@ class GpuScene
 
 	void initialize(backend::Device &device, sg::Scene &scene);
 
-	struct Offsets
-	{
-		uint32_t vertex_offset{0};
-		uint32_t meshlet_offset{0};
-		uint32_t meshlet_vertices_offset{0};
-		uint32_t meshlet_indices_offset{0};
-	};
+	backend::Buffer &get_instance_buffer() const;
+	backend::Buffer &get_mesh_draws_buffer() const;
+	backend::Buffer &get_draw_command_buffer() const;
+	backend::Buffer &get_draw_counts_buffer() const;
+
+	backend::Buffer &get_global_vertex_buffer() const;
+	backend::Buffer &get_global_meshlet_buffer() const;
+	backend::Buffer &get_global_meshlet_vertices_buffer() const;
+	backend::Buffer &get_global_packed_meshlet_indices_buffer() const;
+
+	uint32_t get_instance_count() const;
 
   private:
+	uint32_t instance_count_{};
+
 	std::unique_ptr<backend::Buffer> global_vertex_buffer_;
 	std::unique_ptr<backend::Buffer> global_meshlet_buffer_;
 	std::unique_ptr<backend::Buffer> global_meshlet_vertices_buffer_;
@@ -76,8 +106,7 @@ class GpuScene
 
 	std::unique_ptr<backend::Buffer> instance_buffer_;
 	std::unique_ptr<backend::Buffer> mesh_draws_buffer_;
+	std::unique_ptr<backend::Buffer> draw_command_buffer_;
 	std::unique_ptr<backend::Buffer> draw_counts_buffer_;
-
-	std::vector<Offsets> mesh_offsets_;
 };
 }        // namespace xihe
