@@ -22,6 +22,17 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 {
 	command_buffer.set_has_mesh_shader(true);
 
+	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+
+	auto &task_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader());
+	auto &mesh_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader());
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
+
+	std::vector<backend::ShaderModule *> shader_modules{&task_shader_module, &mesh_shader_module, &frag_shader_module};
+
+	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
+	command_buffer.bind_pipeline_layout(pipeline_layout);
+
 	DepthStencilState depth_stencil_state{};
 	depth_stencil_state.depth_test_enable  = true;
 	depth_stencil_state.depth_write_enable = true;
@@ -61,16 +72,13 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 
-	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+	/*common::BufferMemoryBarrier memory_barrier{};
+	memory_barrier.src_access_mask = vk::AccessFlagBits2::eShaderWrite;
+	memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
+	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eComputeShader;
+	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eMeshShaderEXT;
 
-	auto &task_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader());
-	auto &mesh_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader());
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
-
-	std::vector<backend::ShaderModule *> shader_modules{&task_shader_module, &mesh_shader_module, &frag_shader_module};
-
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules, &resource_cache.request_bindless_descriptor_set());
-	command_buffer.bind_pipeline_layout(pipeline_layout);
+	command_buffer.buffer_memory_barrier(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_command_buffer().get_size(), memory_barrier);*/
 
 	command_buffer.bind_buffer(gpu_scene_.get_mesh_draws_buffer(), 0, gpu_scene_.get_mesh_draws_buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_instance_buffer(), 0, gpu_scene_.get_instance_buffer().get_size(), 0, 4, 0);
@@ -81,8 +89,8 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 	command_buffer.bind_buffer(gpu_scene_.get_global_meshlet_vertices_buffer(), 0, gpu_scene_.get_global_meshlet_vertices_buffer().get_size(), 0, 9, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_global_packed_meshlet_indices_buffer(), 0, gpu_scene_.get_global_packed_meshlet_indices_buffer().get_size(), 0, 10, 0);
 
-	command_buffer.draw_mesh_tasks_indirect_count(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_counts_buffer(), 0, gpu_scene_.get_instance_count(), sizeof())
+	command_buffer.draw_mesh_tasks_indirect_count(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_counts_buffer(), 0, gpu_scene_.get_instance_count(), sizeof(MeshDrawCommand));
 
-	command_buffer.set_has_mesh_shader(false);
+	    command_buffer.set_has_mesh_shader(false);
 }
 }        // namespace xihe::rendering

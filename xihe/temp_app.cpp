@@ -6,6 +6,7 @@
 #include "rendering/passes/clustered_lighting_pass.h"
 #include "rendering/passes/geometry_pass.h"
 #include "rendering/passes/mesh_draw_preparation.h"
+#include "rendering/passes/mesh_pass.h"
 #include "rendering/passes/meshlet_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
@@ -121,18 +122,21 @@ bool TempApp::prepare(Window *window)
 
 		auto mesh_preparation_pass = std::make_unique<MeshDrawPreparationPass>(*gpu_scene_);
 		graph_builder_->add_pass("Mesh Draw Preparation", std::move(mesh_preparation_pass))
+		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "draw command", .buffer_size = gpu_scene_->get_instance_count() * sizeof(MeshDrawCommand)}})
 		    .shader({"mesh_shading/prepare_mesh_draws.comp"})
 		    .finalize();
 
-		auto geometry_pass = std::make_unique<MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
+		auto geometry_pass = std::make_unique<MeshPass>(*gpu_scene_, *camera);
+		// auto geometry_pass = std::make_unique<MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
 
 		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
-
+		    .bindables({{.type = BindableType::kStorageBufferRead, .name = "draw command"}})
 		    .attachments({{AttachmentType::kDepth, "depth"},
 		                  {AttachmentType::kColor, "albedo"},
 		                  {AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32}})
 
-		    .shader({"deferred/geometry_mesh.task", "deferred/geometry_mesh.mesh", "deferred/geometry_mesh.frag"})
+		    //.shader({"deferred/geometry_mesh.task", "deferred/geometry_mesh.mesh", "deferred/geometry_mesh.frag"})
+		    .shader({"deferred/geometry_indirect.task", "deferred/geometry_indirect.mesh", "deferred/geometry_indirect.frag"})
 
 		    .finalize();
 	}

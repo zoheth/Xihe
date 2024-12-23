@@ -17,10 +17,10 @@ class ResourceStateTracker
   public:
 	struct State
 	{
-		ResourceUsageState      usage_state;
-		int32_t                 producer_pass{-1};
-		int32_t                 last_user{-1};
-		backend::ImageView     *image_view{nullptr};
+		ResourceUsageState  usage_state;
+		int32_t             producer_pass{-1};
+		int32_t             last_user{-1};
+		backend::ImageView *image_view{nullptr};
 	};
 	State get_or_create_state(const ResourceHandle &handle);
 
@@ -32,14 +32,17 @@ class ResourceStateTracker
 
 struct ResourceCreateInfo
 {
-	bool                 is_buffer   = false;
-	bool                 is_external = false;
-	bool                 is_handled  = false;        // Track if resource has been created
+	bool is_buffer   = false;
+	bool is_external = false;
+	bool is_handled  = false;        // Track if resource has been created
+
 	vk::BufferUsageFlags buffer_usage{};
-	vk::ImageUsageFlags  image_usage{};
-	vk::Format           format = vk::Format::eUndefined;
-	ExtentDescriptor     extent_desc{};
-	uint32_t             array_layers{1};
+	uint32_t             buffer_size{0};
+
+	vk::ImageUsageFlags image_usage{};
+	vk::Format          format = vk::Format::eUndefined;
+	ExtentDescriptor    extent_desc{};
+	uint32_t            array_layers{1};
 };
 
 class GraphBuilder
@@ -82,8 +85,7 @@ class GraphBuilder
 
 	void recreate_resources();
 
-private:
-
+  private:
 	class PassBatchBuilder
 	{
 	  public:
@@ -103,8 +105,8 @@ private:
 	void add_pass(const std::string            &name,
 	              PassInfo                    &&pass_info,
 	              std::unique_ptr<RenderPass> &&render_pass,
-	              bool is_present,
-	              Gui* gui=nullptr);
+	              bool                          is_present,
+	              Gui                          *gui = nullptr);
 
 	void create_resources();
 
@@ -122,7 +124,6 @@ private:
 	    PassNode             &pass,
 	    ResourceStateTracker &tracker,
 	    PassBatchBuilder     &batch_builder);
-
 
 	RenderGraph   &render_graph_;
 	RenderContext &render_context_;

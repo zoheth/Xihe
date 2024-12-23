@@ -14,7 +14,7 @@ struct ResourceHandle
 {
 	std::string name;
 	uint32_t    base_layer  = 0;
-	uint32_t    layer_count = 1;
+	uint32_t    layer_count = 0;
 
 	bool operator==(const ResourceHandle &) const = default;
 };
@@ -91,6 +91,7 @@ struct ResourceInfo
 	struct BufferDesc
 	{
 		vk::BufferUsageFlags usage;
+		uint32_t             size;
 		backend::Buffer     *buffer = nullptr;
 	};
 
@@ -136,6 +137,8 @@ enum class BindableType
 	kStorageReadWrite,             // layout(rgba8) uniform image2D
 	kUniformBuffer,                // uniform buffer
 	kStorageBufferRead,            // layout(std430) readonly buffer
+	kIndirectBuffer,                // indirect buffer
+	kIndirectBufferRead,            // indirect buffer and storage buffer
 	kStorageBufferWrite,           // layout(std430) writeonly buffer
 	kStorageBufferReadWrite,        // layout(std430) buffer
 };
@@ -154,6 +157,8 @@ struct ResourceUsageState
 	vk::PipelineStageFlags2 stage_mask{};
 	vk::AccessFlags2        access_mask{};
 };
+
+bool is_buffer(BindableType type);
 
 void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageState &state);
 

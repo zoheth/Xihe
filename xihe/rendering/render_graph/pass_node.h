@@ -63,7 +63,7 @@ struct PassBindable
 	ExtentDescriptor extent_desc{};
 
 	// only for buffer
-	uint32_t size;
+	uint32_t buffer_size;
 
 	ImageProperties image_properties;
 };
@@ -97,6 +97,8 @@ class PassNode
 	PassInfo &get_pass_info();
 
 	PassType get_type() const;
+
+	std::string get_name() const;
 
 	void set_render_target(std::unique_ptr<RenderTarget> &&render_target);
 

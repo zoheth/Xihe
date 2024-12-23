@@ -24,6 +24,22 @@ vk::PipelineStageFlags2 get_shader_stage_flags(PassType pass_type)
 	}
 }
 
+bool is_buffer(BindableType type)
+{
+	switch (type)
+	{
+		case BindableType::kUniformBuffer:
+		case BindableType::kStorageBufferRead:
+		case BindableType::kStorageBufferWrite:
+		case BindableType::kStorageBufferReadWrite:
+		case BindableType::kIndirectBuffer:
+		case BindableType::kIndirectBufferRead:
+			return true;
+		default:
+			return false;
+	}
+}
+
 void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageState &state)
 {
 	switch (type)

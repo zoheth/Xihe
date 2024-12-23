@@ -102,7 +102,6 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::
 
 void GraphBuilder::create_resources()
 {
-
 	collect_resource_create_info();
 
 	create_graph_resource();
@@ -130,8 +129,19 @@ void GraphBuilder::collect_resource_create_info()
 				case BindableType::kStorageWrite:
 				case BindableType::kStorageReadWrite:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
-					res_info.format = bindable.format;
+					res_info.format      = bindable.format;
 					res_info.extent_desc = bindable.extent_desc;
+					break;
+				case BindableType::kStorageBufferRead:
+				case BindableType::kStorageBufferWrite:
+				case BindableType::kStorageBufferReadWrite:
+					res_info.is_buffer = true;
+					res_info.buffer_usage |= vk::BufferUsageFlagBits::eStorageBuffer;
+					res_info.buffer_size = std::max(res_info.buffer_size, bindable.buffer_size);
+					break;
+				case BindableType::kIndirectBuffer:
+					res_info.is_buffer = true;
+					res_info.buffer_usage |= vk::BufferUsageFlagBits::eIndirectBuffer;
 					break;
 			}
 		}
@@ -139,8 +149,8 @@ void GraphBuilder::collect_resource_create_info()
 		// Collect attachment info
 		for (const auto &attachment : info.attachments)
 		{
-			auto &res_info  = resource_create_infos_[attachment.name];
-			res_info.format = attachment.format;
+			auto &res_info       = resource_create_infos_[attachment.name];
+			res_info.format      = attachment.format;
 			res_info.extent_desc = attachment.extent_desc;
 
 			if (attachment.type == AttachmentType::kColor)
@@ -178,10 +188,21 @@ void GraphBuilder::create_graph_resource()
 
 		if (info.is_buffer)
 		{
+			backend::BufferBuilder buffer_builder{info.buffer_size};
+			buffer_builder.with_usage(info.buffer_usage)
+			    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+			render_graph_.buffers_.push_back(buffer_builder.build_unique(device));
+			render_graph_.buffers_.back()->set_debug_name(name);
+			ResourceHandle handle{
+			    .name = name};
+
 			ResourceInfo::BufferDesc buffer_desc;
-			buffer_desc.usage = info.buffer_usage;
-			// todo
+			buffer_desc.usage  = info.buffer_usage;
+			buffer_desc.buffer = render_graph_.buffers_.back().get();
+
 			resource_info.desc = buffer_desc;
+
+			render_graph_.resources_[handle] = resource_info;
 		}
 		else
 		{
@@ -219,7 +240,7 @@ void GraphBuilder::create_graph_resource()
 		for (const auto &attachment : info.attachments)
 		{
 			auto &res_info = resource_create_infos_[attachment.name];
-			if (res_info.is_handled)
+			if (res_info.is_handled || res_info.is_buffer)
 			{
 				continue;
 			}
@@ -240,6 +261,11 @@ void GraphBuilder::create_graph_resource()
 		{
 			auto       *base_image = base_images[bindable.name];
 			const auto &res_info   = resource_create_infos_[bindable.name];
+
+			if (res_info.is_buffer)
+			{
+				continue;
+			}
 
 			ResourceHandle handle{
 			    .name        = bindable.name,
@@ -325,15 +351,13 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 	std::vector<std::unordered_set<uint32_t>> adjacency_list(pass_nodes.size());
 	std::vector<uint32_t>                     indegree(pass_nodes.size(), 0);
 
-	// 记录所有写入操作的producer
+	// Process resource dependencies
 	std::unordered_map<std::string, std::vector<uint32_t>> resource_writers;
 
-	// 收集所有写操作
 	for (uint32_t i = 0; i < pass_nodes.size(); ++i)
 	{
 		const auto &pass_info = pass_nodes[i].get_pass_info();
 
-		// 收集bindable中的写操作
 		for (const auto &resource : pass_info.bindables)
 		{
 			if (resource.type == BindableType::kStorageBufferReadWrite ||
@@ -345,19 +369,17 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 			}
 		}
 
-		// attachments总是写操作
+		// attachments always write
 		for (const auto &attachment : pass_info.attachments)
 		{
 			resource_writers[attachment.name].push_back(i);
 		}
 	}
 
-	// 建立依赖
 	for (uint32_t consumer = 0; consumer < pass_nodes.size(); ++consumer)
 	{
 		const auto &pass_info = pass_nodes[consumer].get_pass_info();
 
-		// 检查bindable的依赖
 		for (const auto &resource : pass_info.bindables)
 		{
 			if (auto it = resource_writers.find(resource.name);
@@ -415,10 +437,15 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		if (state.last_user != -1 && render_graph_.pass_nodes_[state.last_user].get_type() != pass.get_type())
 		{
+			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
+			if (is_buffer(bindable.type))
+			{
+				//todo
+				continue;
+			}
 			common::ImageMemoryBarrier release_barrier;
 
 			auto &prev_pass = render_graph_.pass_nodes_[state.last_user];
-			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
 
 			if (pass.get_type() == PassType::kCompute)
 			{
@@ -451,14 +478,18 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
 		}
 
-		pass.add_bindable(i, handle, barrier);
+		//todo
+		if (!is_buffer(bindable.type))
+		{
+			pass.add_bindable(i, handle, barrier);	
+		}
 
 		tracker.track_resource(handle, node, new_state);
 	}
 
 	for (size_t i = 0; i < pass_info.attachments.size(); ++i)
 	{
-		const auto        &attachment = pass_info.attachments[i];
+		const auto &attachment = pass_info.attachments[i];
 
 		ResourceHandle handle{
 		    .name        = attachment.name,
@@ -479,8 +510,8 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 	}
 }
 
-GraphBuilder::GraphBuilder(RenderGraph &render_graph, RenderContext &render_context):
-	render_graph_(render_graph), render_context_(render_context)
+GraphBuilder::GraphBuilder(RenderGraph &render_graph, RenderContext &render_context) :
+    render_graph_(render_graph), render_context_(render_context)
 {
 	render_context.set_on_surface_change([this]() {
 		recreate_resources();

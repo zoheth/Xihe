@@ -19,7 +19,7 @@ glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset, flo
 	std::memcpy(&y, &data[offset + sizeof(float)], sizeof(float));
 	std::memcpy(&z, &data[offset + 2 * sizeof(float)], sizeof(float));
 
-	return glm::vec4(x, y, z, padding);
+	return {x, y, z, padding};
 }
 }        // namespace
 
@@ -250,7 +250,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 	}
 	{
 		backend::BufferBuilder buffer_builder{sizeof(uint32_t)};
-		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 		draw_counts_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
 		draw_counts_buffer_->set_debug_name("draw counts buffer");
@@ -267,10 +267,10 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 	}
 	{
 		backend::BufferBuilder buffer_builder{instance_draws.size() * sizeof(MeshDrawCommand)};
-		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
 		draw_command_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
-		draw_command_buffer_->set_debug_name("instance buffer");
+		draw_command_buffer_->set_debug_name("draw command buffer");
 		draw_command_buffer_->update(std::vector<MeshDrawCommand>(instance_draws.size()));
 	}
 }

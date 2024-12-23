@@ -1,6 +1,7 @@
-#version 450
+#version 460
 #extension GL_EXT_mesh_shader : require
 #extension GL_KHR_shader_subgroup_ballot : require
+#extension GL_ARB_shader_draw_parameters : require
 
 layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
@@ -13,20 +14,23 @@ layout(set = 0, binding = 2) uniform GlobalUniform {
 
 #include "mesh_shading/mesh.h"
 
-layout(std430, binding = 8) buffer Meshlets {
-    Meshlet meshlets[];
-} mbuf;
-
-layout(std430, binding = 7) buffer MeshletCount {
-    uint meshlet_count;
-};
-
-layout(std430, binding = 10) readonly buffer MeshDrawBuffer {
+layout (std430, binding = 3) readonly buffer MeshDrawBuffer
+{
     MeshDraw mesh_draws[];
 };
 
-layout(std430, binding = 11) buffer InstanceBuffer {
+layout(std430, binding = 4) readonly buffer MeshInstanceDrawBuffer
+{
     MeshInstanceDraw instances[];
+};
+
+layout(std430, binding = 5) readonly buffer MeshDrawCommandBuffer
+{
+    MeshDrawCommand commands[];
+};
+
+layout(std430, binding = 7) buffer MeshletBuffer {
+    Meshlet meshlets[];
 };
 
 // Task output payload
@@ -56,24 +60,28 @@ bool frustumCull(vec3 center_view_space, float radius) {
 
 void main()
 {
+    uint command_index = gl_GlobalInvocationID.x;
+    uint instance_index = commands[command_index].instance_index;
+    MeshInstanceDraw instance = instances[instance_index];
+    mat4 model = instance.model;
+
 	uint ti = gl_LocalInvocationID.x;
-    uint draw_id = gl_DrawID;
     uint mgi = gl_WorkGroupID.x;
 
-    uint base_meshlet_index = mesh_draws[draw_id].
+    uint base_meshlet_index = mesh_draws[instance.mesh_draw_index].meshlet_offset;
 
     uint mi = mgi * 32 + ti;
 
-    if (mi >= meshlet_count)
+    if (mi >= mesh_draws[instance.mesh_draw_index].meshlet_count)
         return;
 
-    Meshlet meshlet = mbuf.meshlets[mi];
+    Meshlet meshlet = meshlets[mesh_draws[instance.mesh_draw_index].meshlet_offset + mi];
 
 
 
     // Transform bounding sphere to world space
-    vec4 world_center = global_uniform.model * vec4(meshlet.center, 1.0);
-    float scale = length(global_uniform.model[0]); // Assuming uniform scaling
+    vec4 world_center = model * vec4(meshlet.center, 1.0);
+    float scale = length(model[0]); // Assuming uniform scaling
     float radius = meshlet.radius * scale * 1.1; // Slightly inflate the radius
 
     // Transform center to view space for frustum culling
@@ -83,7 +91,7 @@ void main()
     bool frustum_visible = frustumCull(center_view_space, radius);
 
     // Perform cone culling
-    vec3 cone_axis_world = normalize(mat3(global_uniform.model) * meshlet.cone_axis);
+    vec3 cone_axis_world = normalize(mat3(model) * meshlet.cone_axis);
     float cone_cutoff = meshlet.cone_cutoff;
     bool cone_cull_result = coneCull(world_center.xyz, radius, cone_axis_world, cone_cutoff, global_uniform.camera_position);
 

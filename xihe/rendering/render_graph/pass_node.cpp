@@ -128,6 +128,11 @@ PassType PassNode::get_type() const
 	return type_;
 }
 
+std::string PassNode::get_name() const
+{
+	return name_;
+}
+
 void PassNode::set_render_target(std::unique_ptr<RenderTarget> &&render_target)
 {
 	render_target_ = std::move(render_target);

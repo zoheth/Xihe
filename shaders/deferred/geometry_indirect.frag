@@ -1,6 +1,6 @@
-#version 450
+#version 460
 
-#define HAS_BASE_COLOR_TEXTURE
+//#define HAS_BASE_COLOR_TEXTURE
 
 precision highp float;
 
@@ -17,12 +17,14 @@ layout (location = 0) in PerVertexData
 layout (location = 0) out vec4 o_albedo;
 layout (location = 1) out vec4 o_normal;
 
-layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
+#include "mesh_shading/mesh.h"
 
 layout (std430, binding = 3) readonly buffer MeshDrawBuffer
 {
     MeshDraw mesh_draws[];
 };
+
+layout (set = 1, binding = 10 ) uniform sampler2D global_textures[];
 
 void main(void)
 {
@@ -32,9 +34,9 @@ void main(void)
 
 	vec4 base_color = vec4(1.0, 0.0, 0.0, 1.0);
 #ifdef HAS_BASE_COLOR_TEXTURE
-    base_color = texture(global_textures[nonuniformEXT(mesh_draws[mesh_draw_index].texture_indices.x)], v_in.uv);
+    base_color = texture(global_textures[nonuniformEXT(mesh_draws[v_in.mesh_draw_index].texture_indices.x)], v_in.uv);
 #else
-    base_color = mesh_draws[mesh_draw_index].base_color_factor;
+    base_color = mesh_draws[v_in.mesh_draw_index].base_color_factor;
 #endif
     o_albedo = base_color;
 #ifdef SHOW_MESHLET_VIEW
