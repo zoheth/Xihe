@@ -36,6 +36,7 @@ layout(std430, binding = 7) buffer MeshletBuffer {
 // Task output payload
 struct TaskData {
     uint meshletIndices[32];
+    uint instance_index;
 };
 
 taskPayloadSharedEXT TaskData taskData;
@@ -60,7 +61,7 @@ bool frustumCull(vec3 center_view_space, float radius) {
 
 void main()
 {
-    uint command_index = gl_GlobalInvocationID.x;
+    uint command_index = gl_DrawID;
     uint instance_index = commands[command_index].instance_index;
     MeshInstanceDraw instance = instances[instance_index];
     mat4 model = instance.model;
@@ -76,8 +77,6 @@ void main()
         return;
 
     Meshlet meshlet = meshlets[mesh_draws[instance.mesh_draw_index].meshlet_offset + mi];
-
-
 
     // Transform bounding sphere to world space
     vec4 world_center = model * vec4(meshlet.center, 1.0);
@@ -104,6 +103,8 @@ void main()
 
     if (accept)
         taskData.meshletIndices[index] = mi;
+
+    taskData.instance_index = instance_index;
 
     uint count = subgroupBallotBitCount(ballot);
 

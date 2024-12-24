@@ -13,7 +13,7 @@ ExtentDescriptor ExtentDescriptor::SwapchainRelative(float width_scale, float he
 	return desc;
 }
 
-vk::Extent3D   ExtentDescriptor::calculate(const vk::Extent2D &swapchain_extent) const
+vk::Extent3D ExtentDescriptor::calculate(const vk::Extent2D &swapchain_extent) const
 {
 	switch (type_)
 	{
@@ -21,16 +21,16 @@ vk::Extent3D   ExtentDescriptor::calculate(const vk::Extent2D &swapchain_extent)
 			return extent_;
 		case Type::kSwapchainRelative:
 			return vk::Extent3D{
-				static_cast<uint32_t>(swapchain_extent.width * scale_x_),
-				static_cast<uint32_t>(swapchain_extent.height * scale_y_),
-				depth_};
+			    static_cast<uint32_t>(swapchain_extent.width * scale_x_),
+			    static_cast<uint32_t>(swapchain_extent.height * scale_y_),
+			    depth_};
 		default:
 			return extent_;
 	}
 }
 
-ExtentDescriptor::ExtentDescriptor(Type t, const vk::Extent3D &e):
-	type_(t), extent_(e)
+ExtentDescriptor::ExtentDescriptor(Type t, const vk::Extent3D &e) :
+    type_(t), extent_(e)
 {}
 
 PassNode::PassNode(RenderGraph &render_graph, std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass) :
@@ -46,7 +46,6 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 
 	for (const auto &[index, input_info] : bindables_)
 	{
-
 		shader_bindable[index] = render_graph_.get_resource_bindable(input_info.handle);
 
 		if (!input_info.barrier.has_value())
@@ -56,7 +55,9 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 
 		if (shader_bindable[index].is_buffer())
 		{
-			// command_buffer.buffer_memory_barrier(std::get<backend::Buffer *>(input_info.resource), input_info.barrier);
+			auto &buffer = shader_bindable[index].buffer();
+			// todo offset and size
+			command_buffer.buffer_memory_barrier(buffer, 0, buffer.get_size(), std::get<common::BufferMemoryBarrier>(input_info.barrier.value()));
 		}
 		else
 		{
@@ -73,12 +74,13 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		}
 		else
 		{
+
 		}
 	}
 
 	if (type_ == PassType::kRaster)
 	{
-		command_buffer.begin_rendering(render_target);	
+		command_buffer.begin_rendering(render_target);
 	}
 
 	render_pass_->execute(command_buffer, render_frame, shader_bindable);
@@ -107,13 +109,15 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 
 	for (auto &[handle, barrier] : release_barriers_)
 	{
-
 		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
 		{
 			command_buffer.image_memory_barrier(render_graph_.get_resource_bindable(handle).image_view(), std::get<common::ImageMemoryBarrier>(barrier));
 		}
 		else
 		{
+			auto &buffer = render_graph_.get_resource_bindable(handle).buffer();
+			// todo offset and size
+			command_buffer.buffer_memory_barrier(buffer, 0, buffer.get_size(), std::get<common::BufferMemoryBarrier>(barrier));
 		}
 	}
 }

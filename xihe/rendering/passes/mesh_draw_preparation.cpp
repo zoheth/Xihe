@@ -18,6 +18,8 @@ void MeshDrawPreparationPass::execute(backend::CommandBuffer &command_buffer, Re
 
 	command_buffer.bind_buffer(gpu_scene_.get_mesh_draws_buffer(), 0, gpu_scene_.get_mesh_draws_buffer().get_size(), 0, 1, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_instance_buffer(), 0, gpu_scene_.get_instance_buffer().get_size(), 0, 2, 0);
+
+	// command_buffer.bind_buffer(input_bindables[0].buffer(), 0, input_bindables[0].buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_command_buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_draw_counts_buffer(), 0, gpu_scene_.get_draw_counts_buffer().get_size(), 0, 4, 0);
 

@@ -33,7 +33,6 @@ bool is_buffer(BindableType type)
 		case BindableType::kStorageBufferWrite:
 		case BindableType::kStorageBufferReadWrite:
 		case BindableType::kIndirectBuffer:
-		case BindableType::kIndirectBufferRead:
 			return true;
 		default:
 			return false;
@@ -58,6 +57,42 @@ void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageS
 		case BindableType::kStorageWrite:
 			state.stage_mask  = get_shader_stage_flags(pass_type);
 			state.access_mask = vk::AccessFlagBits2::eShaderWrite;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kStorageReadWrite:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kUniformBuffer:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eUniformRead;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kStorageBufferRead:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eShaderRead;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kStorageBufferWrite:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eShaderWrite;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kStorageBufferReadWrite:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite;
+			state.layout      = vk::ImageLayout::eGeneral;
+			break;
+
+		case BindableType::kIndirectBuffer:
+			state.stage_mask  = get_shader_stage_flags(pass_type);
+			state.access_mask = vk::AccessFlagBits2::eIndirectCommandRead | vk::AccessFlagBits2::eShaderRead;
 			state.layout      = vk::ImageLayout::eGeneral;
 			break;
 	}

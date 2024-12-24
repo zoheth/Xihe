@@ -138,7 +138,6 @@ enum class BindableType
 	kUniformBuffer,                // uniform buffer
 	kStorageBufferRead,            // layout(std430) readonly buffer
 	kIndirectBuffer,                // indirect buffer
-	kIndirectBufferRead,            // indirect buffer and storage buffer
 	kStorageBufferWrite,           // layout(std430) writeonly buffer
 	kStorageBufferReadWrite,        // layout(std430) buffer
 };

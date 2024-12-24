@@ -1,6 +1,6 @@
 #version 460
 
-//#define HAS_BASE_COLOR_TEXTURE
+#define HAS_BASE_COLOR_TEXTURE
 
 precision highp float;
 
@@ -11,7 +11,7 @@ layout (location = 0) in PerVertexData
   vec4 pos;
   vec3 normal;
   vec2 uv;
-  uint mesh_draw_index;
+  flat uint mesh_draw_index;
 } v_in;
 
 layout (location = 0) out vec4 o_albedo;

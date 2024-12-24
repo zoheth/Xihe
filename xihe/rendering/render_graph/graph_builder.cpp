@@ -424,64 +424,100 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 
 		auto state = tracker.get_or_create_state(handle);
 
-		// todo buffer barrier
+		typedef common::BufferMemoryBarrier MemoryBarrierBase;
 
-		common::ImageMemoryBarrier barrier;
-		barrier.src_stage_mask  = state.usage_state.stage_mask;
+
+		MemoryBarrierBase barrier;
 		barrier.src_access_mask = state.usage_state.access_mask;
-		barrier.dst_stage_mask  = new_state.stage_mask;
 		barrier.dst_access_mask = new_state.access_mask;
-
-		barrier.old_layout = state.usage_state.layout;
-		barrier.new_layout = new_state.layout;
+		barrier.src_stage_mask  = state.usage_state.stage_mask;
+		barrier.dst_stage_mask  = new_state.stage_mask;
 
 		if (state.last_user != -1 && render_graph_.pass_nodes_[state.last_user].get_type() != pass.get_type())
-		{
-			batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
+	    {
+		    batch_builder.set_batch_dependency(render_graph_.pass_nodes_[state.last_user].get_batch_index());
+		    auto &prev_pass = render_graph_.pass_nodes_[state.last_user];
+
+		    MemoryBarrierBase release_barrier;
+		    if (pass.get_type() == PassType::kCompute)
+		    {
+			    release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			    release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+
+			    barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+			    barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+		    }
+		    else if (pass.get_type() == PassType::kRaster)
+		    {
+			    release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			    release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+
+			    barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+			    barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
+		    }
+
+		    release_barrier.src_stage_mask  = state.usage_state.stage_mask;
+		    release_barrier.src_access_mask = state.usage_state.access_mask;
+
+		   /* release_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
+		    release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;*/
+			release_barrier.dst_stage_mask = new_state.stage_mask;
+			release_barrier.dst_access_mask = new_state.access_mask;
+
 			if (is_buffer(bindable.type))
 			{
-				//todo
-				continue;
+				common::BufferMemoryBarrier buffer_barrier;
+				buffer_barrier.src_access_mask = release_barrier.src_access_mask;
+				buffer_barrier.dst_access_mask = release_barrier.dst_access_mask;
+				buffer_barrier.src_stage_mask  = release_barrier.src_stage_mask;
+				buffer_barrier.dst_stage_mask  = release_barrier.dst_stage_mask;
+				buffer_barrier.old_queue_family = release_barrier.old_queue_family;
+				buffer_barrier.new_queue_family = release_barrier.new_queue_family;
+				prev_pass.add_release_barrier(handle, buffer_barrier);
 			}
-			common::ImageMemoryBarrier release_barrier;
-
-			auto &prev_pass = render_graph_.pass_nodes_[state.last_user];
-
-			if (pass.get_type() == PassType::kCompute)
+			else
 			{
-				release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
-				release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+				common::ImageMemoryBarrier image_barrier;
+				image_barrier.src_access_mask = release_barrier.src_access_mask;
+				image_barrier.dst_access_mask = release_barrier.dst_access_mask;
+				image_barrier.src_stage_mask  = release_barrier.src_stage_mask;
+				image_barrier.dst_stage_mask  = release_barrier.dst_stage_mask;
+				image_barrier.old_queue_family = release_barrier.old_queue_family;
+				image_barrier.new_queue_family = release_barrier.new_queue_family;
 
-				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
-				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
+				image_barrier.old_layout       = state.usage_state.layout;
+				image_barrier.new_layout       = new_state.layout;
+
+				prev_pass.add_release_barrier(handle, image_barrier);
 			}
-			else if (pass.get_type() == PassType::kRaster)
-			{
-				release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
-				release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
 
-				barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
-				barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
-			}
-			release_barrier.old_layout      = state.usage_state.layout;
-			release_barrier.src_stage_mask  = state.usage_state.stage_mask;
-			release_barrier.src_access_mask = state.usage_state.access_mask;
+		    // barrier.src_stage_mask  = new_state.stage_mask;
+		    // barrier.src_access_mask = vk::AccessFlagBits2::eNone;
+	    }
 
-			release_barrier.new_layout      = new_state.layout;
-			release_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eBottomOfPipe;
-			release_barrier.dst_access_mask = vk::AccessFlagBits2::eNone;
-
-			prev_pass.add_release_barrier(handle, release_barrier);
-
-			// barrier.old_layout      = new_state.layout;
-			barrier.src_stage_mask  = new_state.stage_mask;
-			barrier.src_access_mask = vk::AccessFlagBits2::eNone;
-		}
-
-		//todo
-		if (!is_buffer(bindable.type))
+		if (is_buffer(bindable.type))
 		{
-			pass.add_bindable(i, handle, barrier);	
+			common::BufferMemoryBarrier buffer_barrier;
+			buffer_barrier.src_access_mask  = barrier.src_access_mask;
+			buffer_barrier.dst_access_mask  = barrier.dst_access_mask;
+			buffer_barrier.src_stage_mask   = barrier.src_stage_mask;
+			buffer_barrier.dst_stage_mask   = barrier.dst_stage_mask;
+			buffer_barrier.old_queue_family = barrier.old_queue_family;
+			buffer_barrier.new_queue_family = barrier.new_queue_family;
+			pass.add_bindable(i, handle, buffer_barrier);
+		}
+		else
+		{
+			common::ImageMemoryBarrier image_barrier;
+			image_barrier.src_access_mask = barrier.src_access_mask;
+			image_barrier.dst_access_mask = barrier.dst_access_mask;
+			image_barrier.src_stage_mask  = barrier.src_stage_mask;
+			image_barrier.dst_stage_mask  = barrier.dst_stage_mask;
+			image_barrier.old_queue_family = barrier.old_queue_family;
+			image_barrier.new_queue_family = barrier.new_queue_family;
+			image_barrier.old_layout       = state.usage_state.layout;
+			image_barrier.new_layout       = new_state.layout;
+			pass.add_bindable(i, handle, image_barrier);
 		}
 
 		tracker.track_resource(handle, node, new_state);

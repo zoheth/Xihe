@@ -12,6 +12,8 @@
 #include "scene_graph/components/light.h"
 #include "scene_graph/components/mesh.h"
 
+#define EX
+
 namespace xihe
 {
 using namespace rendering;
@@ -21,6 +23,7 @@ TempApp::TempApp()
 	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
+	//add_device_extension(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
 	backend::GlslCompiler::set_target_environment(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
 }
@@ -119,25 +122,33 @@ bool TempApp::prepare(Window *window)
 		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
 
 		    .finalize();*/
-
+#ifdef EX
 		auto mesh_preparation_pass = std::make_unique<MeshDrawPreparationPass>(*gpu_scene_);
 		graph_builder_->add_pass("Mesh Draw Preparation", std::move(mesh_preparation_pass))
 		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "draw command", .buffer_size = gpu_scene_->get_instance_count() * sizeof(MeshDrawCommand)}})
 		    .shader({"mesh_shading/prepare_mesh_draws.comp"})
 		    .finalize();
+#endif
 
+
+#ifdef EX
 		auto geometry_pass = std::make_unique<MeshPass>(*gpu_scene_, *camera);
-		// auto geometry_pass = std::make_unique<MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
-
+#else
+		auto geometry_pass = std::make_unique<MeshletPass>(scene_->get_components<sg::Mesh>(), *camera);
+#endif
 		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
+#ifdef EX
 		    .bindables({{.type = BindableType::kStorageBufferRead, .name = "draw command"}})
+#endif
+
 		    .attachments({{AttachmentType::kDepth, "depth"},
 		                  {AttachmentType::kColor, "albedo"},
 		                  {AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32}})
-
-		    //.shader({"deferred/geometry_mesh.task", "deferred/geometry_mesh.mesh", "deferred/geometry_mesh.frag"})
+#ifdef EX
 		    .shader({"deferred/geometry_indirect.task", "deferred/geometry_indirect.mesh", "deferred/geometry_indirect.frag"})
-
+#else
+		    .shader({"deferred/geometry_mesh.task", "deferred/geometry_mesh.mesh", "deferred/geometry_mesh.frag"})
+#endif
 		    .finalize();
 	}
 
@@ -234,8 +245,10 @@ bool TempApp::prepare(Window *window)
 
 void TempApp::update(float delta_time)
 {
-	MeshletPass::show_meshlet_view(show_meshlet_view_, *scene_);
-	MeshletPass::freeze_frustum(freeze_frustum_, camera_);
+	/*MeshletPass::show_meshlet_view(show_meshlet_view_, *scene_);
+	MeshletPass::freeze_frustum(freeze_frustum_, camera_);*/
+	MeshPass::show_meshlet_view(show_meshlet_view_);
+	MeshPass::freeze_frustum(freeze_frustum_, camera_);
 	LightingPass::show_cascade_view(show_cascade_view_);
 	XiheApp::update(delta_time);
 }
@@ -249,6 +262,9 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
+
+	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMultiDrawFeaturesEXT, multiDraw);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceVulkan11Features, shaderDrawParameters);
 }
 
 void TempApp::draw_gui()

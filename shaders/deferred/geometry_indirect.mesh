@@ -4,6 +4,7 @@
 
 struct TaskData {
     uint meshletIndices[32];
+    uint instance_index;
 };
 taskPayloadSharedEXT TaskData taskData;
 
@@ -71,13 +72,12 @@ layout (location = 0) out PerVertexData
   vec4 pos;
   vec3 normal;
   vec2 uv;
-  uint mesh_draw_index;
+  flat uint mesh_draw_index;
 } v_out[];
 
 void main(void)
 {
-    uint command_index = gl_GlobalInvocationID.x;
-    uint instance_index = commands[command_index].instance_index;
+    uint instance_index = taskData.instance_index;
 
     MeshInstanceDraw instance = instances[instance_index];
     mat4 model = instance.model;
@@ -118,6 +118,7 @@ void main(void)
         v_out[i].uv = vec2(vb.vertices[global_vertex_index].position.w, vb.vertices[global_vertex_index].normal.w);
 
         v_out[i].mesh_draw_index = instance.mesh_draw_index;
+
 #ifdef SHOW_MESHLET_VIEW
         v_out[i].pos = meshlet_color;
 #endif

@@ -24,9 +24,9 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 
 	auto &resource_cache = command_buffer.get_device().get_resource_cache();
 
-	auto &task_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader());
-	auto &mesh_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader());
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
+	auto &task_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eTaskEXT, get_task_shader(), shader_variant_);
+	auto &mesh_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eMeshEXT, get_mesh_shader(), shader_variant_);
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader(), shader_variant_);
 
 	std::vector<backend::ShaderModule *> shader_modules{&task_shader_module, &mesh_shader_module, &frag_shader_module};
 
@@ -72,14 +72,6 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 2, 0);
 
-	/*common::BufferMemoryBarrier memory_barrier{};
-	memory_barrier.src_access_mask = vk::AccessFlagBits2::eShaderWrite;
-	memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
-	memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eComputeShader;
-	memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eMeshShaderEXT;
-
-	command_buffer.buffer_memory_barrier(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_command_buffer().get_size(), memory_barrier);*/
-
 	command_buffer.bind_buffer(gpu_scene_.get_mesh_draws_buffer(), 0, gpu_scene_.get_mesh_draws_buffer().get_size(), 0, 3, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_instance_buffer(), 0, gpu_scene_.get_instance_buffer().get_size(), 0, 4, 0);
 	command_buffer.bind_buffer(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_command_buffer().get_size(), 0, 5, 0);
@@ -91,6 +83,45 @@ void MeshPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &acti
 
 	command_buffer.draw_mesh_tasks_indirect_count(gpu_scene_.get_draw_command_buffer(), 0, gpu_scene_.get_draw_counts_buffer(), 0, gpu_scene_.get_instance_count(), sizeof(MeshDrawCommand));
 
-	    command_buffer.set_has_mesh_shader(false);
+	command_buffer.set_has_mesh_shader(false);
+}
+
+void MeshPass::show_meshlet_view(bool show)
+{
+	if (show == show_debug_view_)
+	{
+		return;
+	}
+	show_debug_view_ = show;
+
+	if (show)
+	{
+		shader_variant_.add_define("SHOW_MESHLET_VIEW");
+	}
+	else
+	{
+		shader_variant_.remove_define("SHOW_MESHLET_VIEW");
+	}
+}
+
+void MeshPass::freeze_frustum(bool freeze, sg::Camera *camera)
+{
+	assert(camera);
+	if (freeze == freeze_frustum_)
+	{
+		return;
+	}
+	freeze_frustum_ = freeze;
+	if (freeze)
+	{
+		frozen_view_              = camera->get_view();
+		glm::mat4 m               = glm::transpose(camera->get_pre_rotation() * camera->get_projection());
+		frozen_frustum_planes_[0] = normalize_plane(m[3] + m[0]);
+		frozen_frustum_planes_[1] = normalize_plane(m[3] - m[0]);
+		frozen_frustum_planes_[2] = normalize_plane(m[3] + m[1]);
+		frozen_frustum_planes_[3] = normalize_plane(m[3] - m[1]);
+		frozen_frustum_planes_[4] = normalize_plane(m[3] + m[2]);
+		frozen_frustum_planes_[5] = normalize_plane(m[3] - m[2]);
+	}
 }
 }        // namespace xihe::rendering

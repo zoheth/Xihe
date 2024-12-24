@@ -22,6 +22,8 @@ struct BufferMemoryBarrier
 	vk::PipelineStageFlags2 dst_stage_mask  = vk::PipelineStageFlagBits2::eTopOfPipe;
 	vk::AccessFlags2        src_access_mask = {};
 	vk::AccessFlags2        dst_access_mask = {};
+	uint32_t                old_queue_family = VK_QUEUE_FAMILY_IGNORED;
+	uint32_t                new_queue_family = VK_QUEUE_FAMILY_IGNORED;
 };
 
 struct ImageMemoryBarrier

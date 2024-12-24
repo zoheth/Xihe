@@ -293,12 +293,12 @@ void CommandBuffer::image_memory_barrier(const backend::ImageView &image_view, c
 void CommandBuffer::buffer_memory_barrier(const backend::Buffer &buffer, vk::DeviceSize offset, vk::DeviceSize size, const common::BufferMemoryBarrier &memory_barrier)
 {
 	vk::BufferMemoryBarrier2 buffer_memory_barrier{
-	    {},
+	    memory_barrier.src_stage_mask,
 	    memory_barrier.src_access_mask,
-	    {},
+	    memory_barrier.dst_stage_mask,
 	    memory_barrier.dst_access_mask,
-	    {},
-	    {},
+	    memory_barrier.old_queue_family,
+	    memory_barrier.new_queue_family,
 	    buffer.get_handle(),
 	    offset,
 	    size};

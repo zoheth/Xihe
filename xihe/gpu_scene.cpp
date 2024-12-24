@@ -185,9 +185,13 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 
 			MeshData mesh_data{primitive_data};
 
+			std::ranges::transform(mesh_data.meshlet_vertices, std::back_inserter(meshlet_vertices),
+			                       [packed_vertices](const uint32_t &i) { return i + static_cast<uint32_t>(packed_vertices.size()); });
+
 			meshlets.insert(meshlets.end(), mesh_data.meshlets.begin(), mesh_data.meshlets.end());
 			packed_vertices.insert(packed_vertices.end(), mesh_data.vertices.begin(), mesh_data.vertices.end());
-			meshlet_vertices.insert(meshlet_vertices.end(), mesh_data.meshlet_vertices.begin(), mesh_data.meshlet_vertices.end());
+			// meshlet_vertices.insert(meshlet_vertices.end(), mesh_data.meshlet_vertices.begin(), mesh_data.meshlet_vertices.end());
+
 			meshlet_triangles.insert(meshlet_triangles.end(), mesh_data.meshlet_triangles.begin(), mesh_data.meshlet_triangles.end());
 
 			for (const auto &node : mesh->get_nodes())

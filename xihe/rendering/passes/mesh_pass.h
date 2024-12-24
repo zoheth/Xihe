@@ -24,13 +24,15 @@ public:
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
-	static void show_meshlet_view(bool show, sg::Scene &scene);
+	static void show_meshlet_view(bool show);
 
 	static void freeze_frustum(bool freeze, sg::Camera *camera);
 
 private:
 	GpuScene &gpu_scene_;
 	sg::Camera &camera_;
+
+	inline static backend::ShaderVariant shader_variant_;
 
 	inline static bool show_debug_view_{false};
 
