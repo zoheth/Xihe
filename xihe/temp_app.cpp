@@ -8,6 +8,7 @@
 #include "rendering/passes/mesh_draw_preparation.h"
 #include "rendering/passes/mesh_pass.h"
 #include "rendering/passes/meshlet_pass.h"
+#include "rendering/passes/pointshadows_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
 #include "scene_graph/components/mesh.h"
@@ -23,7 +24,7 @@ TempApp::TempApp()
 	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-	//add_device_extension(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+	// add_device_extension(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
 
 	backend::GlslCompiler::set_target_environment(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
 }
@@ -107,6 +108,13 @@ bool TempApp::prepare(Window *window)
 		    .attachments({{shadow_attachment_2}})
 		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
 		    .finalize();
+
+		auto point_shadows_culling_pass = std::make_unique<PointShadowsCullingPass>(*gpu_scene_, scene_->get_components<sg::Light>());
+		graph_builder_->add_pass("Point Shadows Culling", std::move(point_shadows_culling_pass))
+		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "meshlet instances", .buffer_size = kMaxPointLightCount * kMaxPerLightMeshletCount * 8},
+		                {.type = BindableType::kStorageBufferWrite, .name = "per-light meshlet indies", .buffer_size = kMaxPointLightCount * 2 * 4}})
+		    .shader({"shadow/pointshadows_culling.comp"})
+		    .finalize();
 	}
 
 	// geometry pass
@@ -129,7 +137,6 @@ bool TempApp::prepare(Window *window)
 		    .shader({"mesh_shading/prepare_mesh_draws.comp"})
 		    .finalize();
 #endif
-
 
 #ifdef EX
 		auto geometry_pass = std::make_unique<MeshPass>(*gpu_scene_, *camera);
