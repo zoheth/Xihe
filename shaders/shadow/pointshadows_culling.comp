@@ -1,31 +1,44 @@
 #version 450
 
-#define MAX_POINT_LIGHT_COUNT 1
+#define MAX_POINT_LIGHT_COUNT 256
 
-struct Meshlet
-{
-	uint vertex_offset;
-	uint vertex_count;
-	uint primitive_offset;
-	uint primitive_count;
-	uint cull_data_offset;
-	uint cull_data_count;
-};
+#define MAX_PER_LIGHT_MESHLET_INSTANCES 45000
 
-layout(set = 0, binding = 0) readonly buffer Meshlets
+#include "mesh_shading/mesh.h"
+
+layout(set = 0, binding = 2) readonly buffer Meshlets
 {
 	Meshlet meshlets[];
 };
 
-layout(set = 0, binding = 1) buffer MeshletInstances
+layout (std430, binding = 3) readonly buffer MeshDrawBuffer
+{
+    MeshDraw mesh_draws[];
+};
+
+layout(std430, binding = 4) readonly buffer MeshInstanceDrawBuffer
+{
+    MeshInstanceDraw instances[];
+};
+
+layout(std430, binding = 5) readonly buffer MeshBounds
+{
+	vec4 mesh_bounds[];
+};
+
+// Array containing all meshlets plain
+layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
 {
 	uvec2 meshlet_instances[];
 };
 
-layout(set =0, binding = 2) buffer PerLightMeshletIndices
+// Array of per light meshlet (offset + count)
+layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
 {
 	uint per_light_meshlet_indices[];
 };
+
+
 
 layout(constant_id = 0) const uint POINT_LIGHT_COUNT       = 0U;
 layout(constant_id = 1) const uint MESH_INSTANCE_COUNT           = 1U;
@@ -43,6 +56,13 @@ layout(set = 0, binding = 3) uniform Lights {
 };
 
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+bool sphere_intersect( vec3 center_a, float radius_a, vec3 center_b, float radius_b ) {
+	const vec3 v = center_b - center_a;
+	const float total_radius = radius_a + radius_b;
+
+	return dot(v, v) < total_radius;
+}
 
 void main() 
 {
@@ -68,4 +88,35 @@ void main()
 		return;
 	}
 	
+	uint mesh_draw_index = instances[mesh_instance_index].mesh_draw_index;
+
+	MeshDraw mesh_draw = mesh_draws[mesh_draw_index];
+
+	vec4 bounding_sphere = mesh_bounds[mesh_draw_index];
+	mat4 model = instances[mesh_instance_index].model;
+
+	vec4 mesh_world_bounding_center = model * vec4(bounding_sphere.xyz, 1.0);
+
+	float scale = length(model[0]);
+	float mesh_radius = bounding_sphere.w * scale * 1.1;
+
+	// todo: why it needs *2 ?
+	const bool mesh_intersects_sphere = sphere_intersect(mesh_world_bounding_center.xyz, mesh_radius, light.world_position, light.radius * 2);
+
+	if(!mesh_intersects_sphere) {
+		return;
+	}
+
+	uint per_light_offset = atomicAdd(per_light_meshlet_indices[light_index], mesh_draw.meshlet_count);
+
+	for( uint m = 0; m < mesh_draw.meshlet_count; ++m ) {
+		uint meshlet_index = mesh_draw.meshlet_offset + m;
+
+		vec4 meshlet_world_center = model * vec4(meshlets[mesh_index].center, 1);
+
+		float meshlet_radius = meshlets[meshlet_index].radius * scale * 1.1;
+
+		meshlet_instances[light_index * MAX_PER_LIGHT_MESHLET_INSTANCES + per_light_offset + m] = uvec2(mesh_instance_index, meshlet_index);
+	}
+
 };
