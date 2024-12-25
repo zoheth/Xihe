@@ -29,10 +29,20 @@ class PointShadowsCullingPass : public RenderPass
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
+	static inline uint32_t point_light_count_{0};
+
   private:
 	GpuScene &gpu_scene_;
 
 	PointLightUniform point_light_uniform_;
-	uint32_t          point_light_count_{0};
+};
+
+class PointShadowsCommandsGenerationPass : public RenderPass
+{
+public:
+	PointShadowsCommandsGenerationPass() = default;
+
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+
 };
 }        // namespace xihe::rendering

@@ -1,0 +1,48 @@
+#version 460
+
+#define MAX_POINT_LIGHT_COUNT 256
+
+// Array of per light meshlet (offset + count)
+layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
+{
+	uint per_light_meshlet_indices[];
+};
+
+layout(set = 0, binding = 22) buffer MeshletDrawCommands
+{
+    uvec4 meshlet_draw_commands[]; //
+};
+
+layout(constant_id = 0) const uint POINT_LIGHT_COUNT = 0U;
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+void main()
+{
+    if (gl_GlobalInvocationID.x == 0) {
+        // Use this as atomic int
+        per_light_meshlet_indices[MAX_POINT_LIGHT_COUNT] = 0;
+    }
+
+    memoryBarrier();
+    barrier();
+
+    uint light_index = gl_GlobalInvocationID.x;
+
+    if(light_index >= POINT_LIGHT_COUNT)
+        return;
+
+    const uint visible_meshlet_count = per_light_meshlet_indices[light_index];
+
+    if(visible_meshlet_count == 0)
+        return;
+
+    const uint command_offset = atomicAdd(per_light_meshlet_indices[MAX_POINT_LIGHT_COUNT], 6);
+    uint packed_light_index = (light_index & 0xFFFF) << 16;
+    meshlet_draw_commands[command_offset] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|0);
+    meshlet_draw_commands[command_offset+1] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|1);
+    meshlet_draw_commands[command_offset+2] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|2);
+    meshlet_draw_commands[command_offset+3] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|3);
+    meshlet_draw_commands[command_offset+4] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|4);
+    meshlet_draw_commands[command_offset+5] = uvec4((visible_meshlet_count+31)/32, 1, 1, packed_light_index|5);
+}
