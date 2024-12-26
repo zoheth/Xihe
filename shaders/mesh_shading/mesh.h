@@ -8,6 +8,8 @@ struct Meshlet
 	float radius;
 	vec3  cone_axis;
 	float cone_cutoff;
+	uint  mesh_draw_index;
+	uint  padding[3];
 };
 
 struct MeshDraw
@@ -36,11 +38,11 @@ struct MeshInstanceDraw
 struct MeshDrawCommand
 {
 	//// VkDrawIndexedIndirectCommand
-	//uint index_count;
-	//uint instance_count;
-	//uint first_index;
-	//uint vertex_offset;
-	//uint first_instance;
+	// uint index_count;
+	// uint instance_count;
+	// uint first_index;
+	// uint vertex_offset;
+	// uint first_instance;
 
 	// VkDrawMeshTasksIndirectCommandEXT
 	uint group_count_x;

@@ -1,0 +1,100 @@
+#version 460
+
+#define MAX_POINT_LIGHT_COUNT 256
+
+#define MAX_PER_LIGHT_MESHLET_INSTANCES 45000
+
+#extension GL_EXT_mesh_shader : require
+#extension GL_KHR_shader_subgroup_ballot : require
+
+layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(triangles, max_vertices = 64, max_primitives = 124) out;
+
+struct TaskData {
+    uint meshlet_indices[32];
+    uint light_index_face_index;
+};
+
+taskPayloadSharedEXT TaskData taskData;
+
+#include "mesh_shading/mesh.h"
+
+layout(set = 0, binding = 2) readonly buffer Meshlets
+{
+	Meshlet meshlets[];
+};
+
+layout (set = 0, binding = 3) readonly buffer MeshDrawBuffer
+{
+    MeshDraw mesh_draws[];
+};
+
+layout(set = 0, binding = 4) readonly buffer MeshInstanceDrawBuffer
+{
+    MeshInstanceDraw instances[];
+};
+
+
+struct Vertex
+{
+	vec4 position;
+	vec4 normal;
+};
+
+layout (std430, binding = 7) buffer MeshletBuffer
+{
+  Meshlet meshlets[];
+};
+
+layout (std430, binding = 8) buffer VerticesBuffer
+{
+  Vertex vertices[];
+} vb;
+
+layout (std430, binding = 9) buffer MeshletVertices
+{
+    uint meshlet_vertices[]; // All per-meshlet vertex indices
+} mvb;
+
+layout (std430, binding = 10) buffer MeshletTriangles
+{
+    uint meshlet_triangles[];  // All packed per-meshlet triangles
+} mtb;
+
+
+// Array containing all meshlets plain
+layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
+{
+	uvec2 meshlet_instances[];
+};
+
+// Array of per light meshlet (offset + count)
+layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
+{
+	uint per_light_meshlet_indices[];
+};
+
+layout(set = 0, binding = 22) buffer MeshletDrawCommands
+{
+    uvec4 meshlet_draw_commands[]; //
+};
+
+layout(set = 1, binding = 0) readonly buffer ShadowCameraSpheres 
+{
+    vec4 camera_spheres[];
+};
+
+
+void main()
+{
+    uint task_index = gl_LocalInvocationID.x;
+    uint global_meshlet_index = taskData.meshlet_indices[gl_WorkGroupID.x];
+
+    MeshDraw mesh_draw = mesh_draws[meshlets[global_meshlet_index].mesh_draw_index];
+
+    uint vertex_count = meshlets[global_meshlet_index].vertex_count;
+    uint triangle_count = meshlets[global_meshlet_index].triangle_count;
+    uint index_count = triangle_count * 3;
+
+    uint 
+}

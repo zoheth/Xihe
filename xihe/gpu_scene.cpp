@@ -188,7 +188,11 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 			std::ranges::transform(mesh_data.meshlet_vertices, std::back_inserter(meshlet_vertices),
 			                       [packed_vertices](const uint32_t &i) { return i + static_cast<uint32_t>(packed_vertices.size()); });
 
+			// set mesh draw index
+			std::ranges::for_each(mesh_data.meshlets, [mesh_draw_index = static_cast<uint32_t>(mesh_draws.size())](Meshlet &meshlet) { meshlet.mesh_draw_index = mesh_draw_index; });
+
 			meshlets.insert(meshlets.end(), mesh_data.meshlets.begin(), mesh_data.meshlets.end());
+
 			packed_vertices.insert(packed_vertices.end(), mesh_data.vertices.begin(), mesh_data.vertices.end());
 			// meshlet_vertices.insert(meshlet_vertices.end(), mesh_data.meshlet_vertices.begin(), mesh_data.meshlet_vertices.end());
 

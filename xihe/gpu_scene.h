@@ -27,6 +27,9 @@ struct Meshlet
 	float     radius;
 	glm::vec3 cone_axis;
 	float     cone_cutoff;
+
+	uint32_t mesh_draw_index;
+	glm::uvec3 padding;
 };
 
 struct MeshDraw
