@@ -45,4 +45,16 @@ public:
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
 };
+
+class PointShadowsPass : public RenderPass
+{
+public:
+	PointShadowsPass(GpuScene &gpu_scene);
+
+	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
+
+
+private:
+	GpuScene &gpu_scene_;
+};
 }        // namespace xihe::rendering

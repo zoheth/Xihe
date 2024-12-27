@@ -110,18 +110,25 @@ bool TempApp::prepare(Window *window)
 		    .finalize();
 
 		auto point_shadows_culling_pass = std::make_unique<PointShadowsCullingPass>(*gpu_scene_, scene_->get_components<sg::Light>());
-		graph_builder_->add_pass("Point Shadows Culling", std::move(point_shadows_culling_pass))
+		graph_builder_->add_pass("Point Light Shadows Culling", std::move(point_shadows_culling_pass))
 		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "meshlet instances", .buffer_size = kMaxPointLightCount * kMaxPerLightMeshletCount * 8},
 		                {.type = BindableType::kStorageBufferWrite, .name = "per-light meshlet indies", .buffer_size = (kMaxPointLightCount + 1) * 2 * 4}})
 		    .shader({"shadow/pointshadows_culling.comp"})
 		    .finalize();
 
 		auto point_shadows_commands_generation_pass = std::make_unique<PointShadowsCommandsGenerationPass>();
-		graph_builder_->add_pass("Point Shadows Commands Generation", std::move(point_shadows_commands_generation_pass))
+		graph_builder_->add_pass("Point Light Shadows Commands Generation", std::move(point_shadows_commands_generation_pass))
 		    .bindables({{.type = BindableType::kStorageBufferRead, .name = "per-light meshlet indies"},
 		                {.type = BindableType::kStorageBufferWrite, .name = "meshlet draw command", .buffer_size = kMaxPointLightCount * 6 * 16}})
 		    .shader({"shadow/pointshadows_commands_generation.comp"})
 		    .finalize();
+
+		auto point_shadows_pass = std::make_unique<PointShadowsPass>(*gpu_scene_);
+		graph_builder_->add_pass("Point Light Shadows", std::move(point_shadows_pass))
+		    .bindables({
+		        {.type = BindableType::kStorageBufferRead, .name = "meshlet instances"},
+		        {.type = BindableType::kIndirectBuffer, .name = "meshlet draw command"},
+		    });
 	}
 
 	// geometry pass

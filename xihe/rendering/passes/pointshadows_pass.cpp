@@ -66,4 +66,9 @@ void PointShadowsCommandsGenerationPass::execute(backend::CommandBuffer &command
 
 	command_buffer.dispatch((PointShadowsCullingPass::point_light_count_ + 31) / 32, 1, 1);
 }
+
+void PointShadowsPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
+{
+	RenderPass::execute(command_buffer, active_frame, input_bindables);
+}
 }        // namespace xihe::rendering

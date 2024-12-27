@@ -13,6 +13,7 @@ layout(triangles, max_vertices = 64, max_primitives = 124) out;
 struct TaskData {
     uint meshlet_indices[32];
     uint light_index_face_index;
+    uint mesh_instance_index;
 };
 
 taskPayloadSharedEXT TaskData taskData;
@@ -63,16 +64,17 @@ layout (std430, binding = 10) buffer MeshletTriangles
 
 
 // Array containing all meshlets plain
+// x = mesh_instance_index, y = meshlet_index
 layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
 {
 	uvec2 meshlet_instances[];
 };
 
-// Array of per light meshlet (offset + count)
-layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
-{
-	uint per_light_meshlet_indices[];
-};
+// // Array of per light meshlet (offset + count)
+// layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
+// {
+// 	uint per_light_meshlet_indices[];
+// };
 
 layout(set = 0, binding = 22) buffer MeshletDrawCommands
 {
@@ -84,6 +86,10 @@ layout(set = 1, binding = 0) readonly buffer ShadowCameraSpheres
     vec4 camera_spheres[];
 };
 
+layout (set = 1, binding = 4 ) readonly buffer ShadowViews {
+
+    mat4    view_projections[];
+};
 
 void main()
 {
@@ -96,5 +102,33 @@ void main()
     uint triangle_count = meshlets[global_meshlet_index].triangle_count;
     uint index_count = triangle_count * 3;
 
-    uint 
+    mat4 model = instances[taskData.mesh_instance_index].model;
+
+    const uint light_index = taskData.light_index_face_index >> 16;
+    const uint face_index = taskData.light_index_face_index & 0xF;
+    const int layer_index = int(6 * light_index + face_index);
+
+    for(uint i = 0; i < vertex_count; ++i)
+    {
+        uint global_vertex_index = mvb.meshlet_vertices[mesh_draw.mesh_vertex_offset + meshlets[global_meshlet_index].vertex_offset + i];
+
+        vec4 pos = model * vec4(vb.vertices[global_vertex_index].position.xyz, 1.0);
+
+        gl_MeshVerticesEXT[i].gl_Position = view_projections[layer_index] * pos;
+    }
+
+    for(uint i = 0; i < triangle_count; ++i)
+    {
+        uint packed_triangle = mtb.meshlet_triangles[mesh_triangle_offset + meshlet.triangle_offset + i];
+        uint idx0 = (packed_triangle >> 0) & 0xFFu;
+        uint idx1 = (packed_triangle >> 8) & 0xFFu;
+        uint idx2 = (packed_triangle >> 16) & 0xFFu;
+
+        gl_PrimitiveTriangleIndicesEXT[i] = uvec3(idx0, idx1, idx2);
+    }
+
+    gl_MeshPrimitivesEXT[task_index*4].gl_Layer = layer_index;
+    gl_MeshPrimitivesEXT[task_index*4+1].gl_Layer = layer_index;
+    gl_MeshPrimitivesEXT[task_index*4+2].gl_Layer = layer_index;
+    gl_MeshPrimitivesEXT[task_index*4+3].gl_Layer = layer_index;
 }

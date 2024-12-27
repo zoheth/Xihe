@@ -12,6 +12,7 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 struct TaskData {
     uint meshlet_indices[32];
     uint light_index_face_index;
+    uint mesh_instance_index;
 };
 
 taskPayloadSharedEXT TaskData taskData;
@@ -34,18 +35,19 @@ layout(set = 0, binding = 4) readonly buffer MeshInstanceDrawBuffer
 };
 
 // Array containing all meshlets plain
-layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
+// x = mesh_instance_index, y = meshlet_index
+layout(set = 0, binding = 20) readonly buffer MeshletInstancesBuffer
 {
 	uvec2 meshlet_instances[];
 };
 
-// Array of per light meshlet (offset + count)
-layout(set =0, binding = 21) buffer PerLightMeshletIndicesBuffer
-{
-	uint per_light_meshlet_indices[];
-};
+// // Array of per light meshlet (offset + count)
+// layout(set =0, binding = 21) readonly buffer PerLightMeshletIndicesBuffer
+// {
+// 	uint per_light_meshlet_indices[];
+// };
 
-layout(set = 0, binding = 22) buffer MeshletDrawCommands
+layout(set = 0, binding = 22) readonly buffer MeshletDrawCommands
 {
     uvec4 meshlet_draw_commands[]; //
 };
@@ -111,18 +113,18 @@ void main()
     const uint meshlet_index_read_offset = light_index * MAX_PER_LIGHT_MESHLET_INSTANCES;
 
     uint global_meshlet_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].y;
-    uint meshlet_instance_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].x;
+    uint mesh_instance_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].x;
 
     const uint face_index = packed_light_index_face_index & 0xF;
 
-    mat4 model = instances[meshlet_instance_index].model;
+    mat4 model = instances[mesh_instance_index].model;
 
     vec4 world_center = model * vec4(meshlets[global_meshlet_index].center, 1.0);
     float scale = length(model[0]);
     float radius = meshlets[global_meshlet_index].radius * scale;
 
-    vec3 cone_axis = mat3(model) * vec3(int(meshlets[global_meshlet_index].cone_axis[0]) / 127.0, int(meshlets[global_meshlet_index].cone_axis[1]) / 127.0, int(meshlets[global_meshlet_index].cone_axis[2]) / 127.0);
-    float cone_cutoff = int(meshlets[global_meshlet_index].cone_cutoff) / 127.0;
+    vec3 cone_axis = mat3(model) * meshlets[global_meshlet_index].cone_axis;
+    float cone_cutoff = meshlets[global_meshlet_index].cone_cutoff;
 
     const vec4 camera_sphere = camera_spheres[light_index];
 
@@ -165,6 +167,7 @@ void main()
     if (accept)
         taskData.meshlet_indices[index] = global_meshlet_index;
     taskData.light_index_face_index = packed_light_index_face_index;
+    taskData.mesh_instance_index = mesh_instance_index;
 
     uint count = subgroupBallotBitCount(ballot);
 
