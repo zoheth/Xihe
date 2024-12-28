@@ -19,11 +19,6 @@ taskPayloadSharedEXT TaskData taskData;
 
 #include "mesh_shading/mesh.h"
 
-layout(set = 0, binding = 2) readonly buffer Meshlets
-{
-	Meshlet meshlets[];
-};
-
 layout (set = 0, binding = 3) readonly buffer MeshDrawBuffer
 {
     MeshDraw mesh_draws[];
@@ -32,6 +27,12 @@ layout (set = 0, binding = 3) readonly buffer MeshDrawBuffer
 layout(set = 0, binding = 4) readonly buffer MeshInstanceDrawBuffer
 {
     MeshInstanceDraw instances[];
+};
+
+
+layout(set = 0, binding = 7) readonly buffer MeshletBuffer
+{
+	Meshlet meshlets[];
 };
 
 // Array containing all meshlets plain

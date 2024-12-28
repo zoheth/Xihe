@@ -78,7 +78,7 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		}
 	}
 
-	if (type_ == PassType::kRaster)
+	if (type_ == PassType::kRaster || type_ == PassType::kMesh)
 	{
 		command_buffer.begin_rendering(render_target);
 	}
@@ -90,7 +90,7 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		gui_->draw(command_buffer);
 	}
 
-	if (type_ == PassType::kRaster)
+	if (type_ == PassType::kRaster || type_ == PassType::kMesh)
 	{
 		command_buffer.end_rendering();
 		if (!render_target_)

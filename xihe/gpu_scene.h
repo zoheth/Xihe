@@ -28,7 +28,7 @@ struct Meshlet
 	glm::vec3 cone_axis;
 	float     cone_cutoff;
 
-	uint32_t mesh_draw_index;
+	uint32_t   mesh_draw_index;
 	glm::uvec3 padding;
 };
 
@@ -83,9 +83,9 @@ struct MeshData
 class GpuScene
 {
   public:
-	GpuScene() = default;
+	GpuScene(backend::Device &device);
 
-	void initialize(backend::Device &device, sg::Scene &scene);
+	void initialize(sg::Scene &scene);
 
 	backend::Buffer &get_instance_buffer() const;
 	backend::Buffer &get_mesh_draws_buffer() const;
@@ -99,7 +99,11 @@ class GpuScene
 
 	uint32_t get_instance_count() const;
 
+	backend::Device &get_device() const;
+
   private:
+	backend::Device &device_;
+
 	uint32_t instance_count_{};
 
 	std::unique_ptr<backend::Buffer> global_vertex_buffer_;

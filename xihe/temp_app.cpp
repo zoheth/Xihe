@@ -40,8 +40,8 @@ bool TempApp::prepare(Window *window)
 	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
 	update_bindless_descriptor_sets();
-	gpu_scene_ = std::make_unique<GpuScene>();
-	gpu_scene_->initialize(*device_, *scene_);
+	gpu_scene_ = std::make_unique<GpuScene>(*device_);
+	gpu_scene_->initialize(*scene_);
 
 	auto light_pos   = glm::vec3(0.0f, 128.0f, -225.0f);
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
@@ -116,19 +116,29 @@ bool TempApp::prepare(Window *window)
 		    .shader({"shadow/pointshadows_culling.comp"})
 		    .finalize();
 
-		auto point_shadows_commands_generation_pass = std::make_unique<PointShadowsCommandsGenerationPass>();
+		/*auto point_shadows_commands_generation_pass = std::make_unique<PointShadowsCommandsGenerationPass>();
 		graph_builder_->add_pass("Point Light Shadows Commands Generation", std::move(point_shadows_commands_generation_pass))
 		    .bindables({{.type = BindableType::kStorageBufferRead, .name = "per-light meshlet indies"},
 		                {.type = BindableType::kStorageBufferWrite, .name = "meshlet draw command", .buffer_size = kMaxPointLightCount * 6 * 16}})
 		    .shader({"shadow/pointshadows_commands_generation.comp"})
 		    .finalize();
 
-		auto point_shadows_pass = std::make_unique<PointShadowsPass>(*gpu_scene_);
+		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
+		point_shadows_attachment.extent_desc               = ExtentDescriptor::Fixed({256, 256, 1});
+		point_shadows_attachment.image_properties.array_layers = PointShadowsCullingPass::point_light_count_;
+		point_shadows_attachment.image_properties.current_layer = 0;
+		point_shadows_attachment.image_properties.n_use_layer = PointShadowsCullingPass::point_light_count_;
+
+		auto point_shadows_pass = std::make_unique<PointShadowsPass>(*gpu_scene_, scene_->get_components<sg::Light>());
 		graph_builder_->add_pass("Point Light Shadows", std::move(point_shadows_pass))
 		    .bindables({
 		        {.type = BindableType::kStorageBufferRead, .name = "meshlet instances"},
 		        {.type = BindableType::kIndirectBuffer, .name = "meshlet draw command"},
-		    });
+		    })
+			.attachments({point_shadows_attachment})
+		    .shader({"shadow/pointshadows.task", "shadow/pointshadows.mesh"})
+		    .finalize();*/
+		;
 	}
 
 	// geometry pass

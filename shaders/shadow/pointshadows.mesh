@@ -42,22 +42,22 @@ struct Vertex
 	vec4 normal;
 };
 
-layout (std430, binding = 7) buffer MeshletBuffer
+layout (set = 0, binding = 7) readonly buffer MeshletBuffer
 {
   Meshlet meshlets[];
 };
 
-layout (std430, binding = 8) buffer VerticesBuffer
+layout (set = 0, binding = 8) readonly buffer VerticesBuffer
 {
   Vertex vertices[];
 } vb;
 
-layout (std430, binding = 9) buffer MeshletVertices
+layout (set = 0, binding = 9) readonly buffer MeshletVertices
 {
     uint meshlet_vertices[]; // All per-meshlet vertex indices
 } mvb;
 
-layout (std430, binding = 10) buffer MeshletTriangles
+layout (set = 0, binding = 10) readonly buffer MeshletTriangles
 {
     uint meshlet_triangles[];  // All packed per-meshlet triangles
 } mtb;
@@ -65,7 +65,7 @@ layout (std430, binding = 10) buffer MeshletTriangles
 
 // Array containing all meshlets plain
 // x = mesh_instance_index, y = meshlet_index
-layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
+layout(set = 0, binding = 20) readonly buffer MeshletInstancesBuffer
 {
 	uvec2 meshlet_instances[];
 };
@@ -76,7 +76,7 @@ layout(set = 0, binding = 20) buffer MeshletInstancesBuffer
 // 	uint per_light_meshlet_indices[];
 // };
 
-layout(set = 0, binding = 22) buffer MeshletDrawCommands
+layout(set = 0, binding = 22) readonly buffer MeshletDrawCommands
 {
     uvec4 meshlet_draw_commands[]; //
 };
@@ -86,7 +86,7 @@ layout(set = 1, binding = 0) readonly buffer ShadowCameraSpheres
     vec4 camera_spheres[];
 };
 
-layout (set = 1, binding = 4 ) readonly buffer ShadowViews {
+layout (set = 1, binding = 1 ) readonly buffer ShadowViews {
 
     mat4    view_projections[];
 };

@@ -157,7 +157,10 @@ void MeshData::prepare_meshlets(const MeshPrimitiveData &primitive_data)
 	}
 }
 
-void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
+GpuScene::GpuScene(backend::Device &device): device_{device}
+{}
+
+void GpuScene::initialize(sg::Scene &scene)
 {
 	auto meshes = scene.get_components<sg::Mesh>();
 
@@ -220,7 +223,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{packed_vertices.size() * sizeof(PackedVertex)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		global_vertex_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_vertex_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		global_vertex_buffer_->set_debug_name("global vertex buffer");
 		global_vertex_buffer_->update(packed_vertices);
 	}
@@ -228,7 +231,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{meshlets.size() * sizeof(Meshlet)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		global_meshlet_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_meshlet_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		global_meshlet_buffer_->set_debug_name("global meshlet buffer");
 		global_meshlet_buffer_->update(meshlets);
 	}
@@ -236,7 +239,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{meshlet_vertices.size() * sizeof(uint32_t)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		global_meshlet_vertices_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_meshlet_vertices_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		global_meshlet_vertices_buffer_->set_debug_name("global meshlet vertices buffer");
 		global_meshlet_vertices_buffer_->update(meshlet_vertices);
 	}
@@ -244,7 +247,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{meshlet_triangles.size() * sizeof(uint32_t)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		global_packed_meshlet_indices_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		global_packed_meshlet_indices_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		global_packed_meshlet_indices_buffer_->set_debug_name("global packed meshlet indices buffer");
 		global_packed_meshlet_indices_buffer_->update(meshlet_triangles);
 	}
@@ -252,7 +255,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{mesh_draws.size() * sizeof(MeshDraw)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		mesh_draws_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		mesh_draws_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		mesh_draws_buffer_->set_debug_name("mesh draws buffer");
 		mesh_draws_buffer_->update(mesh_draws);
 	}
@@ -260,7 +263,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{sizeof(uint32_t)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		draw_counts_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		draw_counts_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		draw_counts_buffer_->set_debug_name("draw counts buffer");
 		draw_counts_buffer_->update(std::vector<uint32_t>{0});
 	}
@@ -268,7 +271,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{instance_draws.size() * sizeof(MeshInstanceDraw)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		instance_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		instance_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		instance_buffer_->set_debug_name("instance buffer");
 		instance_buffer_->update(instance_draws);
 	
@@ -277,7 +280,7 @@ void GpuScene::initialize(backend::Device &device, sg::Scene &scene)
 		backend::BufferBuilder buffer_builder{instance_draws.size() * sizeof(MeshDrawCommand)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
-		draw_command_buffer_ = std::make_unique<backend::Buffer>(device, buffer_builder);
+		draw_command_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
 		draw_command_buffer_->set_debug_name("draw command buffer");
 		draw_command_buffer_->update(std::vector<MeshDrawCommand>(instance_draws.size()));
 	}
@@ -362,5 +365,10 @@ uint32_t GpuScene::get_instance_count() const
 		throw std::runtime_error("Instance count is not initialized.");
 	}
 	return instance_count_;
+}
+
+backend::Device & GpuScene::get_device() const
+{
+	return device_;
 }
 }        // namespace xihe

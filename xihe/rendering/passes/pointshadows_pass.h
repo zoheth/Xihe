@@ -49,12 +49,16 @@ public:
 class PointShadowsPass : public RenderPass
 {
 public:
-	PointShadowsPass(GpuScene &gpu_scene);
+	PointShadowsPass(GpuScene &gpu_scene, std::vector<sg::Light *> lights);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
+	static inline uint32_t point_light_count_{0};
 
-private:
+  private:
 	GpuScene &gpu_scene_;
+
+	std::unique_ptr<backend::Buffer> light_camera_spheres_buffer_;
+	std::unique_ptr<backend::Buffer> light_camera_matrices_buffer_;
 };
 }        // namespace xihe::rendering
