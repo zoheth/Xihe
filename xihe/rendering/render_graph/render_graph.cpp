@@ -25,7 +25,7 @@ void RenderGraph::execute()
 	{
 		bool is_first = (i == 0);
 		bool is_last  = (i == batch_count - 1);
-		if (pass_batches_[i].type == PassType::kRaster || pass_batches_[i].type == PassType::kMesh)
+		if (pass_batches_[i].type == PassType::kRaster)
 		{
 			execute_raster_batch(pass_batches_[i], is_first, is_last);
 		}

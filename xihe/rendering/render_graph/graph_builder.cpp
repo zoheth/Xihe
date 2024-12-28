@@ -447,7 +447,7 @@ void GraphBuilder::process_pass_resources(uint32_t node, PassNode &pass, Resourc
 			    barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);
 			    barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
 		    }
-		    else if (pass.get_type() == PassType::kRaster || pass.get_type() == PassType::kMesh)
+		    else if (pass.get_type() == PassType::kRaster)
 		    {
 			    release_barrier.old_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eCompute);
 			    release_barrier.new_queue_family = render_context_.get_queue_family_index(vk::QueueFlagBits::eGraphics);

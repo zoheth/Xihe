@@ -60,7 +60,7 @@ void   RenderPass::set_shader(std::initializer_list<std::string> file_names)
 	}
 	else if (task_shader_.has_value() && mesh_shader_.has_value())
 	{
-		type_ = PassType::kMesh;
+		type_ = PassType::kRaster;
 	}
 	else
 	{

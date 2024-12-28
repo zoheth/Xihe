@@ -116,14 +116,14 @@ bool TempApp::prepare(Window *window)
 		    .shader({"shadow/pointshadows_culling.comp"})
 		    .finalize();
 
-		/*auto point_shadows_commands_generation_pass = std::make_unique<PointShadowsCommandsGenerationPass>();
+		auto point_shadows_commands_generation_pass = std::make_unique<PointShadowsCommandsGenerationPass>();
 		graph_builder_->add_pass("Point Light Shadows Commands Generation", std::move(point_shadows_commands_generation_pass))
 		    .bindables({{.type = BindableType::kStorageBufferRead, .name = "per-light meshlet indies"},
 		                {.type = BindableType::kStorageBufferWrite, .name = "meshlet draw command", .buffer_size = kMaxPointLightCount * 6 * 16}})
 		    .shader({"shadow/pointshadows_commands_generation.comp"})
 		    .finalize();
 
-		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
+		/*PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
 		point_shadows_attachment.extent_desc               = ExtentDescriptor::Fixed({256, 256, 1});
 		point_shadows_attachment.image_properties.array_layers = PointShadowsCullingPass::point_light_count_;
 		point_shadows_attachment.image_properties.current_layer = 0;
