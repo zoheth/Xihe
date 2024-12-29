@@ -53,7 +53,7 @@ layout(set = 0, binding = 22) readonly buffer MeshletDrawCommands
     uvec4 meshlet_draw_commands[]; //
 };
 
-layout(set = 1, binding = 0) readonly buffer ShadowCameraSpheres 
+layout(set = 0, binding = 23) readonly buffer ShadowCameraSpheres 
 {
     vec4 camera_spheres[];
 };

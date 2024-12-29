@@ -20,10 +20,6 @@ taskPayloadSharedEXT TaskData taskData;
 
 #include "mesh_shading/mesh.h"
 
-layout(set = 0, binding = 2) readonly buffer Meshlets
-{
-	Meshlet meshlets[];
-};
 
 layout (set = 0, binding = 3) readonly buffer MeshDrawBuffer
 {
@@ -81,12 +77,12 @@ layout(set = 0, binding = 22) readonly buffer MeshletDrawCommands
     uvec4 meshlet_draw_commands[]; //
 };
 
-layout(set = 1, binding = 0) readonly buffer ShadowCameraSpheres 
+layout(set = 0, binding = 23) readonly buffer ShadowCameraSpheres 
 {
     vec4 camera_spheres[];
 };
 
-layout (set = 1, binding = 1 ) readonly buffer ShadowViews {
+layout (set = 0, binding = 24 ) readonly buffer ShadowViews {
 
     mat4    view_projections[];
 };
@@ -119,7 +115,7 @@ void main()
 
     for(uint i = 0; i < triangle_count; ++i)
     {
-        uint packed_triangle = mtb.meshlet_triangles[mesh_triangle_offset + meshlet.triangle_offset + i];
+        uint packed_triangle = mtb.meshlet_triangles[mesh_draw.mesh_triangle_offset + meshlets[global_meshlet_index].triangle_offset + i];
         uint idx0 = (packed_triangle >> 0) & 0xFFu;
         uint idx1 = (packed_triangle >> 8) & 0xFFu;
         uint idx2 = (packed_triangle >> 16) & 0xFFu;

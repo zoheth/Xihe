@@ -24,7 +24,7 @@ TempApp::TempApp()
 	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SHADER_FLOAT_CONTROLS_EXTENSION_NAME);
-	// add_device_extension(VK_EXT_MULTI_DRAW_EXTENSION_NAME);
+	add_device_extension(VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
 
 	backend::GlslCompiler::set_target_environment(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
 }
@@ -123,7 +123,7 @@ bool TempApp::prepare(Window *window)
 		    .shader({"shadow/pointshadows_commands_generation.comp"})
 		    .finalize();
 
-		/*PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
+		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
 		point_shadows_attachment.extent_desc               = ExtentDescriptor::Fixed({256, 256, 1});
 		point_shadows_attachment.image_properties.array_layers = PointShadowsCullingPass::point_light_count_;
 		point_shadows_attachment.image_properties.current_layer = 0;
@@ -137,7 +137,7 @@ bool TempApp::prepare(Window *window)
 		    })
 			.attachments({point_shadows_attachment})
 		    .shader({"shadow/pointshadows.task", "shadow/pointshadows.mesh"})
-		    .finalize();*/
+		    .finalize();
 		;
 	}
 
@@ -294,8 +294,10 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
 
-	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMultiDrawFeaturesEXT, multiDraw);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceVulkan11Features, shaderDrawParameters);
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, primitiveFragmentShadingRate);
+	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, attachmentFragmentShadingRate);
+
 }
 
 void TempApp::draw_gui()

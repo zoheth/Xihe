@@ -157,7 +157,7 @@ bool XiheApp::prepare(Window *window)
 	// todo
 	render_context_->prepare(8);
 
-	render_graph_ = std::make_unique<rendering::RenderGraph>(*render_context_);
+	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_);
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
 	stats_ = std::make_unique<stats::Stats>(*render_context_);
@@ -183,7 +183,6 @@ void XiheApp::update(float delta_time)
 		stats_->update(delta_time);
 		static float stats_view_count = 0.0f;
 		stats_view_count += delta_time;
-
 	}
 
 	for (const auto &callback : post_scene_update_callbacks_)
@@ -366,6 +365,7 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	gpu.get_mutable_requested_features().shaderSampledImageArrayDynamicIndexing = VK_TRUE;
 	gpu.get_mutable_requested_features().depthClamp                             = VK_TRUE;
+	gpu.get_mutable_requested_features().multiDrawIndirect                      = VK_TRUE;
 
 	if (gpu.get_features().samplerAnisotropy)
 	{

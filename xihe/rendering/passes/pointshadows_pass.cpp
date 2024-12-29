@@ -174,8 +174,8 @@ void PointShadowsPass::execute(backend::CommandBuffer &command_buffer, RenderFra
 	command_buffer.bind_buffer(input_bindables[0].buffer(), 0, input_bindables[0].buffer().get_size(), 0, 20, 0);
 	command_buffer.bind_buffer(input_bindables[1].buffer(), 0, input_bindables[1].buffer().get_size(), 0, 22, 0);
 
-	command_buffer.bind_buffer(*light_camera_spheres_buffer_, 0, light_camera_spheres_buffer_->get_size(), 1, 0, 0);
-	command_buffer.bind_buffer(*light_camera_matrices_buffer_, 0, light_camera_matrices_buffer_->get_size(), 1, 1, 0);
+	command_buffer.bind_buffer(*light_camera_spheres_buffer_, 0, light_camera_spheres_buffer_->get_size(), 0, 23, 0);
+	command_buffer.bind_buffer(*light_camera_matrices_buffer_, 0, light_camera_matrices_buffer_->get_size(), 0, 24, 0);
 
 	command_buffer.draw_mesh_tasks_indirect(input_bindables[1].buffer(), 0, point_light_count_ * 6, sizeof(glm::uvec4));
 
