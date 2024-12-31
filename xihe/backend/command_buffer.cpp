@@ -242,6 +242,11 @@ void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize 
 	get_handle().updateBuffer(buffer.get_handle(), offset, data.size(), data.data());
 }
 
+void CommandBuffer::clear_buffer(const backend::Buffer &buffer)
+{
+	get_handle().fillBuffer(buffer.get_handle(), 0, buffer.get_size(), 0);
+}
+
 void CommandBuffer::blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions)
 {
 	get_handle().blitImage(src_img.get_handle(), vk::ImageLayout::eTransferSrcOptimal, dst_img.get_handle(), vk::ImageLayout::eTransferDstOptimal, regions, vk::Filter::eLinear);

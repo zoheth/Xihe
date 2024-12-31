@@ -1,0 +1,57 @@
+#version 450
+
+#define MAX_POINT_LIGHT_COUNT 256
+
+layout(set =0, binding = 0, std430) buffer PerLightMeshletIndicesBuffer
+{
+	uint per_light_meshlet_indices[];
+};
+
+layout (local_size_x = 64, local_size_y = 1, local_size_z = 1) in;
+
+
+void main() 
+{
+	if (gl_LocalInvocationID.x == 0) {
+        // 计算每个工作组至少需要处理的元素数
+        uint elementsPerGroup = MAX_POINT_LIGHT_COUNT / gl_NumWorkGroups.x;
+        // 计算需要处理额外一个元素的工作组数量
+        uint remainingElements = MAX_POINT_LIGHT_COUNT % gl_NumWorkGroups.x;
+        
+        // 计算这个工作组的起始位置
+        uint start;
+        if (gl_WorkGroupID.x < remainingElements) {
+            // 前面的工作组多处理一个元素
+            start = gl_WorkGroupID.x * (elementsPerGroup + 1);
+        } else {
+            // 后面的工作组正常处理
+            start = gl_WorkGroupID.x * elementsPerGroup + remainingElements;
+        }
+        
+        // 计算结束位置
+        uint end;
+        if (gl_WorkGroupID.x < remainingElements) {
+            end = start + elementsPerGroup + 1;
+        } else {
+            end = start + elementsPerGroup;
+        }
+        
+        // 初始化这个范围内的所有元素
+        for(uint i = start; i < end; ++i) {
+            per_light_meshlet_indices[i] = 0;
+        }
+    }
+	memoryBarrierBuffer();
+    memoryBarrierShared();
+    memoryBarrier();
+    barrier();
+
+	uint light_index = gl_GlobalInvocationID.x % MAX_POINT_LIGHT_COUNT;
+
+	// atomicAdd(per_light_meshlet_indices[light_index], 1);
+	if(gl_GlobalInvocationID.x < MAX_POINT_LIGHT_COUNT) {
+        per_light_meshlet_indices[gl_GlobalInvocationID.x] = gl_GlobalInvocationID.x;
+    }
+	return;
+
+}

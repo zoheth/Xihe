@@ -153,6 +153,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data);
 
+	void clear_buffer(const backend::Buffer &buffer);
+
 	void blit_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageBlit> &regions);
 
 	void resolve_image(const backend::Image &src_img, const backend::Image &dst_img, const std::vector<vk::ImageResolve> &regions);

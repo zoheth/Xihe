@@ -19,14 +19,6 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 void main()
 {
-    if (gl_GlobalInvocationID.x == 0) {
-        // Use this as atomic int
-        per_light_meshlet_indices[MAX_POINT_LIGHT_COUNT] = 0;
-    }
-
-    memoryBarrier();
-    barrier();
-
     uint light_index = gl_GlobalInvocationID.x;
 
     if(light_index >= POINT_LIGHT_COUNT)

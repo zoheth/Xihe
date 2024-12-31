@@ -99,7 +99,7 @@ bool sphere_intersect( vec3 center_a, float radius_a, vec3 center_b, float radiu
 	const vec3 v = center_b - center_a;
 	const float total_radius = radius_a + radius_b;
 
-	return dot(v, v) < total_radius;
+	return dot(v, v) <= total_radius*total_radius;
 }
 
 void main()
@@ -133,7 +133,7 @@ void main()
 
     if(accept)
     {
-        accept = sphere_intersect(world_center.xyz, radius, camera_sphere.xyz, camera_sphere.w * 2);
+        accept = sphere_intersect(world_center.xyz, radius, camera_sphere.xyz, camera_sphere.w);
     }
 
     if(accept)
@@ -161,6 +161,7 @@ void main()
                 break;
         }
     }
+
 
     uvec4 ballot = subgroupBallot(accept);
     uint index = subgroupBallotExclusiveBitCount(ballot);

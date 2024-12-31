@@ -21,6 +21,44 @@ glm::vec4 convert_to_vec4(const std::vector<uint8_t> &data, uint32_t offset, flo
 
 	return {x, y, z, padding};
 }
+
+glm::vec4 calculate_bounds(const float *vertex_positions, uint32_t vertex_count)
+{
+	if (vertex_count == 0)
+	{
+		return glm::vec4(0.0f); 
+	}
+
+	glm::vec3 min_point(FLT_MAX);
+	glm::vec3 max_point(-FLT_MAX);
+
+	for (uint32_t i = 0; i < vertex_count; ++i)
+	{
+		const float *vertex = vertex_positions + i * 3;
+
+		min_point.x = std::min(min_point.x, vertex[0]);
+		min_point.y = std::min(min_point.y, vertex[1]);
+		min_point.z = std::min(min_point.z, vertex[2]);
+
+		max_point.x = std::max(max_point.x, vertex[0]);
+		max_point.y = std::max(max_point.y, vertex[1]);
+		max_point.z = std::max(max_point.z, vertex[2]);
+	}
+
+	glm::vec3 center = (min_point + max_point) * 0.5f;
+
+	float max_dist_sq = 0.0f;
+	for (uint32_t i = 0; i < vertex_count; ++i)
+	{
+		const float *vertex = vertex_positions + i * 3;
+		glm::vec3    pos(vertex[0], vertex[1], vertex[2]);
+
+		float dist_sq = glm::length2(pos - center);
+		max_dist_sq   = std::max(max_dist_sq, dist_sq);
+	}
+	return glm::vec4(center, std::sqrt(max_dist_sq));
+}
+
 }        // namespace
 
 namespace xihe
@@ -111,6 +149,8 @@ void MeshData::prepare_meshlets(const MeshPrimitiveData &primitive_data)
 
 	local_meshlets.resize(meshlet_count);
 
+	bounds = calculate_bounds(vertex_positions, primitive_data.vertex_count);
+
 	// Convert meshopt_Meshlet to our Meshlet structure
 	for (size_t i = 0; i < meshlet_count; ++i)
 	{
@@ -165,6 +205,9 @@ void GpuScene::initialize(sg::Scene &scene)
 	auto meshes = scene.get_components<sg::Mesh>();
 
 	std::vector<MeshDraw> mesh_draws;
+
+	std::vector<glm::vec4> mesh_bounds;
+
 	std::vector<MeshInstanceDraw> instance_draws;
 
 	std::vector<PackedVertex> packed_vertices;
@@ -214,6 +257,8 @@ void GpuScene::initialize(sg::Scene &scene)
 
 			mesh_draw.meshlet_count = static_cast<uint32_t>(mesh_data.meshlets.size());
 			mesh_draws.push_back(mesh_draw);
+
+			mesh_bounds.push_back(mesh_data.bounds);
 		}
 	}
 
@@ -260,6 +305,16 @@ void GpuScene::initialize(sg::Scene &scene)
 		mesh_draws_buffer_->update(mesh_draws);
 	}
 	{
+		assert(mesh_bounds.size() == mesh_draws.size());
+
+		backend::BufferBuilder buffer_builder{mesh_bounds.size() * sizeof(glm::vec4)};
+		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer)
+		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
+		mesh_bounds_buffer_ = std::make_unique<backend::Buffer>(device_, buffer_builder);
+		mesh_bounds_buffer_->set_debug_name("mesh bounds buffer");
+		mesh_bounds_buffer_->update(mesh_bounds);
+	}
+	{
 		backend::BufferBuilder buffer_builder{sizeof(uint32_t)};
 		buffer_builder.with_usage(vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer)
 		    .with_vma_usage(VMA_MEMORY_USAGE_CPU_TO_GPU);
@@ -302,6 +357,11 @@ backend::Buffer &GpuScene::get_mesh_draws_buffer() const
 		throw std::runtime_error("Mesh draws buffer is not initialized.");
 	}
 	return *mesh_draws_buffer_;
+}
+
+backend::Buffer & GpuScene::get_mesh_bounds_buffer() const
+{
+	return *mesh_bounds_buffer_;
 }
 
 backend::Buffer & GpuScene::get_draw_command_buffer() const

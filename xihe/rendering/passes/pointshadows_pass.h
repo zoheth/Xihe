@@ -22,6 +22,36 @@ struct PointLightUniform
 	PointLight point_lights[kMaxPointLightCount];
 };
 
+class PointShadowsResources
+{
+  public:
+	static PointShadowsResources &get();
+
+	static void destroy();
+
+	void initialize(backend::Device &device, std::vector<sg::Light *> lights);
+
+	uint32_t get_point_light_count() const;
+
+	backend::Buffer &get_light_camera_spheres_buffer() const;
+	backend::Buffer &get_light_camera_matrices_buffer() const;
+
+	const PointLightUniform &get_point_light_uniform() const;
+
+  private:
+	PointShadowsResources() = default;
+
+	bool               is_initialized_{false};
+	static inline bool destroyed_{false};
+
+	PointLightUniform point_light_uniform_;
+
+	std::unique_ptr<backend::Buffer> light_camera_spheres_buffer_;
+	std::unique_ptr<backend::Buffer> light_camera_matrices_buffer_;
+
+	uint32_t point_light_count_{0};
+};
+
 class PointShadowsCullingPass : public RenderPass
 {
   public:
@@ -29,36 +59,28 @@ class PointShadowsCullingPass : public RenderPass
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
-	static inline uint32_t point_light_count_{0};
-
   private:
 	GpuScene &gpu_scene_;
-
-	PointLightUniform point_light_uniform_;
 };
 
 class PointShadowsCommandsGenerationPass : public RenderPass
 {
-public:
+  public:
 	PointShadowsCommandsGenerationPass() = default;
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
-
 };
 
 class PointShadowsPass : public RenderPass
 {
-public:
+  public:
 	PointShadowsPass(GpuScene &gpu_scene, std::vector<sg::Light *> lights);
+
+	~PointShadowsPass() override;
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
-	static inline uint32_t point_light_count_{0};
-
   private:
 	GpuScene &gpu_scene_;
-
-	std::unique_ptr<backend::Buffer> light_camera_spheres_buffer_;
-	std::unique_ptr<backend::Buffer> light_camera_matrices_buffer_;
 };
 }        // namespace xihe::rendering

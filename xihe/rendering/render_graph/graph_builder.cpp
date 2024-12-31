@@ -139,6 +139,11 @@ void GraphBuilder::collect_resource_create_info()
 					res_info.buffer_usage |= vk::BufferUsageFlagBits::eStorageBuffer;
 					res_info.buffer_size = std::max(res_info.buffer_size, bindable.buffer_size);
 					break;
+				case BindableType::kStorageBufferWriteClear:
+					res_info.is_buffer = true;
+					res_info.buffer_usage |= vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferDst;
+					res_info.buffer_size = std::max(res_info.buffer_size, bindable.buffer_size);
+					break;
 				case BindableType::kIndirectBuffer:
 					res_info.is_buffer = true;
 					res_info.buffer_usage |= vk::BufferUsageFlagBits::eIndirectBuffer;
@@ -362,6 +367,7 @@ std::pair<std::vector<std::unordered_set<uint32_t>>, std::vector<uint32_t>> Grap
 		{
 			if (resource.type == BindableType::kStorageBufferReadWrite ||
 			    resource.type == BindableType::kStorageBufferWrite ||
+				resource.type == BindableType::kStorageBufferWriteClear||
 			    resource.type == BindableType::kStorageReadWrite ||
 			    resource.type == BindableType::kStorageWrite)
 			{

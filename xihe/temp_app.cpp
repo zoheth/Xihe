@@ -9,6 +9,7 @@
 #include "rendering/passes/mesh_pass.h"
 #include "rendering/passes/meshlet_pass.h"
 #include "rendering/passes/pointshadows_pass.h"
+#include "rendering/passes/test_pass.h"
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
 #include "scene_graph/components/mesh.h"
@@ -47,15 +48,15 @@ bool TempApp::prepare(Window *window)
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
 
 	// Magic numbers used to offset lights in the Sponza scene
-	for (int i = -4; i < 4; ++i)
+	for (int i = 0; i < 1; ++i)
 	{
-		for (int j = 0; j < 5; ++j)
+		for (int j = 3; j < 4; ++j)
 		{
 			glm::vec3 pos = light_pos;
 			pos.x += i * 400;
 			pos.z += j * 150;
 			pos.y = 8;
-			for (int k = 0; k < 6; ++k)
+			for (int k = 0; k < 2; ++k)
 			{
 				pos.y         = pos.y + (k * 50);
 				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
@@ -69,6 +70,7 @@ bool TempApp::prepare(Window *window)
 			}
 		}
 	}
+
 
 	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<sg::Camera>();
@@ -109,10 +111,16 @@ bool TempApp::prepare(Window *window)
 		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
 		    .finalize();
 
+		/*auto test_pass = std::make_unique<TestPass>();
+		graph_builder_->add_pass("Test", std::move(test_pass))
+		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "per-light meshlet indies", .buffer_size = 256 * 4}})
+		    .shader({"shadow/test.comp"})
+		    .finalize();*/
+
 		auto point_shadows_culling_pass = std::make_unique<PointShadowsCullingPass>(*gpu_scene_, scene_->get_components<sg::Light>());
 		graph_builder_->add_pass("Point Light Shadows Culling", std::move(point_shadows_culling_pass))
 		    .bindables({{.type = BindableType::kStorageBufferWrite, .name = "meshlet instances", .buffer_size = kMaxPointLightCount * kMaxPerLightMeshletCount * 8},
-		                {.type = BindableType::kStorageBufferWrite, .name = "per-light meshlet indies", .buffer_size = (kMaxPointLightCount + 1) * 2 * 4}})
+		                {.type = BindableType::kStorageBufferWriteClear, .name = "per-light meshlet indies", .buffer_size = (kMaxPointLightCount + 1) * 2 * 4}})
 		    .shader({"shadow/pointshadows_culling.comp"})
 		    .finalize();
 
@@ -125,9 +133,9 @@ bool TempApp::prepare(Window *window)
 
 		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
 		point_shadows_attachment.extent_desc               = ExtentDescriptor::Fixed({256, 256, 1});
-		point_shadows_attachment.image_properties.array_layers = PointShadowsCullingPass::point_light_count_;
+		point_shadows_attachment.image_properties.array_layers  = PointShadowsResources::get().get_point_light_count();
 		point_shadows_attachment.image_properties.current_layer = 0;
-		point_shadows_attachment.image_properties.n_use_layer = PointShadowsCullingPass::point_light_count_;
+		point_shadows_attachment.image_properties.n_use_layer   = PointShadowsResources::get().get_point_light_count();
 
 		auto point_shadows_pass = std::make_unique<PointShadowsPass>(*gpu_scene_, scene_->get_components<sg::Light>());
 		graph_builder_->add_pass("Point Light Shadows", std::move(point_shadows_pass))
@@ -135,7 +143,7 @@ bool TempApp::prepare(Window *window)
 		        {.type = BindableType::kStorageBufferRead, .name = "meshlet instances"},
 		        {.type = BindableType::kIndirectBuffer, .name = "meshlet draw command"},
 		    })
-			.attachments({point_shadows_attachment})
+		    .attachments({point_shadows_attachment})
 		    .shader({"shadow/pointshadows.task", "shadow/pointshadows.mesh"})
 		    .finalize();
 		;
@@ -297,7 +305,6 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceVulkan11Features, shaderDrawParameters);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, primitiveFragmentShadingRate);
 	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, attachmentFragmentShadingRate);
-
 }
 
 void TempApp::draw_gui()

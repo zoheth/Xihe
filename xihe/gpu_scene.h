@@ -74,6 +74,7 @@ struct MeshData
 	std::vector<Meshlet>      meshlets;
 	std::vector<uint32_t>     meshlet_vertices;
 	std::vector<uint32_t>     meshlet_triangles;
+	glm::vec4                 bounds;
 	uint32_t                  meshlet_count{0};
 
   private:
@@ -89,6 +90,7 @@ class GpuScene
 
 	backend::Buffer &get_instance_buffer() const;
 	backend::Buffer &get_mesh_draws_buffer() const;
+	backend::Buffer &get_mesh_bounds_buffer() const;
 	backend::Buffer &get_draw_command_buffer() const;
 	backend::Buffer &get_draw_counts_buffer() const;
 
@@ -112,7 +114,10 @@ class GpuScene
 	std::unique_ptr<backend::Buffer> global_packed_meshlet_indices_buffer_;
 
 	std::unique_ptr<backend::Buffer> instance_buffer_;
+
 	std::unique_ptr<backend::Buffer> mesh_draws_buffer_;
+	std::unique_ptr<backend::Buffer> mesh_bounds_buffer_;
+
 	std::unique_ptr<backend::Buffer> draw_command_buffer_;
 	std::unique_ptr<backend::Buffer> draw_counts_buffer_;
 };
