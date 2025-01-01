@@ -55,6 +55,8 @@ layout(set = 0, binding = 5) uniform ShadowUniform {
 
 layout(set = 0, binding = 6) uniform sampler2DArrayShadow shadow_sampler;
 
+layout(set = 0, binding = 10) uniform samplerCubeArrayShadow shadow_sampler_cube;
+
 layout(constant_id = 0) const uint DIRECTIONAL_LIGHT_COUNT = 0U;
 layout(constant_id = 1) const uint POINT_LIGHT_COUNT       = 0U;
 layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;
@@ -184,6 +186,17 @@ float calculate_shadow(highp vec3 pos, uint cascade_index)
     return shadow;
 }
 
+float pointlight_get_depth_value(inout vec3 vec, float radius)
+{
+    vec3 abs_vec = abs(vec);
+    float max_val = max(abs_vec.x, max(abs_vec.y, abs_vec.z));
+
+    const float f = 0.01f;
+    const float n = radius;
+    float depth = -(f / (n - f) - (n * f) / (n - f) / max_val);
+    return depth;
+}
+
 void main()
 {
 	// Retrieve position from depth
@@ -248,20 +261,27 @@ void main()
 
     // Point Light
     if(min_light_id != MAX_POINT_LIGHT_COUNT + 1) {
-	    for(uint i = min_light_id; i <= max_light_id; ++i) {
-            uint word_index = i / 32;
-            uint bit_index = i % 32;
-            
-            if((tiles[tile_base + word_index] & ( 1u << bit_index ) ) != 0) {
-                uint global_light_index = light_indices[i];
-                L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
-            }
+    for(uint i = min_light_id; i <= max_light_id; ++i) {
+        uint word_index = i / 32;
+        uint bit_index = i % 32;
+        
+        if((tiles[tile_base + word_index] & ( 1u << bit_index ) ) != 0) {
+            uint global_light_index = light_indices[i];
 
-//            uint global_light_index = light_indices[i];
-//            L += apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
+            vec3 shadow_position_to_light = pos - lights_info.point_lights[global_light_index].position.xyz;
+            float radius = lights_info.point_lights[global_light_index].direction.w;
 
+            float depth = pointlight_get_depth_value(shadow_position_to_light, radius);
+
+            vec4 shadow_coord = vec4(normalize(shadow_position_to_light), float(global_light_index));
+
+            float bias = 0.05;
+            float shadow = texture(shadow_sampler_cube, shadow_coord, depth);
+
+            L += shadow * apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
         }
     }
+}
 	
 	for (uint i = 0U; i < SPOT_LIGHT_COUNT; ++i)
 	{

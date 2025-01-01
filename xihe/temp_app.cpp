@@ -201,7 +201,8 @@ bool TempApp::prepare(Window *window)
 		    .bindables({{BindableType::kSampled, "depth"},
 		                {BindableType::kSampled, "albedo"},
 		                {BindableType::kSampled, "normal"},
-		                {BindableType::kSampled, "shadowmap"}})
+		                {BindableType::kSampled, "shadowmap"},
+		                {BindableType::kSampledCube, "point shadowmaps"}})
 
 		    .attachments({{AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
 

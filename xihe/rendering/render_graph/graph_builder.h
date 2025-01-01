@@ -39,10 +39,11 @@ struct ResourceCreateInfo
 	vk::BufferUsageFlags buffer_usage{};
 	uint32_t             buffer_size{0};
 
-	vk::ImageUsageFlags image_usage{};
-	vk::Format          format = vk::Format::eUndefined;
-	ExtentDescriptor    extent_desc{};
-	uint32_t            array_layers{1};
+	vk::ImageUsageFlags  image_usage{};
+	vk::ImageCreateFlags image_flags{};
+	vk::Format           format = vk::Format::eUndefined;
+	ExtentDescriptor     extent_desc{};
+	uint32_t             array_layers{1};
 };
 
 class GraphBuilder

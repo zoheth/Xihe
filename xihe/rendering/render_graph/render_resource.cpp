@@ -45,6 +45,7 @@ void update_bindable_state(BindableType type, PassType pass_type, ResourceUsageS
 	switch (type)
 	{
 		case BindableType::kSampled:
+		case BindableType::kSampledCube:
 			state.stage_mask  = get_shader_stage_flags(pass_type);
 			state.access_mask = vk::AccessFlagBits2::eShaderRead;
 			state.layout      = vk::ImageLayout::eShaderReadOnlyOptimal;

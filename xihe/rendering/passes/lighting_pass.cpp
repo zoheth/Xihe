@@ -95,6 +95,11 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
 	}
 
+	if (input_bindables.size() > 4)
+	{
+		command_buffer.bind_image(input_bindables[4].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 10, 0);
+	}
+
 	command_buffer.draw(3, 1, 0, 0);
 }
 

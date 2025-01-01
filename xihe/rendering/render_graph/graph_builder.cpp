@@ -132,6 +132,10 @@ void GraphBuilder::collect_resource_create_info()
 				case BindableType::kSampled:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eSampled;
 					break;
+				case BindableType::kSampledCube:
+					res_info.image_usage |= vk::ImageUsageFlagBits::eSampled;
+					res_info.image_flags |= vk::ImageCreateFlagBits::eCubeCompatible;
+					break;
 				case BindableType::kStorageRead:
 					res_info.image_usage |= vk::ImageUsageFlagBits::eStorage;
 					break;
@@ -240,6 +244,7 @@ void GraphBuilder::create_graph_resource()
 			image_builder.with_format(info.format)
 			    .with_usage(info.image_usage)
 			    .with_array_layers(info.array_layers)
+				.with_flags(info.image_flags)
 			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
 			render_graph_.images_.push_back(image_builder.build_unique(device));
@@ -302,6 +307,11 @@ void GraphBuilder::create_graph_resource()
 			}
 
 			vk::ImageViewType view_type = bindable.image_properties.n_use_layer > 1 ? vk::ImageViewType::e2DArray : vk::ImageViewType::e2D;
+			if (bindable.type == BindableType::kSampledCube)
+			{
+				// todo
+				view_type = vk::ImageViewType::eCubeArray;
+			}
 
 			auto image_view = std::make_unique<backend::ImageView>(*base_image, view_type, res_info.format, 0, handle.base_layer, 0, bindable.image_properties.n_use_layer);
 

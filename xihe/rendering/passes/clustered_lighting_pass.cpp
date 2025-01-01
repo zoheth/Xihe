@@ -139,6 +139,11 @@ void ClusteredLightingPass::execute(backend::CommandBuffer &command_buffer, Rend
 		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
 	}
 
+	if (input_bindables.size() > 4)
+	{
+		command_buffer.bind_image(input_bindables[4].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 10, 0);
+	}
+
 	{
 		auto storage_allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eStorageBuffer, bins_.size() * 4, thread_index_);
 		storage_allocation.update(bins_);
