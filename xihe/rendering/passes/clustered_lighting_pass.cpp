@@ -163,6 +163,8 @@ void ClusteredLightingPass::collect_and_sort_lights()
 	sorted_lights_.clear();
 	auto camera_view_mat = camera_.get_view();
 
+	uint32_t point_light_index = 0;
+
 	for (uint32_t i = 0; i < lights_.size(); ++i)
 	{
 		sg::Light *light = lights_[i];
@@ -180,6 +182,8 @@ void ClusteredLightingPass::collect_and_sort_lights()
 
 		SortedLight sorted_light;
 		sorted_light.light_index = i;
+		sorted_light.point_light_index = point_light_index;
+		++point_light_index;
 		sorted_light.projected_z = (-projected_pos.z - camera_.get_near_plane()) /
 		                           (camera_.get_far_plane() - camera_.get_near_plane());
 		sorted_light.projected_z_min = (-projected_pos_min.z - camera_.get_near_plane()) /
@@ -198,7 +202,7 @@ void ClusteredLightingPass::collect_and_sort_lights()
 	light_indices_.resize(sorted_lights_.size());
 	for (size_t i = 0; i < sorted_lights_.size(); ++i)
 	{
-		light_indices_[i] = sorted_lights_[i].light_index;
+		light_indices_[i] = sorted_lights_[i].point_light_index;
 	}
 }
 

@@ -13,6 +13,7 @@ constexpr uint32_t kMaxPointLightCount = 256;
 struct SortedLight
 {
 	uint32_t light_index;
+	uint32_t point_light_index;
 	float    projected_z;
 	float    projected_z_min;
 	float    projected_z_max;

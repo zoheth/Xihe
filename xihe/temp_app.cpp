@@ -50,13 +50,13 @@ bool TempApp::prepare(Window *window)
 	// Magic numbers used to offset lights in the Sponza scene
 	for (int i = 0; i < 1; ++i)
 	{
-		for (int j = 3; j < 4; ++j)
+		for (int j = 2; j < 3; ++j)
 		{
 			glm::vec3 pos = light_pos;
 			pos.x += i * 400;
 			pos.z += j * 150;
 			pos.y = 8;
-			for (int k = 0; k < 2; ++k)
+			for (int k = 3; k < 4; ++k)
 			{
 				pos.y         = pos.y + (k * 50);
 				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
