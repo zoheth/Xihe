@@ -59,6 +59,8 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 
 	AttachmentsState attachments_state;
 
+	const uint32_t layer_count = render_target.get_views()[0].get_subresource_layers().layerCount;
+
 	for (size_t i = 0; i < render_target.get_views().size(); i++)
 	{
 		if (common::is_depth_format(render_target.get_views()[i].get_format()))
@@ -105,7 +107,7 @@ void CommandBuffer::begin_rendering(rendering::RenderTarget &render_target, cons
 	vk::RenderingInfo rendering_info(
 	    {},                                                     // flags
 	    {{}, render_target.get_extent()},                       // renderArea
-	    1,                                                      // layerCount
+	    layer_count,                                             // layerCount
 	    0,                                                      // viewMask
 	    static_cast<uint32_t>(color_attachments_.size()),        // colorAttachmentCount
 	    color_attachments_.data(),                               // pColorAttachments
