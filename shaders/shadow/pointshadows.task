@@ -12,7 +12,6 @@ layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 struct TaskData {
     uint meshlet_indices[32];
     uint light_index_face_index;
-    uint mesh_instance_index;
 };
 
 taskPayloadSharedEXT TaskData taskData;
@@ -42,11 +41,11 @@ layout(set = 0, binding = 20) readonly buffer MeshletInstancesBuffer
 	uvec2 meshlet_instances[];
 };
 
-// // Array of per light meshlet (offset + count)
-// layout(set =0, binding = 21) readonly buffer PerLightMeshletIndicesBuffer
-// {
-// 	uint per_light_meshlet_indices[];
-// };
+ // Array of per light meshlet (offset + count)
+ layout(set =0, binding = 21) readonly buffer PerLightMeshletIndicesBuffer
+ {
+ 	uint per_light_meshlet_indices[];
+ };
 
 layout(set = 0, binding = 22) readonly buffer MeshletDrawCommands
 {
@@ -111,6 +110,25 @@ void main()
     uint packed_light_index_face_index = meshlet_draw_commands[gl_DrawID].w;
 
     const uint light_index = packed_light_index_face_index >> 16;
+
+    if(meshlet_index >= per_light_meshlet_indices[light_index])
+	{
+		return;
+	}
+
+//    uvec4 ballotxx = subgroupBallot(true);
+//    uint indexxx = subgroupBallotExclusiveBitCount(ballotxx);
+//
+//    taskData.meshlet_indices[indexxx] = 0;
+//    taskData.light_index_face_index = 0;
+//    taskData.mesh_instance_index = 0;
+//
+//    uint countxx = subgroupBallotBitCount(ballotxx);
+//    if (gl_LocalInvocationID.x == 0 && countxx > 0) {
+//        EmitMeshTasksEXT(countxx, 1, 1);
+//    }
+//    return;
+
     const uint meshlet_index_read_offset = light_index * MAX_PER_LIGHT_MESHLET_INSTANCES;
 
     uint global_meshlet_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].y;
@@ -162,17 +180,14 @@ void main()
         }
     }
 
-
     uvec4 ballot = subgroupBallot(accept);
     uint index = subgroupBallotExclusiveBitCount(ballot);
 
     if (accept)
-        taskData.meshlet_indices[index] = global_meshlet_index;
+        taskData.meshlet_indices[index] = meshlet_index;
     taskData.light_index_face_index = packed_light_index_face_index;
-    taskData.mesh_instance_index = mesh_instance_index;
 
     uint count = subgroupBallotBitCount(ballot);
-
     if (gl_LocalInvocationID.x == 0 && count > 0) {
         EmitMeshTasksEXT(count, 1, 1);
     }

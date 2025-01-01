@@ -227,12 +227,13 @@ void PointShadowsPass::execute(backend::CommandBuffer &command_buffer, RenderFra
 	command_buffer.bind_buffer(gpu_scene_.get_global_packed_meshlet_indices_buffer(), 0, gpu_scene_.get_global_packed_meshlet_indices_buffer().get_size(), 0, 10, 0);
 
 	command_buffer.bind_buffer(input_bindables[0].buffer(), 0, input_bindables[0].buffer().get_size(), 0, 20, 0);
-	command_buffer.bind_buffer(input_bindables[1].buffer(), 0, input_bindables[1].buffer().get_size(), 0, 22, 0);
+	command_buffer.bind_buffer(input_bindables[1].buffer(), 0, input_bindables[1].buffer().get_size(), 0, 21, 0);
+	command_buffer.bind_buffer(input_bindables[2].buffer(), 0, input_bindables[2].buffer().get_size(), 0, 22, 0);
 
 	command_buffer.bind_buffer(PointShadowsResources::get().get_light_camera_spheres_buffer(), 0, PointShadowsResources::get().get_light_camera_spheres_buffer().get_size(), 0, 23, 0);
 	command_buffer.bind_buffer(PointShadowsResources::get().get_light_camera_matrices_buffer(), 0, PointShadowsResources::get().get_light_camera_matrices_buffer().get_size(), 0, 24, 0);
 
-	command_buffer.draw_mesh_tasks_indirect(input_bindables[1].buffer(), 0, PointShadowsResources::get().get_point_light_count() * 6, sizeof(glm::uvec4));
+	command_buffer.draw_mesh_tasks_indirect(input_bindables[2].buffer(), 0, PointShadowsResources::get().get_point_light_count() * 6, sizeof(glm::uvec4));
 
 	command_buffer.set_has_mesh_shader(false);
 }

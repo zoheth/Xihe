@@ -71,7 +71,6 @@ bool TempApp::prepare(Window *window)
 		}
 	}
 
-
 	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent());
 	auto  camera      = &camera_node.get_component<sg::Camera>();
 	camera_           = camera;
@@ -86,6 +85,7 @@ bool TempApp::prepare(Window *window)
 		shadow_attachment_0.extent_desc                    = ExtentDescriptor::Fixed({kShadowmapResolution, kShadowmapResolution, 1});
 		shadow_attachment_0.image_properties.array_layers  = 3;
 		shadow_attachment_0.image_properties.current_layer = 0;
+		shadow_attachment_0.image_properties.n_use_layer   = 1;
 
 		PassAttachment shadow_attachment_1                 = shadow_attachment_0;
 		shadow_attachment_1.image_properties.current_layer = 1;
@@ -132,15 +132,16 @@ bool TempApp::prepare(Window *window)
 		    .finalize();
 
 		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
-		point_shadows_attachment.extent_desc               = ExtentDescriptor::Fixed({256, 256, 1});
-		point_shadows_attachment.image_properties.array_layers  = PointShadowsResources::get().get_point_light_count();
+		point_shadows_attachment.extent_desc                    = ExtentDescriptor::Fixed({256, 256, 1});
+		point_shadows_attachment.image_properties.array_layers  = PointShadowsResources::get().get_point_light_count() * 6;
 		point_shadows_attachment.image_properties.current_layer = 0;
-		point_shadows_attachment.image_properties.n_use_layer   = PointShadowsResources::get().get_point_light_count();
+		point_shadows_attachment.image_properties.n_use_layer   = PointShadowsResources::get().get_point_light_count() * 6;
 
 		auto point_shadows_pass = std::make_unique<PointShadowsPass>(*gpu_scene_, scene_->get_components<sg::Light>());
 		graph_builder_->add_pass("Point Light Shadows", std::move(point_shadows_pass))
 		    .bindables({
 		        {.type = BindableType::kStorageBufferRead, .name = "meshlet instances"},
+		        {.type = BindableType::kStorageBufferRead, .name = "per-light meshlet indies"},
 		        {.type = BindableType::kIndirectBuffer, .name = "meshlet draw command"},
 		    })
 		    .attachments({point_shadows_attachment})

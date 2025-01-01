@@ -7,13 +7,12 @@
 #extension GL_EXT_mesh_shader : require
 #extension GL_KHR_shader_subgroup_ballot : require
 
-layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+layout(local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 layout(triangles, max_vertices = 64, max_primitives = 124) out;
 
 struct TaskData {
     uint meshlet_indices[32];
     uint light_index_face_index;
-    uint mesh_instance_index;
 };
 
 taskPayloadSharedEXT TaskData taskData;
@@ -89,25 +88,25 @@ layout (set = 0, binding = 24 ) readonly buffer ShadowViews {
 
 void main()
 {
+    const uint light_index = taskData.light_index_face_index >> 16;
+    const uint face_index = taskData.light_index_face_index & 0xF;
+    const int layer_index = int(6 * light_index + face_index);
+
     uint task_index = gl_LocalInvocationID.x;
-    uint global_meshlet_index = taskData.meshlet_indices[gl_WorkGroupID.x];
+    uint meshlet_index = taskData.meshlet_indices[gl_WorkGroupID.x];
+
+    const uint meshlet_index_read_offset = light_index * MAX_PER_LIGHT_MESHLET_INSTANCES;
+    uint global_meshlet_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].y;
+    uint mesh_instance_index = meshlet_instances[meshlet_index + meshlet_index_read_offset].x;
 
     MeshDraw mesh_draw = mesh_draws[meshlets[global_meshlet_index].mesh_draw_index];
 
     uint vertex_count = meshlets[global_meshlet_index].vertex_count;
     uint triangle_count = meshlets[global_meshlet_index].triangle_count;
-    uint index_count = triangle_count * 3;
 
-    mat4 model = instances[taskData.mesh_instance_index].model;
+    SetMeshOutputsEXT(vertex_count, triangle_count);
 
-    const uint light_index = taskData.light_index_face_index >> 16;
-    const uint face_index = taskData.light_index_face_index & 0xF;
-    const int layer_index = int(6 * light_index + face_index);
-
-    if(layer_index>0)
-    {
-        return;
-    }
+    mat4 model = instances[mesh_instance_index].model;
 
     for(uint i = 0; i < vertex_count; ++i)
     {
@@ -128,13 +127,25 @@ void main()
         gl_PrimitiveTriangleIndicesEXT[i] = uvec3(idx0, idx1, idx2);
     }
 
-//    gl_MeshPrimitivesEXT[task_index*4].gl_Layer = layer_index;
-//    gl_MeshPrimitivesEXT[task_index*4+1].gl_Layer = layer_index;
-//    gl_MeshPrimitivesEXT[task_index*4+2].gl_Layer = layer_index;
-//    gl_MeshPrimitivesEXT[task_index*4+3].gl_Layer = layer_index;    
+    uint index_processing_iterations = (triangle_count + gl_WorkGroupSize.x - 1) / gl_WorkGroupSize.x;
+
+    for(int i = 0; i < index_processing_iterations; i++) {
+		if(gl_LocalInvocationIndex * index_processing_iterations + i >= triangle_count) {
+			break;
+		}
+
+		gl_MeshPrimitivesEXT[gl_LocalInvocationIndex * index_processing_iterations + i].gl_Layer = layer_index;
+
+	}
+
+//    gl_MeshPrimitivesEXT[gl_LocalInvocationIndex * 4 + 0].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[gl_LocalInvocationIndex * 4 + 1].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[gl_LocalInvocationIndex * 4 + 2].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[gl_LocalInvocationIndex * 4 + 3].gl_Layer = layer_index;
     
-    gl_MeshPrimitivesEXT[task_index].gl_Layer = layer_index;
-    gl_MeshPrimitivesEXT[task_index+32].gl_Layer = layer_index;
-    gl_MeshPrimitivesEXT[task_index+64].gl_Layer = layer_index;
-    gl_MeshPrimitivesEXT[task_index+96].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[task_index + 0].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[task_index + 32].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[task_index + 64].gl_Layer = layer_index;
+//    gl_MeshPrimitivesEXT[task_index + 96].gl_Layer = layer_index;
+
 }
