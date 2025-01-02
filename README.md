@@ -23,10 +23,10 @@
 - **分簇延迟光照**
 - **级联阴影映射**
 - **泛光**
+- **Mesh Shader 阴影** （低消耗为数百个点光源添加阴影）
 
 ### 待实现功能
 
-- Mesh Shader 阴影
 - 可变速率着色 (VRS)
 - 体积雾
 - 时间抗锯齿 (TAA)
@@ -35,8 +35,7 @@
 ## 效果展示
 
 ![Meshlet](./assets/images/meshlet.png)
-
-![Clustered Lighting](./assets/images/clustered_lighting.png)
+![Point Shadows](./assets/images/meshshader_shadows.png)
 
 ## 许可证
 

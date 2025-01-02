@@ -22,10 +22,10 @@ Xi He is a modern rendering engine developed following the approach outlined in 
 - **Clustered Deferred Lighting**
 - **Cascaded Shadow Mapping**
 - **Bloom**
+- **Mesh Shader Shadows** (Add shadows for hundreds of point lights with low performance overhead)
 
 ### Planned Features
 
-- Mesh Shader Shadows
 - Variable Rate Shading (VRS)
 - Volumetric Fog
 - Temporal Anti-aliasing (TAA)
@@ -34,7 +34,7 @@ Xi He is a modern rendering engine developed following the approach outlined in 
 ## Gallery
 
 ![Meshlet](./assets/images/meshlet.png)
-![Clustered Lighting](./assets/images/clustered_lighting.png)
+![Point Shadows](./assets/images/meshshader_shadows.png)
 
 ## License
 
