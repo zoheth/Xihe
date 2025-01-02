@@ -44,19 +44,19 @@ bool TempApp::prepare(Window *window)
 	gpu_scene_ = std::make_unique<GpuScene>(*device_);
 	gpu_scene_->initialize(*scene_);
 
-	auto light_pos   = glm::vec3(0.0f, 128.0f, -225.0f);
+	auto light_pos   = glm::vec3(-150.0f, 188.0f, -225.0f);
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
 
 	// Magic numbers used to offset lights in the Sponza scene
-	for (int i = 0; i < 1; ++i)
+	/*for (int i = -4; i < 4; ++i)
 	{
-		for (int j = 2; j < 3; ++j)
+		for (int j = 0; j < 5; ++j)
 		{
 			glm::vec3 pos = light_pos;
 			pos.x += i * 400;
 			pos.z += j * 150;
 			pos.y = 8;
-			for (int k = 3; k < 4; ++k)
+			for (int k = 0; k < 6; ++k)
 			{
 				pos.y         = pos.y + (k * 50);
 				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
@@ -65,6 +65,32 @@ bool TempApp::prepare(Window *window)
 				sg::LightProperties props;
 				props.color     = light_color;
 				props.intensity = 2.0f;
+				props.range     = 700.f;
+				add_point_light(*scene_, pos, props);
+			}
+		}
+	}*/
+
+	for (int i = -4; i < 4; ++i)
+	{
+		for (int j = 0; j < 2; ++j)
+		{
+			glm::vec3 pos = light_pos;
+			pos.x += i * 400;
+			pos.z += j * (225 + 140);
+			pos.y = 8;
+
+			for (int k = 0; k < 3; ++k)
+			{
+				pos.y = pos.y + (k * 100);
+
+				light_color.x = static_cast<float>(rand()) / (RAND_MAX);
+				light_color.y = static_cast<float>(rand()) / (RAND_MAX);
+				light_color.z = static_cast<float>(rand()) / (RAND_MAX);
+
+				sg::LightProperties props;
+				props.color     = light_color;
+				props.intensity = 1.f;
 				props.range     = 700.f;
 				add_point_light(*scene_, pos, props);
 			}
@@ -132,7 +158,7 @@ bool TempApp::prepare(Window *window)
 		    .finalize();
 
 		PassAttachment point_shadows_attachment{AttachmentType::kDepth, "point shadowmaps"};
-		point_shadows_attachment.extent_desc                    = ExtentDescriptor::Fixed({256, 256, 1});
+		point_shadows_attachment.extent_desc                    = ExtentDescriptor::Fixed({1024, 1024, 1});
 		point_shadows_attachment.image_properties.array_layers  = PointShadowsResources::get().get_point_light_count() * 6;
 		point_shadows_attachment.image_properties.current_layer = 0;
 		point_shadows_attachment.image_properties.n_use_layer   = PointShadowsResources::get().get_point_light_count() * 6;

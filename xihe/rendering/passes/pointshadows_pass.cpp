@@ -79,8 +79,8 @@ void PointShadowsResources::initialize(backend::Device &device, std::vector<sg::
 				}
 
 				glm::mat4 view = glm::lookAt(point_light.position, point_light.position + look_at, up);
-				glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, point_light.radius, 0.1f);
-				proj           = vulkan_style_projection(proj);
+				glm::mat4 proj = glm::perspective(glm::radians(90.0f), 1.0f, point_light.radius, 0.01f);
+				// proj           = vulkan_style_projection(proj);
 
 				light_camera_matrices.push_back(proj * view);
 			}

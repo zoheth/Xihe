@@ -186,15 +186,23 @@ float calculate_shadow(highp vec3 pos, uint cascade_index)
     return shadow;
 }
 
-float pointlight_get_depth_value(inout vec3 vec, float radius)
+float pointlight_get_depth_value(inout vec3 light_to_frag, float radius)
 {
-    vec3 abs_vec = abs(vec);
-    float max_val = max(abs_vec.x, max(abs_vec.y, abs_vec.z));
+//    vec3 abs_vec = abs(vec);
+//    float max_val = max(abs_vec.x, max(abs_vec.y, abs_vec.z));
+//
+//    const float f = 0.01f;
+//    const float n = radius;
+//    float depth = -(f / (n - f) - (n * f) / (n - f) / max_val);
+//    return depth;
 
-    const float f = 0.01f;
-    const float n = radius;
-    float depth = -(f / (n - f) - (n * f) / (n - f) / max_val);
-    return depth;
+    vec3 abs_vec = abs(light_to_frag);
+    float max_val = max(abs_vec.x, max(abs_vec.y, abs_vec.z));
+    
+    const float far = 0.01f;
+    const float near = radius;
+
+    return far * (max_val - near) / (max_val * (far - near));
 }
 
 void main()
@@ -268,16 +276,15 @@ void main()
         if((tiles[tile_base + word_index] & ( 1u << bit_index ) ) != 0) {
             uint global_light_index = light_indices[i];
 
-            vec3 shadow_position_to_light = pos - lights_info.point_lights[global_light_index].position.xyz;
+            vec3 light_to_frag = pos - lights_info.point_lights[global_light_index].position.xyz;
             float radius = lights_info.point_lights[global_light_index].direction.w;
 
-            float depth = pointlight_get_depth_value(shadow_position_to_light, radius);
+            float depth = pointlight_get_depth_value(light_to_frag, radius);
 
-            vec4 shadow_coord = vec4(normalize(shadow_position_to_light), float(global_light_index));
+            vec4 shadow_coord = vec4(normalize(light_to_frag), float(global_light_index));
 
-            float bias = 0.05;
-            float shadow = texture(shadow_sampler_cube, shadow_coord, depth);
-
+            float bias = 0.00000005;
+            float shadow = texture(shadow_sampler_cube, shadow_coord, depth-bias);
             L += shadow * apply_point_light(lights_info.point_lights[global_light_index], pos, normal);
         }
     }
@@ -288,6 +295,7 @@ void main()
 		L += apply_spot_light(lights_info.spot_lights[i], pos, normal);
 	}
 	vec3 ambient_color = vec3(0.05) * albedo.xyz;
+    // ambient_color = vec3(0.0);
 
 	vec3 final_color = ambient_color + L * albedo.xyz;
 
