@@ -5,6 +5,7 @@
 #include "scene_graph/components/camera.h"
 #include "scene_graph/components/light.h"
 #include "scene_graph/scripts/cascade_script.h"
+#include "scene_graph/components/texture.h"
 
 namespace xihe::rendering
 {
@@ -37,7 +38,7 @@ struct alignas(16) ClusteredLightUniform
 class ClusteredLightingPass : public LightingPass
 {
   public:
-	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
+	ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr, sg::Texture *skybox = nullptr);
 
 	~ClusteredLightingPass() override = default;
 
@@ -63,6 +64,8 @@ class ClusteredLightingPass : public LightingPass
 	static constexpr uint32_t tile_size_  = 8;
 	static constexpr uint32_t max_point_light_count_ = 256;
 	static constexpr uint32_t num_words_  = (max_point_light_count_ + 31) / 32;
+
+	sg::Texture *skybox_{nullptr};
 
 	uint32_t width_{};
 	uint32_t height_{};

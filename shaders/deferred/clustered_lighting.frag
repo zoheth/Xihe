@@ -57,6 +57,8 @@ layout(set = 0, binding = 6) uniform sampler2DArrayShadow shadow_sampler;
 
 layout(set = 0, binding = 10) uniform samplerCubeArrayShadow shadow_sampler_cube;
 
+layout(set = 0, binding = 11) uniform samplerCube sky_box;
+
 layout(constant_id = 0) const uint DIRECTIONAL_LIGHT_COUNT = 0U;
 layout(constant_id = 1) const uint POINT_LIGHT_COUNT       = 0U;
 layout(constant_id = 2) const uint SPOT_LIGHT_COUNT        = 0U;

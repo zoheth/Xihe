@@ -14,21 +14,23 @@
 #include "common/helpers.h"
 #include "common/logging.h"
 #include "common/timer.h"
+#include "platform/filesystem.h"
+
 #include "components/light.h"
 #include "components/image/astc.h"
-#include "platform/filesystem.h"
-#include "scene_graph/geometry_data.h"
-#include "scene_graph/components/camera.h"
-#include "scene_graph/components/image.h"
-#include "scene_graph/components/material.h"
-#include "scene_graph/components/mesh.h"
-#include "scene_graph/components/mshader_mesh.h"
-#include "scene_graph/components/sampler.h"
-#include "scene_graph/components/sub_mesh.h"
-#include "scene_graph/components/texture.h"
-#include "scene_graph/components/transform.h"
-#include "scene_graph/node.h"
-#include "scene_graph/scene.h"
+#include "asset_loader.h"
+#include "geometry_data.h"
+#include "components/camera.h"
+#include "components/image.h"
+#include "components/material.h"
+#include "components/mesh.h"
+#include "components/mshader_mesh.h"
+#include "components/sampler.h"
+#include "components/sub_mesh.h"
+#include "components/texture.h"
+#include "components/transform.h"
+#include "node.h"
+#include "scene.h"
 
 namespace xihe
 {
@@ -92,54 +94,6 @@ inline vk::SamplerAddressMode find_wrap_mode(int wrap)
 			return vk::SamplerAddressMode::eMirroredRepeat;
 		default:
 			return vk::SamplerAddressMode::eRepeat;
-	}
-};
-
-void upload_image_to_gpu(backend::CommandBuffer &command_buffer, backend::Buffer &staging_buffer, sg::Image &image)
-{
-	// Clean up the image data, as they are copied in the staging buffer
-	image.clear_data();
-
-	{
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.old_layout      = vk::ImageLayout::eUndefined;
-		memory_barrier.new_layout      = vk::ImageLayout::eTransferDstOptimal;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferWrite;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eHost;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
-
-		command_buffer.image_memory_barrier(image.get_vk_image_view(), memory_barrier);
-	}
-
-	// Create a buffer image copy for every mip level
-	auto &mipmaps = image.get_mipmaps();
-
-	std::vector<vk::BufferImageCopy> buffer_copy_regions(mipmaps.size());
-
-	for (size_t i = 0; i < mipmaps.size(); ++i)
-	{
-		auto &mipmap      = mipmaps[i];
-		auto &copy_region = buffer_copy_regions[i];
-
-		copy_region.bufferOffset     = mipmap.offset;
-		copy_region.imageSubresource = image.get_vk_image_view().get_subresource_layers();
-		// Update miplevel
-		copy_region.imageSubresource.mipLevel = mipmap.level;
-		copy_region.imageExtent               = mipmap.extent;
-	}
-
-	command_buffer.copy_buffer_to_image(staging_buffer, image.get_vk_image(), buffer_copy_regions);
-
-	{
-		common::ImageMemoryBarrier memory_barrier{};
-		memory_barrier.old_layout      = vk::ImageLayout::eTransferDstOptimal;
-		memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
-		memory_barrier.src_access_mask = vk::AccessFlagBits2::eTransferWrite;
-		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eShaderRead;
-		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
-		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eFragmentShader;
-
-		command_buffer.image_memory_barrier(image.get_vk_image_view(), memory_barrier);
 	}
 }
 

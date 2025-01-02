@@ -37,12 +37,16 @@ bool TempApp::prepare(Window *window)
 		return false;
 	}
 
+	asset_loader_ = std::make_unique<AssetLoader>(*device_);
+
 	load_scene("scenes/sponza/Sponza01.gltf");
 	// load_scene("scenes/cube.gltf");
 	assert(scene_ && "Scene not loaded");
 	update_bindless_descriptor_sets();
 	gpu_scene_ = std::make_unique<GpuScene>(*device_);
 	gpu_scene_->initialize(*scene_);
+
+	auto *skybox_texture = asset_loader_->load_texture_cube(*scene_, "skybox", "textures/uffizi_rgba16f_cube.ktx");
 
 	auto light_pos   = glm::vec3(-150.0f, 188.0f, -225.0f);
 	auto light_color = glm::vec3(1.0, 1.0, 1.0);
@@ -220,7 +224,7 @@ bool TempApp::prepare(Window *window)
 
 	// lighting pass
 	{
-		auto lighting_pass = std::make_unique<ClusteredLightingPass>(scene_->get_components<sg::Light>(), *camera, p_cascade_script);
+		auto lighting_pass = std::make_unique<ClusteredLightingPass>(scene_->get_components<sg::Light>(), *camera, p_cascade_script, skybox_texture);
 
 		graph_builder_->add_pass("Lighting", std::move(lighting_pass))
 

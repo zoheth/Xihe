@@ -1,5 +1,7 @@
 #include "clustered_lighting_pass.h"
 
+#include "scene_graph/components/image.h"
+
 #include <algorithm>
 #include <utility>
 
@@ -72,8 +74,8 @@ void get_axis_bounds(const glm::vec3 &axis,                 // Camera space axis
 }
 }        // namespace
 
-ClusteredLightingPass::ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script) :
-    LightingPass(std::move(lights), camera, cascade_script)
+ClusteredLightingPass::ClusteredLightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script, sg::Texture *skybox) :
+    LightingPass(std::move(lights), camera, cascade_script), skybox_{skybox}
 {
 }
 
@@ -137,6 +139,11 @@ void ClusteredLightingPass::execute(backend::CommandBuffer &command_buffer, Rend
 		command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
 
 		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
+	}
+
+	if (skybox_)
+	{
+		command_buffer.bind_image(skybox_->get_image()->get_vk_image_view(), skybox_->get_sampler()->vk_sampler_, 0, 11, 0);
 	}
 
 	if (input_bindables.size() > 4)
