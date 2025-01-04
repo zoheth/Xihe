@@ -84,7 +84,6 @@ void RenderContext::recreate_frame_render_targets()
 
 		auto render_target = create_render_target_function_(std::move(swapchain_image));
 		frames_[i]->update_render_target(std::move(render_target));
-		
 	}
 }
 
@@ -314,20 +313,19 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	{
 		timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_value);
 		wait_semaphores.push_back(graphics_semaphore_);
-		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader); 
+		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
 	}
 
 	++compute_semaphore_value_;
 	signal_semaphore_value = compute_semaphore_value_;
 	timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_value);
 	submit_info.setSignalSemaphores({compute_semaphore_});
-	
 
 	if (!wait_semaphores.empty())
-    {
-        submit_info.setWaitSemaphores(wait_semaphores);
-        submit_info.setPWaitDstStageMask(wait_stages.data());
-    }
+	{
+		submit_info.setWaitSemaphores(wait_semaphores);
+		submit_info.setPWaitDstStageMask(wait_stages.data());
+	}
 
 	submit_info.setPNext(&timeline_submit_info);
 
@@ -337,76 +335,74 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value, bool is_first_submission,
                                     bool is_last_submission)
 {
-	 vk::SubmitInfo                 submit_info{};
-    std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size());
-    std::transform(command_buffers.begin(), command_buffers.end(), command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
-        return cmd_buf->get_handle();
-    });
-    submit_info.setCommandBuffers(command_buffer_handles);
+	vk::SubmitInfo                 submit_info{};
+	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size());
+	std::transform(command_buffers.begin(), command_buffers.end(), command_buffer_handles.begin(), [](const backend::CommandBuffer *cmd_buf) {
+		return cmd_buf->get_handle();
+	});
+	submit_info.setCommandBuffers(command_buffer_handles);
 
-    std::vector<vk::Semaphore>          wait_semaphores;
-    std::vector<vk::PipelineStageFlags> wait_stages;
-    std::vector<uint64_t>               wait_semaphore_values;
+	std::vector<vk::Semaphore>          wait_semaphores;
+	std::vector<vk::PipelineStageFlags> wait_stages;
+	std::vector<uint64_t>               wait_semaphore_values;
 
-    std::vector<vk::Semaphore> signal_semaphores;
-    std::vector<uint64_t>      signal_semaphore_values;
+	std::vector<vk::Semaphore> signal_semaphores;
+	std::vector<uint64_t>      signal_semaphore_values;
 
-    // Handle the first submission: Wait on the swapchain's acquired semaphore
-    if (is_first_submission && swapchain_)
-    {
-        wait_semaphores.push_back(acquired_semaphore_);
-        wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
-        wait_semaphore_values.push_back(0); // Placeholder value for binary semaphore
-    }
-    else if (wait_semaphore_value != 0)
-    {
-        wait_semaphores.push_back(compute_semaphore_);
-        wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
-        wait_semaphore_values.push_back(wait_semaphore_value);
-    }
+	// Handle the first submission: Wait on the swapchain's acquired semaphore
+	if (is_first_submission && swapchain_)
+	{
+		wait_semaphores.push_back(acquired_semaphore_);
+		wait_stages.push_back(vk::PipelineStageFlagBits::eColorAttachmentOutput);
+		wait_semaphore_values.push_back(0);        // Placeholder value for binary semaphore
+	}
+	else if (wait_semaphore_value != 0)
+	{
+		wait_semaphores.push_back(compute_semaphore_);
+		wait_stages.push_back(vk::PipelineStageFlagBits::eComputeShader);
+		wait_semaphore_values.push_back(wait_semaphore_value);
+	}
 
-    // Handle signal semaphores
+	// Handle signal semaphores
 	++graphics_semaphore_value_;
 	signal_semaphore_value = graphics_semaphore_value_;
 	signal_semaphores.push_back(graphics_semaphore_);
 	signal_semaphore_values.push_back(signal_semaphore_value);
-    
 
-    // Handle the last submission: Signal the render finished semaphore
-    RenderFrame        &frame            = get_active_frame();
-    const vk::Semaphore render_semaphore = frame.request_semaphore();
-    if (is_last_submission && swapchain_)
-    {
-        signal_semaphores.push_back(render_semaphore);
-        signal_semaphore_values.push_back(0); // Placeholder value for binary semaphore
-    }
+	// Handle the last submission: Signal the render finished semaphore
+	RenderFrame        &frame            = get_active_frame();
+	const vk::Semaphore render_semaphore = frame.request_semaphore();
+	if (is_last_submission && swapchain_)
+	{
+		signal_semaphores.push_back(render_semaphore);
+		signal_semaphore_values.push_back(0);        // Placeholder value for binary semaphore
+	}
 
-    if (!wait_semaphores.empty())
-    {
-        submit_info.setWaitSemaphores(wait_semaphores);
-        submit_info.setPWaitDstStageMask(wait_stages.data());
-    }
+	if (!wait_semaphores.empty())
+	{
+		submit_info.setWaitSemaphores(wait_semaphores);
+		submit_info.setPWaitDstStageMask(wait_stages.data());
+	}
 
-    if (!signal_semaphores.empty())
-    {
-        submit_info.setSignalSemaphores(signal_semaphores);
-    }
+	if (!signal_semaphores.empty())
+	{
+		submit_info.setSignalSemaphores(signal_semaphores);
+	}
 
-    // Create TimelineSemaphoreSubmitInfo with matching counts
-    vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
-    timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_values);
-    timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_values);
+	// Create TimelineSemaphoreSubmitInfo with matching counts
+	vk::TimelineSemaphoreSubmitInfo timeline_submit_info{};
+	timeline_submit_info.setWaitSemaphoreValues(wait_semaphore_values);
+	timeline_submit_info.setSignalSemaphoreValues(signal_semaphore_values);
 
-    // Attach the TimelineSemaphoreSubmitInfo to the submit info
-    submit_info.setPNext(&timeline_submit_info);
+	// Attach the TimelineSemaphoreSubmitInfo to the submit info
+	submit_info.setPNext(&timeline_submit_info);
 
-
-    if (is_last_submission && swapchain_)
-    {
+	if (is_last_submission && swapchain_)
+	{
 		vk::Fence fence = frame.request_fence();
 		graphics_queue_->get_handle().submit(submit_info, fence);
-        end_frame(render_semaphore);
-    }
+		end_frame(render_semaphore);
+	}
 	else
 	{
 		graphics_queue_->get_handle().submit(submit_info, nullptr);
@@ -455,7 +451,7 @@ void RenderContext::set_on_surface_change(std::function<void()> on_surface_chang
 
 void RenderContext::update_swapchain(const vk::Extent2D &extent)
 {
-	//device_.get_resource_cache().clear_framebuffers();
+	// device_.get_resource_cache().clear_framebuffers();
 
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, extent);
 
@@ -466,14 +462,14 @@ void RenderContext::update_swapchain(const std::set<vk::ImageUsageFlagBits> &ima
 {
 	assert(swapchain_);
 
-	//device_.get_resource_cache().clear_framebuffers();
+	// device_.get_resource_cache().clear_framebuffers();
 
 	swapchain_ = std::make_unique<backend::Swapchain>(*swapchain_, image_usage_flags);
 
 	recreate_frame_render_targets();
 }
 
-backend::Swapchain const & RenderContext::get_swapchain() const
+backend::Swapchain const &RenderContext::get_swapchain() const
 {
 	return *swapchain_;
 }
@@ -484,7 +480,7 @@ void RenderContext::set_render_target_function(const RenderTarget::CreateFunc &c
 	recreate_frame_render_targets();
 }
 
-//void RenderContext::register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass)
+// void RenderContext::register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass)
 //{
 //	surface_extent_ = swapchain_->get_extent();
 //	const vk::Extent3D extent{surface_extent_.width, surface_extent_.height, 1};
@@ -518,7 +514,7 @@ void RenderContext::set_render_target_function(const RenderTarget::CreateFunc &c
 //			    return rdg_pass->create_render_target(std::move(swapchain_image));
 //		    };
 //	}
-//}
+// }
 
 uint32_t RenderContext::get_queue_family_index(vk::QueueFlagBits queue_flags) const
 {
@@ -531,5 +527,31 @@ uint32_t RenderContext::get_queue_family_index(vk::QueueFlagBits queue_flags) co
 		default:
 			throw std::runtime_error("Unsupported queue family index");
 	}
+}
+
+void RenderContext::create_sparse_bind_queue()
+{
+	if (sparse_queue_)
+	{
+		return;
+	}
+	const auto &queue_family_properties = get_device().get_gpu().get_queue_family_properties();
+
+	uint8_t sparse_queue_family_index = 0xFF;
+	for (uint32_t i = 0; i < static_cast<uint32_t>(queue_family_properties.size()); ++i)
+	{
+		if ((queue_family_properties[i].queueFlags & vk::QueueFlagBits::eTransfer) &&
+		    (queue_family_properties[i].queueFlags & vk::QueueFlagBits::eSparseBinding) &&
+		    !(queue_family_properties[i].queueFlags & vk::QueueFlagBits::eGraphics))
+		{
+			sparse_queue_family_index = i;
+			break;
+		}
+	}
+	if (sparse_queue_family_index == 0xFF)
+	{
+		sparse_queue_family_index = get_device().get_queue_family_index(vk::QueueFlagBits::eSparseBinding);
+	}
+	sparse_queue_ = &get_device().get_queue(sparse_queue_family_index, 0);
 }
 }        // namespace xihe::rendering

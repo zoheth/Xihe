@@ -90,6 +90,8 @@ class RenderContext
 
 	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
 
+	void create_sparse_bind_queue();
+
   private:
 	backend::Device &device_;
 
@@ -98,6 +100,8 @@ class RenderContext
 
 	const backend::Queue *graphics_queue_{nullptr};
 	const backend::Queue *compute_queue_{nullptr};
+
+	const backend::Queue *sparse_queue_{nullptr};
 
 	std::unique_ptr<backend::Swapchain> swapchain_;
 

@@ -6,11 +6,11 @@
 
 namespace xihe
 {
-class TempApp : public XiheApp
+class SampleApp final : public XiheApp
 {
   public:
-	TempApp();
-	~TempApp() override = default;
+	SampleApp();
+	~SampleApp() override = default;
 
 	bool prepare(Window *window) override;
 

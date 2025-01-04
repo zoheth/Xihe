@@ -1,4 +1,4 @@
-#include "temp_app.h"
+#include "sample_app.h"
 
 #include "backend/shader_compiler/glsl_compiler.h"
 #include "rendering/passes/bloom_pass.h"
@@ -20,7 +20,7 @@ namespace xihe
 {
 using namespace rendering;
 
-TempApp::TempApp()
+SampleApp::SampleApp()
 {
 	add_device_extension(VK_KHR_SPIRV_1_4_EXTENSION_NAME);
 	add_device_extension(VK_EXT_MESH_SHADER_EXTENSION_NAME);
@@ -30,7 +30,7 @@ TempApp::TempApp()
 	backend::GlslCompiler::set_target_environment(glslang::EShTargetSpv, glslang::EShTargetSpv_1_4);
 }
 
-bool TempApp::prepare(Window *window)
+bool SampleApp::prepare(Window *window)
 {
 	if (!XiheApp::prepare(window))
 	{
@@ -314,7 +314,7 @@ bool TempApp::prepare(Window *window)
 	return true;
 }
 
-void TempApp::update(float delta_time)
+void SampleApp::update(float delta_time)
 {
 	/*MeshletPass::show_meshlet_view(show_meshlet_view_, *scene_);
 	MeshletPass::freeze_frustum(freeze_frustum_, camera_);*/
@@ -324,7 +324,7 @@ void TempApp::update(float delta_time)
 	XiheApp::update(delta_time);
 }
 
-void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
+void SampleApp::request_gpu_features(backend::PhysicalDevice &gpu)
 {
 	XiheApp::request_gpu_features(gpu);
 
@@ -339,7 +339,7 @@ void TempApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, attachmentFragmentShadingRate);
 }
 
-void TempApp::draw_gui()
+void SampleApp::draw_gui()
 {
 	gui_->show_stats(*stats_);
 
@@ -355,5 +355,5 @@ void TempApp::draw_gui()
 
 std::unique_ptr<xihe::Application> create_application()
 {
-	return std::make_unique<xihe::TempApp>();
+	return std::make_unique<xihe::SampleApp>();
 }
