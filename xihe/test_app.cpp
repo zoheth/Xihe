@@ -40,6 +40,20 @@ void SparseImagePass::execute(backend::CommandBuffer &command_buffer, rendering:
 	RenderPass::execute(command_buffer, active_frame, input_bindables);
 }
 
+void SparseImagePass::create_sparse_texture_image()
+{
+	{
+		backend::ImageBuilder image_builder(virtual_texture_.width, virtual_texture_.height);
+
+		image_builder.with_usage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled);
+		image_builder.with_flags(vk::ImageCreateFlagBits::eSparseBinding | vk::ImageCreateFlagBits::eSparseResidency);
+		image_builder.with_format(virtual_texture_.raw_data_image->get_format());
+
+		// todo virtual_texture_.
+
+	}
+}
+
 TestApp::TestApp()
 {
 }
