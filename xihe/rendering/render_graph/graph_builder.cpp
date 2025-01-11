@@ -188,7 +188,11 @@ void GraphBuilder::collect_resource_create_info()
 					res_info.format = vk::Format::eD32Sfloat;
 				}
 			}
-
+			res_info.is_external = attachment.is_external;
+			if (attachment.is_external)
+			{
+				res_info.image_usage |= vk::ImageUsageFlagBits::eTransferSrc;
+			}
 			res_info.array_layers = std::max(res_info.array_layers, attachment.image_properties.array_layers);
 		}
 	}

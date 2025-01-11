@@ -5,6 +5,8 @@
 
 namespace xihe::rendering
 {
+void bind_submesh_vertex_buffers(backend::CommandBuffer &command_buffer, backend::PipelineLayout &pipeline_layout, sg::SubMesh &sub_mesh);
+
 class GeometryPass : public RenderPass
 {
   public:

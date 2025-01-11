@@ -1,0 +1,76 @@
+#version 450
+layout(local_size_x = 8, local_size_y = 8) in;
+
+layout(set = 0, binding = 0) uniform sampler2D in_tex;
+
+layout(rgba16f, set = 0, binding = 1) writeonly uniform image2D out_tex;
+
+layout(set = 0, binding = 2) uniform CommonUniforms {
+    uvec2 resolution;
+    vec2 inv_resolution;
+    vec2 inv_input_resolution;
+} common_uniform;
+
+vec2 get_uv(vec2 uv, float x, float y, float scale)
+{
+    return uv + common_uniform.inv_input_resolution * (vec2(x, y) * scale);
+}
+
+float get_luminance(vec3 color) {
+    return dot(color, vec3(0.2126729, 0.7151522, 0.0721750));
+}
+
+vec3 bloom_blur(vec2 uv, float uv_scale)
+{
+    vec3 rgb = vec3(0.0);
+    float total_weight = 0.0;
+    const float N = -1.0;
+    const float Z = 0.0;
+    const float P = 1.0;
+    
+    // Center sample
+    vec3 center = textureLod(in_tex, get_uv(uv, Z, Z, uv_scale), 0.0).rgb;
+    float center_weight = 0.25 / (1.0 + get_luminance(center));
+    rgb += center * center_weight;
+    total_weight += center_weight;
+    
+    // Corner samples (diagonal)
+    vec3 c1 = textureLod(in_tex, get_uv(uv, N, P, uv_scale), 0.0).rgb;
+    vec3 c2 = textureLod(in_tex, get_uv(uv, P, P, uv_scale), 0.0).rgb;
+    vec3 c3 = textureLod(in_tex, get_uv(uv, N, N, uv_scale), 0.0).rgb;
+    vec3 c4 = textureLod(in_tex, get_uv(uv, P, N, uv_scale), 0.0).rgb;
+    
+    float w1 = 0.0625 / (1.0 + get_luminance(c1));
+    float w2 = 0.0625 / (1.0 + get_luminance(c2));
+    float w3 = 0.0625 / (1.0 + get_luminance(c3));
+    float w4 = 0.0625 / (1.0 + get_luminance(c4));
+    
+    rgb += c1 * w1 + c2 * w2 + c3 * w3 + c4 * w4;
+    total_weight += w1 + w2 + w3 + w4;
+
+    vec3 s1 = textureLod(in_tex, get_uv(uv, N, Z, uv_scale), 0.0).rgb;
+    vec3 s2 = textureLod(in_tex, get_uv(uv, P, Z, uv_scale), 0.0).rgb;
+    vec3 s3 = textureLod(in_tex, get_uv(uv, Z, N, uv_scale), 0.0).rgb;
+    vec3 s4 = textureLod(in_tex, get_uv(uv, Z, P, uv_scale), 0.0).rgb;
+    
+    float w5 = 0.125 / (1.0 + get_luminance(s1));
+    float w6 = 0.125 / (1.0 + get_luminance(s2));
+    float w7 = 0.125 / (1.0 + get_luminance(s3));
+    float w8 = 0.125 / (1.0 + get_luminance(s4));
+    
+    rgb += s1 * w5 + s2 * w6 + s3 * w7 + s4 * w8;
+    total_weight += w5 + w6 + w7 + w8;
+
+    return rgb / max(total_weight, 0.0001); 
+}
+const float SCALE = 1.75;
+void main()
+{
+    if (all(lessThan(gl_GlobalInvocationID.xy, common_uniform.resolution)))
+    {
+        vec2 uv = (vec2(gl_GlobalInvocationID.xy) + 0.5) * common_uniform.inv_resolution;
+        vec3 rgb = bloom_blur(uv, SCALE);
+        rgb = clamp(rgb, vec3(0.0), vec3(65504.0));
+        imageStore(out_tex, ivec2(gl_GlobalInvocationID.xy), vec4(rgb, 1.0));
+    }
+}
