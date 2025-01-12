@@ -11,6 +11,7 @@ class SkyboxPass : public RenderPass
 {
   public:
 	SkyboxPass(sg::Mesh &box_mesh, rendering::Texture &cubemap, sg::Camera &camera);
+	SkyboxPass(sg::Mesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera);
 
 	~SkyboxPass() override = default;
 
@@ -18,7 +19,8 @@ class SkyboxPass : public RenderPass
 
   private:
 	sg::Mesh    &box_mesh_;
-	Texture &cubemap_;
+	Texture     *cubemap_{nullptr};
+	sg::Texture *cubemap_sg_{nullptr};
 	sg::Camera  &camera_;
 };
-}
+}        // namespace xihe::rendering

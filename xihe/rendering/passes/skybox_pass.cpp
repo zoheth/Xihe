@@ -6,7 +6,11 @@
 namespace xihe::rendering
 {
 SkyboxPass::SkyboxPass(sg::Mesh &box_mesh, Texture &cubemap, sg::Camera &camera) :
-    box_mesh_(box_mesh), cubemap_(cubemap), camera_(camera)
+    box_mesh_(box_mesh), cubemap_(&cubemap), camera_(camera)
+{}
+
+SkyboxPass::SkyboxPass(sg::Mesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera) :
+    box_mesh_(box_mesh), cubemap_sg_(&cubemap), camera_(camera)
 {}
 
 void SkyboxPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
@@ -31,7 +35,14 @@ void SkyboxPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &ac
 	allocation.update(mvp);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 0, 0);
 
-	command_buffer.bind_image(*cubemap_.image_view, *cubemap_.sampler, 0, 2, 0);
+	if (cubemap_)
+	{
+		command_buffer.bind_image(*cubemap_->image_view, *cubemap_->sampler, 0, 2, 0);
+	}
+	else
+	{
+		command_buffer.bind_image(cubemap_sg_->get_image()->get_vk_image_view(), cubemap_sg_->get_sampler()->vk_sampler_, 0, 2, 0);
+	}
 
 	sg::SubMesh &sub_mesh = *box_mesh_.get_submeshes()[0];
 	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sub_mesh);

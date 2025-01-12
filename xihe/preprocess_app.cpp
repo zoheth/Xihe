@@ -1,11 +1,154 @@
 #include "preprocess_app.h"
 
+#include "ktx.h"
 #include "rendering/passes/geometry_pass.h"
 #include "rendering/passes/skybox_pass.h"
 #include "scene_graph/components/image.h"
+#include "ktxvulkan.h"
 
 namespace xihe
 {
+
+uint32_t get_format_size(vk::Format format)
+{
+	switch (format)
+	{
+		case vk::Format::eR32G32B32A32Sfloat:
+			return 16;
+		case vk::Format::eR16G16B16A16Sfloat:
+			return 8;
+		default:
+			throw std::runtime_error("Unsupported format");
+	}
+}
+
+void download_image(backend::ImageView &image_view, backend::Device &device)
+{
+	vk::DeviceSize                   total_size = 0;
+
+	auto                             subresource_range = image_view.get_subresource_range();
+	std::vector<vk::BufferImageCopy> buffer_copy_regions(subresource_range.levelCount);
+
+	for (uint32_t mip = 0; mip < subresource_range.levelCount; mip++)
+	{
+		auto &copy_region                           = buffer_copy_regions[mip];
+		auto  extent                                = image_view.get_image().get_extent();
+		copy_region.imageExtent                     = vk::Extent3D{std::max(extent.width >> mip, 1u), std::max(extent.height >> mip, 1u), extent.depth};
+
+		copy_region.bufferRowLength                 = copy_region.imageExtent.width;
+		copy_region.bufferImageHeight               = copy_region.imageExtent.height;
+		copy_region.bufferOffset                    = total_size;
+		copy_region.imageSubresource.aspectMask     = subresource_range.aspectMask;
+		copy_region.imageSubresource.mipLevel       = mip;
+		copy_region.imageSubresource.baseArrayLayer = subresource_range.baseArrayLayer;
+		copy_region.imageSubresource.layerCount     = subresource_range.layerCount;
+
+		total_size += get_format_size(image_view.get_format()) * copy_region.imageExtent.width * copy_region.imageExtent.height * copy_region.imageExtent.depth * subresource_range.layerCount;
+	}
+
+	backend::BufferBuilder builder{total_size};
+	builder.with_usage(vk::BufferUsageFlagBits::eTransferDst);
+	builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_TO_CPU);
+	builder.with_vma_flags(VMA_ALLOCATION_CREATE_MAPPED_BIT);
+	auto dst_buffer = builder.build(device);
+
+	backend::CommandBuffer &command_buffer = device.request_command_buffer();
+
+	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	{
+		common::BufferMemoryBarrier memory_barrier{};
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eNone;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferWrite;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
+		command_buffer.buffer_memory_barrier(dst_buffer, 0, total_size, memory_barrier);
+	}
+
+	{
+		common::ImageMemoryBarrier memory_barrier{};
+		memory_barrier.old_layout      = vk::ImageLayout::eUndefined;
+		memory_barrier.new_layout      = vk::ImageLayout::eTransferSrcOptimal;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferRead;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
+		command_buffer.image_memory_barrier(image_view, memory_barrier);
+	}
+
+
+	command_buffer.copy_image_to_buffer(image_view.get_image(), vk::ImageLayout::eTransferSrcOptimal, dst_buffer, buffer_copy_regions);
+
+	{
+		common::BufferMemoryBarrier memory_barrier{};
+		memory_barrier.src_access_mask = vk::AccessFlagBits2::eTransferWrite;
+		memory_barrier.dst_access_mask = vk::AccessFlagBits2::eHostRead;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eTransfer;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eHost;
+		command_buffer.buffer_memory_barrier(dst_buffer, 0, total_size, memory_barrier);
+	}
+
+	{
+		common::ImageMemoryBarrier memory_barrier{};
+		memory_barrier.old_layout      = vk::ImageLayout::eTransferSrcOptimal;
+		memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
+		memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+		memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+		command_buffer.image_memory_barrier(image_view, memory_barrier);
+	}
+
+	command_buffer.end();
+
+	const auto &queue = device.get_queue_by_flags(vk::QueueFlagBits::eGraphics, 0);
+	queue.submit(command_buffer, device.request_fence());
+
+	device.wait_idle();
+
+	auto raw_data = dst_buffer.map();
+
+	ktxTexture2 *ktx_texture;
+	ktxTextureCreateInfo create_info{};
+	create_info.vkFormat = static_cast<VkFormat>(image_view.get_format());
+	create_info.baseWidth = image_view.get_image().get_extent().width;
+	create_info.baseHeight = image_view.get_image().get_extent().height;
+	create_info.baseDepth = image_view.get_image().get_extent().depth;
+	create_info.numDimensions = 2;
+	create_info.numFaces      = image_view.get_subresource_range().layerCount;
+	create_info.numLevels     = image_view.get_subresource_range().levelCount;
+	create_info.numLayers     = 1;
+	create_info.isArray        = KTX_FALSE;
+	create_info.generateMipmaps = KTX_FALSE;
+
+	auto error = ktxTexture2_Create(&create_info, KTX_TEXTURE_CREATE_ALLOC_STORAGE, &ktx_texture);
+
+	// ktxTexture_construct(&ktx_texture, &create_info, nullptr);
+
+	VkDeviceSize current_offset = 0;
+	for (uint32_t level = 0; level < subresource_range.levelCount; level++)
+	{
+		uint32_t width  = std::max(1u, create_info.baseWidth >> level);
+		uint32_t height = std::max(1u, create_info.baseHeight >> level);
+
+		VkDeviceSize level_size = get_format_size(image_view.get_format()) *
+		                          width * height * create_info.baseDepth;
+
+		for (uint32_t layer = 0; layer < subresource_range.layerCount; layer++)
+		{
+			ktxTexture_SetImageFromMemory(
+			    (ktxTexture *) ktx_texture,
+			    level,        // mipLevel
+			    0,        // layer
+			    layer,        // face
+			    raw_data + current_offset,
+			    level_size);
+
+			current_offset += level_size;
+		}
+	}
+
+	ktxTexture_WriteToNamedFile((ktxTexture *) ktx_texture, "assets/textures/output.ktx2");
+
+	ktxTexture_Destroy((ktxTexture *) ktx_texture);
+}
+
 PreprocessApp::PreprocessApp()
 {}
 
@@ -25,6 +168,7 @@ bool PreprocessApp::prepare(Window *window)
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
 	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/uffizi_rgba16f_cube.ktx");
+	//textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/output.ktx2");
 
 	enum Target
 	{
@@ -55,7 +199,7 @@ bool PreprocessApp::prepare(Window *window)
 		image_builder.with_format(format);
 		image_builder.with_array_layers(6);
 		image_builder.with_mip_levels(PrefilterPass::num_mips);
-		image_builder.with_usage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+		image_builder.with_usage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc);
 		image_builder.with_flags(vk::ImageCreateFlagBits::eCubeCompatible);
 		image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
@@ -115,14 +259,14 @@ bool PreprocessApp::prepare(Window *window)
 				    .finalize();
 			}
 		}
-
-
 	}
 	graph_builder_->build();
 
 	render_graph_->execute(false);
 
 	get_device()->get_handle().waitIdle();
+
+	// download_image(*textures_.prefiltered_cube.image_view, *device_);
 
 	graph_builder_.reset();
 	render_graph_.reset();
@@ -133,7 +277,8 @@ bool PreprocessApp::prepare(Window *window)
 	auto &camera_node = sg::add_free_camera(*scene_, "default_camera", render_context_->get_surface_extent(), 3, 2);
 	auto  camera      = &camera_node.get_component<sg::Camera>();
 
-	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.prefiltered_cube, *camera);
+	// auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.prefiltered_cube, *camera);
+	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
 	graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
 	    .shader({"skybox.vert", "skybox.frag"})
 	    .present()
