@@ -17,8 +17,12 @@ std::vector<glm::mat4> matrices = {
 };
 }
 
-PrefilterPass::PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face) :
-    cubemap_(cubemap), sky_box_(sky_box), mip_(mip), face_(face)
+PrefilterPass::PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target) :
+	target_(target),
+	cubemap_(cubemap),
+	sky_box_(sky_box),
+	mip_(mip),
+	face_(face)
 {}
 
 void PrefilterPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
@@ -39,10 +43,17 @@ void PrefilterPass::execute(backend::CommandBuffer &command_buffer, RenderFrame 
 	allocation.update(mvp);
 	command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 0, 0);
 
-	const float roughness = static_cast<float>(mip_) / static_cast<float>(num_mips - 1);
-	command_buffer.set_specialization_constant(0, roughness);
-	command_buffer.set_specialization_constant(1, 32U);        // num_samples
-
+	if (target_== kIrradiance)
+	{
+		command_buffer.set_specialization_constant(0, 2.0f * glm::pi<float>() / 180.0f);        // delta_phi
+		command_buffer.set_specialization_constant(1, 0.5f * glm::pi<float>() / 64.0f);        // delta_theta
+	}
+	else if (target_ == kPrefilter)
+	{
+		const float roughness = static_cast<float>(mip_) / static_cast<float>(num_mips - 1);
+		command_buffer.set_specialization_constant(0, roughness);
+		command_buffer.set_specialization_constant(1, 32U);        // num_samples
+	}
 
 	command_buffer.bind_image(cubemap_.get_image()->get_vk_image_view(), cubemap_.get_sampler()->vk_sampler_, 0, 1, 0);
 
@@ -59,5 +70,26 @@ void PrefilterPass::execute(backend::CommandBuffer &command_buffer, RenderFrame 
 	{
 		command_buffer.draw(sub_mesh.vertex_count, 1, 0, 0);
 	}
+}
+
+void BrdfLutPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables)
+{
+	auto &resource_cache = command_buffer.get_device().get_resource_cache();
+
+	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader());
+	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
+
+	std::vector<backend::ShaderModule *> shader_modules = {&vert_shader_module, &frag_shader_module};
+
+	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules);
+	command_buffer.bind_pipeline_layout(pipeline_layout);
+
+	command_buffer.set_specialization_constant(0, 1024U);		// num_samples
+
+	RasterizationState rasterization_state;
+	rasterization_state.cull_mode = vk::CullModeFlagBits::eNone;
+	command_buffer.set_rasterization_state(rasterization_state);
+
+	command_buffer.draw(3, 1, 0, 0);
 }
 }        // namespace xihe::rendering

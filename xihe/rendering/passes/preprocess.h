@@ -6,22 +6,17 @@
 
 namespace xihe::rendering
 {
-struct PushBlockIrradiance
-{
-	float     delta_phi   = (2.0f * glm::pi<float>()) / 180.0f;
-	float delta_theta = (0.5f * glm::pi<float>()) / 64.0f;
-};
 
-struct PushBlockPrefilterEnv
+enum PreprocessType
 {
-	float     roughness;
-	uint32_t  num_samples = 32u;
+	kIrradiance = 0,
+	kPrefilter = 1,
 };
 
 class PrefilterPass : public RenderPass
 {
   public:
-	PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face);
+	PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target);
 
 	~PrefilterPass() override = default;
 
@@ -30,10 +25,20 @@ class PrefilterPass : public RenderPass
 	inline static uint32_t num_mips = 0;
 
   private:
+	PreprocessType target_;
+
 	sg::Texture &cubemap_;
 	sg::Mesh    &sky_box_;
 
 	uint32_t mip_{};
 	uint32_t face_{};
+};
+
+
+class BrdfLutPass : public RenderPass
+{
+  public:
+	BrdfLutPass() = default;
+	auto execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) -> void override;
 };
 }
