@@ -61,6 +61,8 @@ class GraphBuilder
 		PassBuilder &bindables(const std::vector<PassBindable> &bindables);
 		PassBuilder &attachments(const std::vector<PassAttachment> &attachments);
 
+		PassBuilder &copy(uint32_t attachment_index, std::unique_ptr<backend::ImageView> &&dst_image_view, const vk::ImageCopy &copy_region);
+
 		PassBuilder &present();
 
 		PassBuilder &gui(Gui *gui);
@@ -74,6 +76,8 @@ class GraphBuilder
 		std::unique_ptr<RenderPass> render_pass_;
 		bool                        is_present_{false};
 		Gui                        *gui_{nullptr};
+
+		std::unique_ptr<PassNode::ImageCopyInfo> image_read_back_;
 	};
 
 	GraphBuilder(RenderGraph &render_graph, RenderContext &render_context);
@@ -103,11 +107,12 @@ class GraphBuilder
 		std::vector<PassBatch> batches_;
 	};
 
-	void add_pass(const std::string            &name,
-	              PassInfo                    &&pass_info,
-	              std::unique_ptr<RenderPass> &&render_pass,
-	              bool                          is_present,
-	              Gui                          *gui = nullptr);
+	void add_pass(const std::string                         &name,
+	              PassInfo                                 &&pass_info,
+	              std::unique_ptr<RenderPass>              &&render_pass,
+	              bool                                       is_present,
+	              std::unique_ptr<PassNode::ImageCopyInfo> &&image_read_back,
+	              Gui                                       *gui = nullptr);
 
 	void create_resources();
 

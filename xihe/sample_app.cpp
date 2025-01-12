@@ -332,8 +332,6 @@ void SampleApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, meshShaderQueries);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceMeshShaderFeaturesEXT, taskShader);
 
-	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceDynamicRenderingFeatures, dynamicRendering);
-
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceVulkan11Features, shaderDrawParameters);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, primitiveFragmentShadingRate);
 	// REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceFragmentShadingRateFeaturesKHR, attachmentFragmentShadingRate);
@@ -352,8 +350,8 @@ void SampleApp::draw_gui()
 	    /* lines = */ 2);
 }
 }        // namespace xihe
-
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::SampleApp>();
-}
+//
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::SampleApp>();
+//}

@@ -1,79 +1,146 @@
 #include "preprocess_app.h"
 
 #include "rendering/passes/geometry_pass.h"
+#include "rendering/passes/skybox_pass.h"
 #include "scene_graph/components/image.h"
 
 namespace xihe
 {
-namespace 
-{
-std::vector<glm::mat4> matrices = {
-    glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-    glm::rotate(glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(0.0f, 1.0f, 0.0f)), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-    glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-    glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)),
-    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0.0f, 0.0f, 1.0f)),
-};
-}
-
-PrefilterPass::PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face) :
-    cubemap_(cubemap), sky_box_(sky_box), mip_(mip), face_(face)
-{}
-
-void PrefilterPass::execute(backend::CommandBuffer &command_buffer, rendering::RenderFrame &active_frame, std::vector<rendering::ShaderBindable> input_bindables)
-{
-	auto &resource_cache = command_buffer.get_device().get_resource_cache();
-
-	auto &vert_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eVertex, get_vertex_shader());
-	auto &frag_shader_module = resource_cache.request_shader_module(vk::ShaderStageFlagBits::eFragment, get_fragment_shader());
-
-	std::vector<backend::ShaderModule *> shader_modules{&vert_shader_module, &frag_shader_module};
-
-	auto &pipeline_layout = resource_cache.request_pipeline_layout(shader_modules);
-
-	if (pipeline_layout.get_push_constant_range_stage(sizeof(PushBlockPrefilterEnv)))
-	{
-		PushBlockPrefilterEnv push_block_prefilter_env;
-		push_block_prefilter_env.mvp       = glm::perspective(static_cast<float>((M_PI / 2.0)), 1.0f, 0.1f, 512.0f) * matrices[face_];
-		push_block_prefilter_env.roughness = static_cast<float>(mip_) / static_cast<float>(num_mips - 1);
-
-		if (const auto data = to_bytes(push_block_prefilter_env); !data.empty())
-		{
-			command_buffer.push_constants(data);
-		}
-	}
-
-	command_buffer.bind_image(cubemap_.get_image()->get_vk_image_view(), cubemap_.get_sampler()->vk_sampler_, 0, 0, 0);
-
-	sg::SubMesh &sub_mesh = *sky_box_.get_submeshes()[0];
-	rendering::bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sub_mesh);
-
-	if (sub_mesh.index_count != 0)
-	{
-		command_buffer.bind_index_buffer(*sub_mesh.index_buffer, sub_mesh.index_offset, sub_mesh.index_type);
-
-		command_buffer.draw_indexed(sub_mesh.index_count, 1, 0, 0, 0);
-	}
-	else
-	{
-		command_buffer.draw(sub_mesh.vertex_count, 1, 0, 0);
-	}
-}
-
 PreprocessApp::PreprocessApp()
 {}
 
 bool PreprocessApp::prepare(Window *window)
 {
+	using namespace rendering;
+
 	if (!XiheApp::prepare(window))
 	{
 		return false;
 	}
 
+	load_scene("scenes/Box.gltf");
+	// load_scene("scenes/cube.gltf");
+	assert(scene_ && "Scene not loaded");
+
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
-	auto *skybox_texture = asset_loader_->load_texture_cube(*scene_, "skybox", "textures/uffizi_rgba16f_cube.ktx");
+	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/uffizi_rgba16f_cube.ktx");
+
+	enum Target
+	{
+		IRRADIANCE     = 0,
+		PREFILTEREDENV = 1
+	};
+
+	for (uint32_t target = 1; target < PREFILTEREDENV + 1; target++)
+	{
+		vk::Format format;
+		int32_t    dim;
+
+		switch (target)
+		{
+			case IRRADIANCE:
+				format = vk::Format::eR32G32B32A32Sfloat;
+				dim    = 64;
+				break;
+			case PREFILTEREDENV:
+				format = vk::Format::eR16G16B16A16Sfloat;
+				dim    = 512;
+				break;
+		}
+
+		PrefilterPass::num_mips = static_cast<uint32_t>(floor(log2(dim))) + 1;
+
+		backend::ImageBuilder image_builder(dim, dim);
+		image_builder.with_format(format);
+		image_builder.with_array_layers(6);
+		image_builder.with_mip_levels(PrefilterPass::num_mips);
+		image_builder.with_usage(vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst);
+		image_builder.with_flags(vk::ImageCreateFlagBits::eCubeCompatible);
+		image_builder.with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
+
+		vk::SamplerCreateInfo sampler_info;
+		sampler_info.magFilter     = vk::Filter::eLinear;
+		sampler_info.minFilter     = vk::Filter::eLinear;
+		sampler_info.mipmapMode    = vk::SamplerMipmapMode::eLinear;
+		sampler_info.addressModeU  = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeV  = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.addressModeW  = vk::SamplerAddressMode::eClampToEdge;
+		sampler_info.minLod        = 0.0f;
+		sampler_info.maxLod        = static_cast<float>(PrefilterPass::num_mips);
+		sampler_info.maxAnisotropy = 1.0f;
+		sampler_info.borderColor   = vk::BorderColor::eFloatOpaqueWhite;
+
+		textures_.prefiltered_cube.image      = image_builder.build_unique(*device_);
+		textures_.prefiltered_cube.image_view = std::make_unique<backend::ImageView>(
+		    *textures_.prefiltered_cube.image, vk::ImageViewType::eCube);
+		textures_.prefiltered_cube.sampler = std::make_unique<backend::Sampler>(*device_, sampler_info);
+
+		for (uint32_t m = 0; m < PrefilterPass::num_mips; m++)
+		{
+			for (uint32_t f = 0; f < 6; f++)
+
+			{
+				std::string suffix         = "_mip" + to_string(m) + "_face" + to_string(f);
+				auto        prefilter_pass = std::make_unique<PrefilterPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, m, f);
+
+				PassAttachment attachment{AttachmentType::kColor, "prefilter_rt" + suffix};
+
+				uint32_t mip_dim = dim * std::pow(0.5, m);
+
+				attachment.extent_desc = ExtentDescriptor::Fixed({mip_dim, mip_dim, 1});
+				attachment.format      = vk::Format::eR16G16B16A16Sfloat;
+				attachment.is_external = true;
+
+				auto          copy_dst_image_view = std::make_unique<backend::ImageView>(*textures_.prefiltered_cube.image, vk::ImageViewType::e2D, vk::Format::eUndefined, m, f, 1, 1);
+				vk::ImageCopy copy_region{};
+				copy_region.srcSubresource.aspectMask     = vk::ImageAspectFlagBits::eColor;
+				copy_region.srcSubresource.baseArrayLayer = 0;
+				copy_region.srcSubresource.mipLevel       = 0;
+				copy_region.srcSubresource.layerCount     = 1;
+				copy_region.srcOffset                     = vk::Offset3D{0, 0, 0};
+
+				copy_region.dstSubresource.aspectMask     = vk::ImageAspectFlagBits::eColor;
+				copy_region.dstSubresource.baseArrayLayer = f;
+				copy_region.dstSubresource.mipLevel       = m;
+				copy_region.dstSubresource.layerCount     = 1;
+				copy_region.dstOffset                     = vk::Offset3D{0, 0, 0};
+
+				copy_region.extent = vk::Extent3D{mip_dim, mip_dim, 1};
+
+				graph_builder_->add_pass("prefilter_pass" + suffix, std::move(prefilter_pass))
+				    .attachments({{attachment}})
+				    .shader({"preprocess/filtercube.vert", "preprocess/prefilterenvmap.frag"})
+				    .copy(0, std::move(copy_dst_image_view), copy_region)
+				    .finalize();
+			}
+		}
+
+
+	}
+	graph_builder_->build();
+
+	render_graph_->execute(false);
+
+	get_device()->get_handle().waitIdle();
+
+	graph_builder_.reset();
+	render_graph_.reset();
+
+	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_);
+	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
+
+	auto &camera_node = sg::add_free_camera(*scene_, "default_camera", render_context_->get_surface_extent(), 3, 2);
+	auto  camera      = &camera_node.get_component<sg::Camera>();
+
+	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.prefiltered_cube, *camera);
+	graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
+	    .shader({"skybox.vert", "skybox.frag"})
+	    .present()
+	    .finalize();
+
+	graph_builder_->build();
+	return true;
 }
 
 void PreprocessApp::update(float delta_time)
@@ -92,3 +159,8 @@ void PreprocessApp::draw_gui()
 }
 
 }        // namespace xihe
+
+std::unique_ptr<xihe::Application> create_application()
+{
+	return std::make_unique<xihe::PreprocessApp>();
+}

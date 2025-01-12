@@ -16,7 +16,7 @@ RenderGraph::RenderGraph(RenderContext &render_context) :
     render_context_{render_context}
 {}
 
-void RenderGraph::execute()
+void RenderGraph::execute(bool present)
 {
 	render_context_.begin_frame();
 
@@ -27,7 +27,7 @@ void RenderGraph::execute()
 		bool is_last  = (i == batch_count - 1);
 		if (pass_batches_[i].type == PassType::kRaster)
 		{
-			execute_raster_batch(pass_batches_[i], is_first, is_last);
+			execute_raster_batch(pass_batches_[i], is_first, is_last, present);
 		}
 		else if (pass_batches_[i].type == PassType::kCompute)
 		{
@@ -51,7 +51,7 @@ void RenderGraph::add_pass_node(PassNode &&pass_node)
 	pass_nodes_.push_back(std::move(pass_node));
 }
 
-void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, bool is_last)
+void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, bool is_last, bool present)
 {
 	auto &command_buffer = render_context_.request_graphics_command_buffer(
 	    backend::CommandBuffer::ResetMode::kResetPool,
@@ -83,7 +83,8 @@ void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, boo
 	    pass_batch.signal_semaphore_value,
 	    wait_semaphore_value,
 	    is_first,
-	    is_last);
+	    is_last,
+		present);
 }
 
 void RenderGraph::execute_compute_batch(PassBatch &pass_batch, bool is_first, bool is_last)

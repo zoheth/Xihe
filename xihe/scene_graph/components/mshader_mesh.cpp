@@ -31,7 +31,9 @@ MshaderMesh::MshaderMesh(const MeshPrimitiveData &primitive_data, backend::Devic
 
 	if (pos_it == primitive_data.attributes.end() || normal_it == primitive_data.attributes.end() || uv_it == primitive_data.attributes.end())
 	{
-		throw std::runtime_error("Position, Normal or UV attribute not found.");
+		LOGW("Position, Normal or UV attribute not found.");
+		return;
+		// throw std::runtime_error("Position, Normal or UV attribute not found.");
 	}
 
 	const VertexAttributeData &pos_attr    = pos_it->second;

@@ -211,11 +211,11 @@ void RenderContext::begin_frame()
 	get_active_frame().reset();
 }
 
-void RenderContext::end_frame(vk::Semaphore semaphore)
+void RenderContext::end_frame(vk::Semaphore semaphore, bool present)
 {
 	assert(frame_active_ && "Frame is not active, please call begin_frame");
 
-	if (swapchain_)
+	if (swapchain_ && present)
 	{
 		vk::SwapchainKHR   vk_swapchain = swapchain_->get_handle();
 		vk::PresentInfoKHR present_info(semaphore, vk_swapchain, active_frame_index_);
@@ -332,8 +332,12 @@ void RenderContext::compute_submit(const std::vector<backend::CommandBuffer *> &
 	compute_queue_->get_handle().submit(submit_info, nullptr);
 }
 
-void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value, bool is_first_submission,
-                                    bool is_last_submission)
+void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers,
+                                    uint64_t                                    &signal_semaphore_value,
+                                    uint64_t                                     wait_semaphore_value,
+                                    bool                                         is_first_submission,
+                                    bool                                         is_last_submission,
+                                    bool                                         present)
 {
 	vk::SubmitInfo                 submit_info{};
 	std::vector<vk::CommandBuffer> command_buffer_handles(command_buffers.size());
@@ -401,7 +405,7 @@ void RenderContext::graphics_submit(const std::vector<backend::CommandBuffer *> 
 	{
 		vk::Fence fence = frame.request_fence();
 		graphics_queue_->get_handle().submit(submit_info, fence);
-		end_frame(render_semaphore);
+		end_frame(render_semaphore, present);
 	}
 	else
 	{

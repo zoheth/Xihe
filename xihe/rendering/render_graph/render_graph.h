@@ -29,7 +29,7 @@ class RenderGraph
 
 	~RenderGraph() = default;
 
-	void execute();
+	void execute(bool present=true);
 
 	ShaderBindable get_resource_bindable(ResourceHandle handle) const;
 
@@ -37,7 +37,7 @@ class RenderGraph
 	// Called by GraphBuilder
 	void add_pass_node(PassNode &&pass_node);
 
-	void execute_raster_batch(PassBatch &pass_batch, bool is_first, bool is_last);
+	void execute_raster_batch(PassBatch &pass_batch, bool is_first, bool is_last, bool present);
 
 	void execute_compute_batch(PassBatch &pass_batch, bool is_first, bool is_last);
 

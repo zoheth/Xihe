@@ -107,6 +107,64 @@ void PassNode::execute(backend::CommandBuffer &command_buffer, RenderTarget &ren
 		}
 	}
 
+	if (image_read_back_)
+	{
+		{
+			common::ImageMemoryBarrier memory_barrier{};
+			memory_barrier.new_layout      = vk::ImageLayout::eTransferDstOptimal;
+			memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferWrite;
+			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+
+			command_buffer.image_memory_barrier(*image_read_back_->image_view, memory_barrier);
+		}
+
+		assert(image_read_back_->attachment_index < render_target.get_views().size());
+		const auto &src_image_view = render_target.get_views()[image_read_back_->attachment_index];
+
+		const vk::ImageLayout  layout      = std::get<common::ImageMemoryBarrier>(attachment_barriers_[image_read_back_->attachment_index]).new_layout;
+		const vk::AccessFlags2 aspect_mask = std::get<common::ImageMemoryBarrier>(attachment_barriers_[image_read_back_->attachment_index]).dst_access_mask;
+
+		{
+			common::ImageMemoryBarrier memory_barrier;
+			memory_barrier.old_layout      = layout;
+			memory_barrier.src_access_mask = aspect_mask;
+			memory_barrier.new_layout      = vk::ImageLayout::eTransferSrcOptimal;
+			memory_barrier.dst_access_mask = vk::AccessFlagBits2::eTransferRead;
+			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+			// todo
+			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+
+			command_buffer.image_memory_barrier(src_image_view, memory_barrier);	
+		}
+
+		command_buffer.copy_image(src_image_view.get_image(), image_read_back_->image_view->get_image(), {image_read_back_->copy_region});
+
+		{
+			common::ImageMemoryBarrier memory_barrier;
+			memory_barrier.old_layout      = vk::ImageLayout::eTransferSrcOptimal;
+			memory_barrier.src_access_mask = vk::AccessFlagBits2::eTransferRead;
+			memory_barrier.new_layout      = layout;
+			memory_barrier.dst_access_mask = aspect_mask;
+			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+
+			command_buffer.image_memory_barrier(src_image_view, memory_barrier);
+		}
+
+		{
+			common::ImageMemoryBarrier memory_barrier;
+			memory_barrier.old_layout      = vk::ImageLayout::eTransferDstOptimal;
+			memory_barrier.src_access_mask = vk::AccessFlagBits2::eTransferWrite;
+			memory_barrier.new_layout      = vk::ImageLayout::eShaderReadOnlyOptimal;
+			memory_barrier.dst_access_mask = vk::AccessFlagBits2::eHostWrite | vk::AccessFlagBits2::eTransferWrite;
+			memory_barrier.src_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+			memory_barrier.dst_stage_mask  = vk::PipelineStageFlagBits2::eAllCommands;
+
+			command_buffer.image_memory_barrier(*image_read_back_->image_view, memory_barrier);
+		}
+	}
+
 	for (auto &[handle, barrier] : release_barriers_)
 	{
 		if (std::holds_alternative<common::ImageMemoryBarrier>(barrier))
@@ -150,6 +208,11 @@ RenderTarget *PassNode::get_render_target()
 void PassNode::set_gui(Gui *gui)
 {
 	gui_ = gui;
+}
+
+void PassNode::set_image_copy_info(std::unique_ptr<ImageCopyInfo> &&image_read_back)
+{
+	image_read_back_ = std::move(image_read_back);
 }
 
 void PassNode::set_batch_index(uint64_t batch_index)

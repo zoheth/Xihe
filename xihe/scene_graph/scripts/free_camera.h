@@ -12,8 +12,6 @@ namespace xihe::sg
 	  public:
 	    static const float TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME;
 
-	    static const float ROTATION_MOVE_WEIGHT;
-
 	    static const float KEY_ROTATION_MOVE_WEIGHT;
 
 	    static const float TRANSLATION_MOVE_WEIGHT;
@@ -34,8 +32,12 @@ namespace xihe::sg
 
 		void set_speed_multiplier(float speed_multiplier);
 
+		void set_rotation_move_weight(float rotation_move_weight);
+
 	  private:
 	    float speed_multiplier_{3.0f};
+
+		float rotation_move_weight_{0.3f};
 
 	    glm::vec2 mouse_move_delta_{0.0f};
 

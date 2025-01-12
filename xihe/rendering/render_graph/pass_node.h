@@ -41,11 +41,11 @@ class ExtentDescriptor
 
 	static ExtentDescriptor SwapchainRelative(float    width_scale  = 1.0f,
 	                                          float    height_scale = 1.0f,
-	                                          uint32_t depth       = 1);
+	                                          uint32_t depth        = 1);
 
 	vk::Extent3D calculate(const vk::Extent2D &swapchain_extent) const;
 
-private:
+  private:
 	Type         type_{Type::kSwapchainRelative};
 	vk::Extent3D extent_;
 	float        scale_x_ = 1.0f;
@@ -57,9 +57,9 @@ private:
 
 struct PassBindable
 {
-	BindableType type;
-	std::string  name;
-	vk::Format   format;
+	BindableType     type;
+	std::string      name;
+	vk::Format       format;
 	ExtentDescriptor extent_desc{};
 
 	// only for buffer
@@ -69,9 +69,9 @@ struct PassBindable
 };
 struct PassAttachment
 {
-	AttachmentType type;
-	std::string    name;
-	vk::Format     format;
+	AttachmentType   type;
+	std::string      name;
+	vk::Format       format;
 	ExtentDescriptor extent_desc{};
 
 	ImageProperties image_properties;
@@ -92,6 +92,14 @@ class PassNode
 		ResourceHandle         handle;
 		std::optional<Barrier> barrier;
 	};
+
+	struct ImageCopyInfo
+	{
+		uint32_t        attachment_index{};
+		std::unique_ptr<backend::ImageView> image_view;
+		vk::ImageCopy   copy_region;
+	};
+
 	PassNode(RenderGraph &render_graph, std::string name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass);
 
 	void execute(backend::CommandBuffer &command_buffer, RenderTarget &render_target, RenderFrame &render_frame);
@@ -111,6 +119,8 @@ class PassNode
 	RenderTarget *get_render_target();
 
 	void set_gui(Gui *gui);
+
+	void set_image_copy_info(std::unique_ptr<ImageCopyInfo> &&image_read_back);
 
 	void set_batch_index(uint64_t batch_index);
 
@@ -148,5 +158,7 @@ class PassNode
 	std::unordered_map<ResourceHandle, Barrier> release_barriers_;
 
 	Gui *gui_{nullptr};
+
+	std::unique_ptr<ImageCopyInfo> image_read_back_;
 };
 }        // namespace xihe::rendering

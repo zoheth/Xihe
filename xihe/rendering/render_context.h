@@ -60,7 +60,7 @@ class RenderContext
 
 	void begin_frame();
 
-	void end_frame(vk::Semaphore semaphore);
+	void end_frame(vk::Semaphore semaphore, bool present = true);
 
 	vk::Semaphore submit(const backend::Queue                        &queue,
 	                     const std::vector<backend::CommandBuffer *> &command_buffers,
@@ -71,8 +71,12 @@ class RenderContext
 
 	void compute_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value = 0);
 
-	void graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers, uint64_t &signal_semaphore_value, uint64_t wait_semaphore_value = 0, bool is_first_submission = false,
-	                     bool is_last_submission = false);
+	void graphics_submit(const std::vector<backend::CommandBuffer *> &command_buffers,
+	                     uint64_t                                    &signal_semaphore_value,
+	                     uint64_t                                     wait_semaphore_value = 0,
+	                     bool                                         is_first_submission  = false,
+	                     bool                                         is_last_submission   = false,
+	                     bool                                         present              = true);
 
 	bool handle_surface_changes(bool force_update = false);
 
@@ -86,7 +90,7 @@ class RenderContext
 
 	void set_render_target_function(const RenderTarget::CreateFunc &create_render_target_function);
 
-	//void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
+	// void register_rdg_render_target(const std::string &name, const RdgPass *rdg_pass);
 
 	uint32_t get_queue_family_index(vk::QueueFlagBits queue_flags) const;
 
@@ -116,8 +120,8 @@ class RenderContext
 
 	vk::Semaphore graphics_semaphore_;
 	vk::Semaphore compute_semaphore_;
-	uint64_t     graphics_semaphore_value_{0};
-	uint64_t     compute_semaphore_value_{0};
+	uint64_t      graphics_semaphore_value_{0};
+	uint64_t      compute_semaphore_value_{0};
 
 	bool     prepared_{false};
 	bool     frame_active_{false};

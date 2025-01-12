@@ -11,8 +11,6 @@ namespace xihe::sg
 {
 const float FreeCamera::TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME = 2.0f;
 
-const float FreeCamera::ROTATION_MOVE_WEIGHT = 0.1f;
-
 const float FreeCamera::KEY_ROTATION_MOVE_WEIGHT = 0.5f;
 
 const float FreeCamera::TRANSLATION_MOVE_WEIGHT = 3.0f;
@@ -88,8 +86,8 @@ void FreeCamera::update(float delta_time)
 	}
 	else if (mouse_button_pressed_[MouseButton::Right])
 	{
-		delta_rotation.x -= ROTATION_MOVE_WEIGHT * mouse_move_delta_.y;
-		delta_rotation.y -= ROTATION_MOVE_WEIGHT * mouse_move_delta_.x;
+		delta_rotation.x -= rotation_move_weight_ * mouse_move_delta_.y;
+		delta_rotation.y -= rotation_move_weight_ * mouse_move_delta_.x;
 	}
 	else if (mouse_button_pressed_[MouseButton::Left])
 	{
@@ -99,8 +97,8 @@ void FreeCamera::update(float delta_time)
 
 	if (touch_pointer_pressed_[0])
 	{
-		delta_rotation.x -= ROTATION_MOVE_WEIGHT * touch_move_delta_.y;
-		delta_rotation.y -= ROTATION_MOVE_WEIGHT * touch_move_delta_.x;
+		delta_rotation.x -= rotation_move_weight_ * touch_move_delta_.y;
+		delta_rotation.y -= rotation_move_weight_ * touch_move_delta_.x;
 
 		if (touch_pointer_time_ > TOUCH_DOWN_MOVE_FORWARD_WAIT_TIME)
 		{
@@ -217,5 +215,10 @@ void FreeCamera::resize(uint32_t width, uint32_t height)
 void FreeCamera::set_speed_multiplier(float speed_multiplier)
 {
 	speed_multiplier_ = speed_multiplier;
+}
+
+void FreeCamera::set_rotation_move_weight(float rotation_move_weight)
+{
+	rotation_move_weight_ = rotation_move_weight;
 }
 }

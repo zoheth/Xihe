@@ -135,6 +135,6 @@ class OrthographicCamera : public Camera
 	float far_plane_{1.0f};
 };
 
-Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent, float speed=3.0f);
+Node &add_free_camera(Scene &scene, const std::string &node_name, vk::Extent2D extent, float speed=3.0f, float rotation_weight=0.3f);
 
 }

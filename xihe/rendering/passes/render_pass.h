@@ -14,6 +14,13 @@ namespace xihe
 namespace rendering
 {
 
+struct Texture
+{
+	std::unique_ptr<backend::Image>     image;
+	std::unique_ptr<backend::ImageView> image_view;
+	std::unique_ptr<backend::Sampler>   sampler;
+};
+
 glm::mat4 vulkan_style_projection(const glm::mat4 &proj);
 
 class RenderPass
