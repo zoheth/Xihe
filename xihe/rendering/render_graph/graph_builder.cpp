@@ -65,9 +65,9 @@ GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::attachments(const std::vec
 	return *this;
 }
 
-GraphBuilder::PassBuilder & GraphBuilder::PassBuilder::copy(uint32_t attachment_index, std::unique_ptr<backend::ImageView> &&dst_image_view, const vk::ImageCopy &copy_region)
+GraphBuilder::PassBuilder &GraphBuilder::PassBuilder::copy(uint32_t attachment_index, std::unique_ptr<backend::ImageView> &&dst_image_view, const vk::ImageCopy &copy_region)
 {
-	image_read_back_ = std::make_unique<PassNode::ImageCopyInfo>();
+	image_read_back_                   = std::make_unique<PassNode::ImageCopyInfo>();
 	image_read_back_->attachment_index = attachment_index;
 	image_read_back_->image_view       = std::move(dst_image_view);
 	image_read_back_->copy_region      = copy_region;
@@ -92,7 +92,7 @@ void GraphBuilder::PassBuilder::finalize()
 	                        std::move(render_pass_), is_present_, std::move(image_read_back_), gui_);
 }
 
-void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass, bool is_present, std::unique_ptr<PassNode::ImageCopyInfo> &&image_read_back, Gui * gui)
+void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::unique_ptr<RenderPass> &&render_pass, bool is_present, std::unique_ptr<PassNode::ImageCopyInfo> &&image_read_back, Gui *gui)
 {
 	is_dirty_ = true;
 
@@ -107,7 +107,6 @@ void GraphBuilder::add_pass(const std::string &name, PassInfo &&pass_info, std::
 	{
 		pass_node.set_image_copy_info(std::move(image_read_back));
 	}
-
 
 	if (is_present)
 	{
@@ -263,7 +262,7 @@ void GraphBuilder::create_graph_resource()
 			image_builder.with_format(info.format)
 			    .with_usage(info.image_usage)
 			    .with_array_layers(info.array_layers)
-				.with_flags(info.image_flags)
+			    .with_flags(info.image_flags)
 			    .with_vma_usage(VMA_MEMORY_USAGE_GPU_ONLY);
 
 			render_graph_.images_.push_back(image_builder.build_unique(device));
