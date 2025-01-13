@@ -5,6 +5,7 @@ layout (location = 0) out vec4 outColor;
 
 layout (binding = 2) uniform samplerCube samplerEnv;
 
+
 void main() 
 {
 	vec3 color = textureLod(samplerEnv, inUVW, 1.5).rgb;	

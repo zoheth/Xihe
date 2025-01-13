@@ -166,7 +166,7 @@ bool PreprocessApp::prepare(Window *window)
 
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
-	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/uffizi_rgba16f_cube.ktx");
+	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/concrete.ktx");
 	// textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/output.ktx2");
 
 	vk::SamplerCreateInfo default_sampler_info;
@@ -354,8 +354,8 @@ bool PreprocessApp::prepare(Window *window)
 	auto &camera_node = sg::add_free_camera(*scene_, "default_camera", render_context_->get_surface_extent(), 3, 2);
 	auto  camera      = &camera_node.get_component<sg::Camera>();
 
-	//auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.irradiance_cube, *camera);
-	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
+	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.prefiltered_cube, *camera);
+	//auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
 	graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
 	    .shader({"skybox.vert", "skybox.frag"})
 	    .present()
