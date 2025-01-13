@@ -131,7 +131,7 @@ struct MemSectorCompare
 
 struct VirtualTexture
 {
-	vk::Image     texture_image      = VK_NULL_HANDLE;
+	std::unique_ptr<backend::Image>     texture_image;
 	vk::ImageView texture_image_view = VK_NULL_HANDLE;
 	MemAllocInfo  memory_allocations;
 
@@ -158,6 +158,8 @@ struct VirtualTexture
 	vk::SparseImageFormatProperties format_properties{};
 
 	std::vector<vk::SparseImageMemoryBind> sparse_image_memory_binds;
+
+	void create_sparse_texture_image(backend::Device &device);
 };
 
 struct CalculateMipLevelData
