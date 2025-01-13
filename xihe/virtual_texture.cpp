@@ -89,6 +89,38 @@ bool MemSectorCompare::operator()(const std::weak_ptr<MemSector> &left, const st
 	return left.lock()->available_offsets.size() > right.lock()->available_offsets.size();
 }
 
+void VirtualTexture::create_sparse_texture_image(backend::Device &device)
+{
+	{
+		backend::ImageBuilder image_builder(width, height);
+
+		image_builder.with_usage(vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eSampled);
+		image_builder.with_flags(vk::ImageCreateFlagBits::eSparseBinding | vk::ImageCreateFlagBits::eSparseResidency);
+		image_builder.with_format(raw_data_image->get_format());
+
+		base_mip_level = 0U;
+		mip_levels     = 5U;
+
+		image_builder.with_mip_levels(mip_levels);
+		image_builder.with_sample_count(vk::SampleCountFlagBits::e1);
+		image_builder.with_tiling(vk::ImageTiling::eOptimal);
+		image_builder.with_sharing_mode(vk::SharingMode::eExclusive);
+
+		texture_image = image_builder.build_unique(device);
+	}
+
+	std::vector<vk::SparseImageMemoryRequirements> sparse_image_memory_requirements;
+	vk::MemoryRequirements                         memory_requirements;
+
+	uint32_t sparse_image_requirement_count = 0U;
+
+	device.get_handle().getImageSparseMemoryRequirements(texture_image->get_handle(), &sparse_image_requirement_count, sparse_image_memory_requirements.data());
+	sparse_image_memory_requirements.resize(sparse_image_requirement_count);
+	device.get_handle().getImageSparseMemoryRequirements(texture_image->get_handle(), &sparse_image_requirement_count, sparse_image_memory_requirements.data());
+
+	// device.get_handle().getBufferMemoryRequirements(texture_image->get_handle(), &memory_requirements);
+}
+
 CalculateMipLevelData::CalculateMipLevelData(const glm::mat4 &mvp_transform, const vk::Extent2D &texture_base_dim, const vk::Extent2D &screen_base_dim, uint32_t vertical_num_blocks, uint32_t horizontal_num_blocks, uint8_t mip_levels) :
     mesh(vertical_num_blocks + 1U),
     vertical_num_blocks(vertical_num_blocks),
