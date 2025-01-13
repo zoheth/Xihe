@@ -248,49 +248,49 @@ bool SampleApp::prepare(Window *window)
 		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
 		    .bindables({{BindableType::kSampled, "lighting"},
 		                {BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5, 0.5)}})
-		    .shader({"post_processing/bloom_extract.comp"})
+		    .shader({"post_processing/bloom/threshold.comp"})
 		    .finalize();
 
-		auto downsample_pass0 = std::make_unique<BloomDownsamplePass>(1.0f);
+		auto downsample_pass0 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Downsample 0", std::move(downsample_pass0))
 		    .bindables({{BindableType::kSampled, "bloom_extract"},
 		                {BindableType::kStorageWrite, "bloom_down_sample_0", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.25, 0.25)}})
-		    .shader({"post_processing/bloom_downsample.comp"})
+		    .shader({"post_processing/bloom/blur_down_first.comp"})
 		    .finalize();
 
-		auto downsample_pass1 = std::make_unique<BloomDownsamplePass>(0.9f);
+		auto downsample_pass1 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Downsample 1", std::move(downsample_pass1))
 		    .bindables({{BindableType::kSampled, "bloom_down_sample_0"},
 		                {BindableType::kStorageWrite, "bloom_down_sample_1", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.125, 0.125)}})
-		    .shader({"post_processing/bloom_downsample.comp"})
+		    .shader({"post_processing/bloom/blur_down.comp"})
 		    .finalize();
 
-		auto downsample_pass2 = std::make_unique<BloomDownsamplePass>(0.7f);
+		auto downsample_pass2 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Downsample 2", std::move(downsample_pass2))
 		    .bindables({{BindableType::kSampled, "bloom_down_sample_1"},
 		                {BindableType::kStorageWrite, "bloom_down_sample_2", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.0625, 0.0625)}})
-		    .shader({"post_processing/bloom_downsample.comp"})
+		    .shader({"post_processing/bloom/blur_down.comp"})
 		    .finalize();
 
 		auto upsample_pass0 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Upsample 0", std::move(upsample_pass0))
 		    .bindables({{BindableType::kSampled, "bloom_down_sample_2"},
 		                {BindableType::kStorageWrite, "bloom_up_sample_0", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.125, 0.125)}})
-		    .shader({"post_processing/bloom_upsample.comp"})
+		    .shader({"post_processing/bloom/blur_up.comp"})
 		    .finalize();
 
 		auto upsample_pass1 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Upsample 1", std::move(upsample_pass1))
 		    .bindables({{BindableType::kSampled, "bloom_up_sample_0"},
 		                {BindableType::kStorageWrite, "bloom_up_sample_1", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.25, 0.25)}})
-		    .shader({"post_processing/bloom_upsample.comp"})
+		    .shader({"post_processing/bloom/blur_up.comp"})
 		    .finalize();
 
 		auto upsample_pass2 = std::make_unique<BloomComputePass>();
 		graph_builder_->add_pass("Bloom Upsample 2", std::move(upsample_pass2))
 		    .bindables({{BindableType::kSampled, "bloom_up_sample_1"},
 		                {BindableType::kStorageWrite, "bloom_up_sample_2", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5, 0.5)}})
-		    .shader({"post_processing/bloom_upsample.comp"})
+		    .shader({"post_processing/bloom/blur_up.comp"})
 		    .finalize();
 	}
 

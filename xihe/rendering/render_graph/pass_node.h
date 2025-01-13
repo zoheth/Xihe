@@ -75,6 +75,8 @@ struct PassAttachment
 	ExtentDescriptor extent_desc{};
 
 	ImageProperties image_properties;
+
+	bool is_external{false};
 };
 struct PassInfo
 {

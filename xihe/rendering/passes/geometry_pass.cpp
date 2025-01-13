@@ -12,6 +12,52 @@
 
 namespace xihe::rendering
 {
+void bind_submesh_vertex_buffers(backend::CommandBuffer &command_buffer, backend::PipelineLayout &pipeline_layout, sg::SubMesh &sub_mesh)
+{
+	auto vertex_input_resources = pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex);
+
+	VertexInputState vertex_input_state{};
+
+	for (auto &input_resource : vertex_input_resources)
+	{
+		VertexAttribute attribute;
+
+		if (!sub_mesh.get_attribute(input_resource.name, attribute))
+		{
+			continue;
+		}
+
+		vk::VertexInputAttributeDescription vertex_attribute{
+		    input_resource.location,
+		    input_resource.location,
+		    attribute.format,
+		    attribute.offset};
+
+		vertex_input_state.attributes.push_back(vertex_attribute);
+
+		vk::VertexInputBindingDescription vertex_binding{
+		    input_resource.location,
+		    attribute.stride};
+
+		vertex_input_state.bindings.push_back(vertex_binding);
+	}
+
+	command_buffer.set_vertex_input_state(vertex_input_state);
+
+	for (auto &input_resource : vertex_input_resources)
+	{
+		const auto &buffer_iter = sub_mesh.vertex_buffers.find(input_resource.name);
+
+		if (buffer_iter != sub_mesh.vertex_buffers.end())
+		{
+			std::vector<std::reference_wrapper<const backend::Buffer>> buffers;
+			buffers.emplace_back(std::ref(buffer_iter->second));
+
+			command_buffer.bind_vertex_buffers(input_resource.location, buffers, {0});
+		}
+	}
+}
+
 GeometryPass::GeometryPass(std::vector<sg::Mesh *> meshes, sg::Camera &camera) :
     meshes_{std::move(meshes)},
     camera_{camera}
@@ -128,48 +174,7 @@ void GeometryPass::draw_submesh(backend::CommandBuffer &command_buffer, sg::SubM
 		}
 	}
 
-	auto vertex_input_resources = pipeline_layout.get_resources(backend::ShaderResourceType::kInput, vk::ShaderStageFlagBits::eVertex);
-
-	VertexInputState vertex_input_state{};
-
-	for (auto &input_resource : vertex_input_resources)
-	{
-		VertexAttribute attribute;
-
-		if (!sub_mesh.get_attribute(input_resource.name, attribute))
-		{
-			continue;
-		}
-
-		vk::VertexInputAttributeDescription vertex_attribute{
-		    input_resource.location,
-		    input_resource.location,
-		    attribute.format,
-		    attribute.offset};
-
-		vertex_input_state.attributes.push_back(vertex_attribute);
-
-		vk::VertexInputBindingDescription vertex_binding{
-		    input_resource.location,
-		    attribute.stride};
-
-		vertex_input_state.bindings.push_back(vertex_binding);
-	}
-
-	command_buffer.set_vertex_input_state(vertex_input_state);
-
-	for (auto &input_resource : vertex_input_resources)
-	{
-		const auto &buffer_iter = sub_mesh.vertex_buffers.find(input_resource.name);
-
-		if (buffer_iter != sub_mesh.vertex_buffers.end())
-		{
-			std::vector<std::reference_wrapper<const backend::Buffer>> buffers;
-			buffers.emplace_back(std::ref(buffer_iter->second));
-
-			command_buffer.bind_vertex_buffers(input_resource.location, buffers, {0});
-		}
-	}
+	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sub_mesh);
 
 	draw_submesh_command(command_buffer, sub_mesh);
 }
