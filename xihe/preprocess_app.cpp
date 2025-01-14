@@ -4,6 +4,7 @@
 #include "ktxvulkan.h"
 #include "rendering/passes/geometry_pass.h"
 #include "rendering/passes/skybox_pass.h"
+#include "scene_graph/gltf_loader.h"
 #include "scene_graph/components/image.h"
 
 namespace xihe
@@ -161,7 +162,10 @@ bool PreprocessApp::prepare(Window *window)
 	}
 
 	//load_scene("scenes/Box.gltf");
-	load_scene("scenes/cube.gltf");
+	load_scene("scenes/helmet.gltf");
+	xihe::GltfLoader loader(*device_);
+	loader.
+
 	assert(scene_ && "Scene not loaded");
 
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);

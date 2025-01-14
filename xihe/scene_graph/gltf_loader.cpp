@@ -393,6 +393,49 @@ std::unique_ptr<sg::Scene> GltfLoader::read_scene_from_file(const std::string &f
 	return std::make_unique<sg::Scene>(load_scene(scene_index));
 }
 
+std::unique_ptr<sg::SubMesh> GltfLoader::read_model_from_file(const std::string &file_name, uint32_t index, bool storage_buffer)
+{
+	std::string err;
+	std::string warn;
+
+	tinygltf::TinyGLTF loader;
+
+	fs::Path gltf_file_path = fs::path::get(fs::path::Type::kAssets) / file_name;
+
+	bool import_result = loader.LoadASCIIFromFile(&model_, &err, &warn, gltf_file_path.string());
+
+	if (!import_result)
+	{
+		LOGE("Failed to load gltf file {}.", gltf_file_path.string().c_str());
+
+		return nullptr;
+	}
+
+	if (!err.empty())
+	{
+		LOGE("Error loading gltf model: {}.", err.c_str());
+
+		return nullptr;
+	}
+
+	if (!warn.empty())
+	{
+		LOGW("{}", warn.c_str());
+	}
+
+	const size_t pos = file_name.find_last_of('/');
+
+	model_path_ = file_name.substr(0, pos);
+
+	if (pos == std::string::npos)
+	{
+		model_path_.clear();
+	}
+
+	return std::make_unique<sg::Scene>(load_scene(scene_index));
+
+}
+
 sg::Scene GltfLoader::load_scene(int scene_index)
 {
 	sg::Scene scene;
@@ -849,6 +892,11 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 	}
 
 	return scene;
+}
+
+std::unique_ptr<sg::SubMesh> GltfLoader::load_model(uint32_t index, bool storage_buffer)
+{
+	
 }
 
 std::unique_ptr<sg::Node> GltfLoader::parse_node(const tinygltf::Node &gltf_node, size_t index) const

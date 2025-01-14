@@ -6,6 +6,8 @@
 #define TINYGLTF_NO_STB_IMAGE
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #define TINYGLTF_NO_EXTERNAL_IMAGE
+#include "vulkan/vulkan_format_traits.hpp"
+
 #include <tiny_gltf.h>
 
 #define KHR_LIGHTS_PUNCTUAL_EXTENSION "KHR_lights_punctual"
@@ -47,8 +49,12 @@ class GltfLoader
 
 	std::unique_ptr<sg::Scene> read_scene_from_file(const std::string &file_name, int scene_index = -1);
 
+	std::unique_ptr<sg::SubMesh> read_model_from_file(const std::string &file_name, uint32_t index, bool storage_buffer = false);
+
 private:
 	sg::Scene load_scene(int scene_index = -1);
+
+	std::unique_ptr<sg::SubMesh> load_model(uint32_t index, bool storage_buffer = false);
 
 	std::unique_ptr<sg::Node> parse_node(const tinygltf::Node &gltf_node, size_t index) const;
 
