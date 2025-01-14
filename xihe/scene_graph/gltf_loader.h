@@ -61,7 +61,7 @@ private:
 
 	std::unique_ptr<sg::PbrMaterial> parse_material(const tinygltf::Material &gltf_material) const;
 
-	std::unique_ptr<sg::Image> parse_image(tinygltf::Image &gltf_image) const;
+	std::unique_ptr<sg::Image> parse_image(tinygltf::Image &gltf_image, bool is_srgb=false) const;
 
 	std::unique_ptr<sg::Sampler> parse_sampler(const tinygltf::Sampler &gltf_sampler) const;
 

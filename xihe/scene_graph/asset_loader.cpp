@@ -74,6 +74,7 @@ sg::Texture *AssetLoader::load_texture_cube(sg::Scene &scene, const std::string 
 	device_.wait_idle();
 
 	texture->set_image(*image);
+	const uint32_t mip_levels = static_cast<uint32_t>(image->get_mipmaps().size());
 
 	scene.add_component(std::move(image));
 
@@ -85,6 +86,11 @@ sg::Texture *AssetLoader::load_texture_cube(sg::Scene &scene, const std::string 
 	sampler_info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
 	sampler_info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
 	sampler_info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+	sampler_info.mipLodBias   = 0.0f;
+	sampler_info.maxAnisotropy = 1.0f;
+	sampler_info.minLod = 0.0f;
+	sampler_info.maxLod        = static_cast<float>(mip_levels);
+	sampler_info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
 
 	backend::Sampler vk_sampler{device_, sampler_info};
 	vk_sampler.set_debug_name(file_name + "_sampler");

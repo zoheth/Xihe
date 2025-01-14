@@ -285,6 +285,11 @@ const backend::ImageView &Image::get_vk_image_view() const
 	return *vk_image_view;
 }
 
+bool Image::is_created() const
+{
+	return vk_image_view != nullptr;
+}
+
 sg::Mipmap &Image::get_mipmap(const size_t index)
 {
 	assert(index < mipmaps.size());

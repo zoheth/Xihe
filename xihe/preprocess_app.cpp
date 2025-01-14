@@ -171,7 +171,7 @@ bool PreprocessApp::prepare(Window *window)
 	update_bindless_descriptor_sets();
 
 	xihe::GltfLoader loader(*device_);
-	skybox_mesh_ = loader.minimal_read_model("scenes/cube.gltf");
+	skybox_mesh_ = loader.minimal_read_model("scenes/Box.gltf");
 
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
@@ -363,12 +363,12 @@ bool PreprocessApp::prepare(Window *window)
 	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent(), 0.1f, 1.0f);
 	auto  camera      = &camera_node.get_component<sg::Camera>();
 
-	auto skybox_pass = std::make_unique<SkyboxPass>(*skybox_mesh_, textures_.prefiltered_cube, *camera);
-	//auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
-	graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
-	    .shader({"skybox.vert", "skybox.frag"})
-	    .present()
-	    .finalize();
+	//auto skybox_pass = std::make_unique<SkyboxPass>(*skybox_mesh_, *textures_.environment_cube, *camera);
+	////auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
+	//graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
+	//    .shader({"skybox.vert", "skybox.frag"})
+	//    .present()
+	//    .finalize();
 
 	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
 	auto *p_cascade_script = cascade_script.get();

@@ -57,6 +57,8 @@ class Image : public sg::Component
 	const backend::Image                                  &get_vk_image() const;
 	const backend::ImageView                              &get_vk_image_view() const;
 
+	bool is_created() const;
+
   protected:
 	sg::Mipmap              &get_mipmap(size_t index);
 	std::vector<uint8_t>                                 &get_mut_data();

@@ -342,6 +342,48 @@ std::string to_snake_case(const std::string &text)
 	return result.str();
 }
 
+std::vector<bool> parse_srgb_requirements(const tinygltf::Model &model)
+{
+	std::vector<bool> needs_srgb(model.images.size(), false);
+
+	for (const auto &material : model.materials)
+	{
+		for (const auto &value : material.values)
+		{
+			if (value.first.find("Texture") != std::string::npos && texture_needs_srgb_colorspace(value.first))
+			{
+				int texture_index = value.second.TextureIndex();
+				if (texture_index >= 0 && texture_index < model.textures.size())
+				{
+					int image_index = model.textures[texture_index].source;
+					if (image_index >= 0 && image_index < needs_srgb.size())
+					{
+						needs_srgb[image_index] = true;
+					}
+				}
+			}
+		}
+
+		for (const auto &value : material.additionalValues)
+		{
+			if (value.first.find("Texture") != std::string::npos && texture_needs_srgb_colorspace(value.first))
+			{
+				int texture_index = value.second.TextureIndex();
+				if (texture_index >= 0 && texture_index < model.textures.size())
+				{
+					int image_index = model.textures[texture_index].source;
+					if (image_index >= 0 && image_index < needs_srgb.size())
+					{
+						needs_srgb[image_index] = true;
+					}
+				}
+			}
+		}
+	}
+
+	return needs_srgb;
+}
+
 }        // namespace
 
 std::unordered_map<std::string, bool> GltfLoader::supported_extensions_ = {
@@ -360,13 +402,15 @@ std::unique_ptr<sg::Scene> GltfLoader::read_scene_from_file(const std::string &f
 
 	fs::Path gltf_file_path = fs::path::get(fs::path::Type::kAssets) / file_name;
 
-	bool import_result = loader.LoadASCIIFromFile(&model_, &err, &warn, gltf_file_path.string());
-
-	if (!import_result)
+	fs::get_extension(file_name);
+	bool import_result = false;
+	if (fs::get_extension(file_name) == "gltf")
 	{
-		LOGE("Failed to load gltf file {}.", gltf_file_path.string().c_str());
-
-		return nullptr;
+		import_result = loader.LoadASCIIFromFile(&model_, &err, &warn, gltf_file_path.string());
+	}
+	else if(fs::get_extension(file_name) == "glb")
+	{
+		import_result = loader.LoadBinaryFromFile(&model_, &err, &warn, gltf_file_path.string());
 	}
 
 	if (!err.empty())
@@ -379,6 +423,13 @@ std::unique_ptr<sg::Scene> GltfLoader::read_scene_from_file(const std::string &f
 	if (!warn.empty())
 	{
 		LOGW("{}", warn.c_str());
+	}
+
+	if (!import_result)
+	{
+		LOGE("Failed to load gltf file {}.", gltf_file_path.string().c_str());
+
+		return nullptr;
 	}
 
 	const size_t pos = file_name.find_last_of('/');
@@ -522,11 +573,14 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 	auto image_count = to_u32(model_.images.size());
 
 	std::vector<std::future<std::unique_ptr<sg::Image>>> image_component_futures;
+
+	auto srgb_flags = parse_srgb_requirements(model_);
+
 	for (size_t image_index = 0; image_index < image_count; image_index++)
 	{
 		auto fut = thread_pool.push(
-		    [this, image_index](size_t) {
-			    auto image = parse_image(model_.images[image_index]);
+		    [this, image_index, &srgb_flags](size_t) {
+			    auto image = parse_image(model_.images[image_index], srgb_flags[image_index]);
 
 			    LOGI("Loaded gltf image #{} ({})", image_index, model_.images[image_index].uri.c_str());
 
@@ -1051,7 +1105,7 @@ std::unique_ptr<sg::PbrMaterial> GltfLoader::parse_material(const tinygltf::Mate
 	return material;
 }
 
-std::unique_ptr<sg::Image> GltfLoader::parse_image(tinygltf::Image &gltf_image) const
+std::unique_ptr<sg::Image> GltfLoader::parse_image(tinygltf::Image &gltf_image, bool is_srgb) const
 {
 	std::unique_ptr<sg::Image> image{nullptr};
 
@@ -1085,6 +1139,11 @@ std::unique_ptr<sg::Image> GltfLoader::parse_image(tinygltf::Image &gltf_image) 
 			image->generate_mipmaps();
 		}
 	 }
+
+	if (is_srgb)
+	{
+		image->coerce_format_to_srgb();
+	}
 
 	image->create_vk_image(device_);
 

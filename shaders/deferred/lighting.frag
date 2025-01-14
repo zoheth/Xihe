@@ -163,7 +163,7 @@ void main()
 #ifdef USE_IBL
 	vec3 V = normalize(camera_pos - pos);
 	vec3 ibl = calculate_ibl(normal, V, albedo, metallic, roughness);
-	final_color += ibl * 1.0;
+	final_color = ibl * 1.0;
 #else
     final_color += ambient_color;
 #endif
