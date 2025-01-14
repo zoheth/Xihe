@@ -59,8 +59,7 @@ class PbrMaterial : public Material
 
 	float roughness_factor{0.0f};
 
-	// x = diffuse index, y = roughness index, z = normal index, w = occlusion index.
-    // Occlusion and roughness are encoded in the same texture
+	// x: base color, y: metallic roughness occlusion, z: normal, w: emissive
 	glm::uvec4 texture_indices{2, 0, 0, 0};
 };
 }

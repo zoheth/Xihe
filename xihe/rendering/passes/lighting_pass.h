@@ -21,6 +21,7 @@ const std::vector<std::string> kLightTypeDefinitions = {
 struct alignas(16) LightUniform
 {
 	glm::mat4 inv_view_proj;
+	glm::vec3 camera_position;
 };
 
 struct alignas(16) Light
@@ -60,7 +61,7 @@ void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &
 class LightingPass : public RenderPass
 {
   public:
-	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr);
+	LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script = nullptr, Texture *irradiance = nullptr, Texture *prefiltered = nullptr, Texture *brdf_lut = nullptr);
 
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
@@ -83,6 +84,10 @@ class LightingPass : public RenderPass
 	backend::ShaderVariant shader_variant_cascade_;
 
 	sg::CascadeScript *cascade_script_;
+
+	Texture *irradiance_{nullptr};
+	Texture *prefiltered_{nullptr};
+	Texture *brdf_lut_{nullptr};
 
 	inline static bool show_cascade_view_{false};
 };

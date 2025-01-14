@@ -39,4 +39,11 @@ class GeometryPass : public RenderPass
 
 	uint32_t color_attachments_count_{2};
 };
+
+
+class PbrGeometryPass : public GeometryPass
+{
+public:
+
+};
 }        // namespace xihe::rendering

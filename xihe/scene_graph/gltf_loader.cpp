@@ -393,47 +393,72 @@ std::unique_ptr<sg::Scene> GltfLoader::read_scene_from_file(const std::string &f
 	return std::make_unique<sg::Scene>(load_scene(scene_index));
 }
 
-std::unique_ptr<sg::SubMesh> GltfLoader::read_model_from_file(const std::string &file_name, uint32_t index, bool storage_buffer)
+std::unique_ptr<sg::SubMesh> GltfLoader::minimal_read_model(const std::string &file_name)
 {
-	std::string err;
-	std::string warn;
-
+	tinygltf::Model    model;
 	tinygltf::TinyGLTF loader;
+	std::string        err, warn;
+	fs::Path           gltf_file_path = fs::path::get(fs::path::Type::kAssets) / file_name;
 
-	fs::Path gltf_file_path = fs::path::get(fs::path::Type::kAssets) / file_name;
-
-	bool import_result = loader.LoadASCIIFromFile(&model_, &err, &warn, gltf_file_path.string());
-
-	if (!import_result)
+	if (!loader.LoadASCIIFromFile(&model, &err, &warn, gltf_file_path.string()))
 	{
-		LOGE("Failed to load gltf file {}.", gltf_file_path.string().c_str());
-
-		return nullptr;
+		throw std::runtime_error("Failed to load GLTF file: " + err);
 	}
 
-	if (!err.empty())
+	if (model.meshes.empty())
 	{
-		LOGE("Error loading gltf model: {}.", err.c_str());
-
-		return nullptr;
+		throw std::runtime_error("No mesh found in GLTF file");
 	}
 
-	if (!warn.empty())
+	const auto &gltf_mesh = model.meshes[0];
+
+	for (const auto &gltf_primitive : gltf_mesh.primitives)
 	{
-		LOGW("{}", warn.c_str());
+		MeshPrimitiveData primitive_data;
+		primitive_data.name = gltf_mesh.name;
+
+		// auto submesh_name = fmt::format("'{}' mesh, primitive #{}", gltf_mesh.name, i_primitive);
+		// auto submesh      = std::make_unique<sg::SubMesh>(std::move(submesh_name));
+
+		for (auto &attribute : gltf_primitive.attributes)
+		{
+			VertexAttributeData attrib_data;
+			std::string         attrib_name = attribute.first;
+			std::ranges::transform(attrib_name, attrib_name.begin(), ::tolower);
+
+			int accessor_index = attribute.second;
+			attrib_data.format = get_attribute_format(&model, accessor_index);
+			attrib_data.stride = to_u32(get_attribute_stride(&model, accessor_index));
+			attrib_data.data   = get_attribute_data(&model, accessor_index);
+
+			primitive_data.attributes[attrib_name] = std::move(attrib_data);
+
+			if (attrib_name == "position")
+			{
+				primitive_data.vertex_count = to_u32(model.accessors[accessor_index].count);
+			}
+		}
+
+		if (gltf_primitive.indices >= 0)
+		{
+			int accessor_index         = gltf_primitive.indices;
+			primitive_data.index_count = to_u32(get_attribute_size(&model, accessor_index));
+			primitive_data.index_type  = get_index_type(&model, accessor_index);
+			primitive_data.indices     = get_attribute_data(&model, accessor_index);
+
+			// Handle index format conversion if necessary
+			if (primitive_data.index_type == vk::IndexType::eUint8EXT)
+			{
+				primitive_data.indices    = convert_indices_to_uint16(primitive_data.indices);
+				primitive_data.index_type = vk::IndexType::eUint16;
+			}
+		}
+
+		auto submesh = std::make_unique<sg::SubMesh>(primitive_data, device_);
+
+		return submesh;
 	}
-
-	const size_t pos = file_name.find_last_of('/');
-
-	model_path_ = file_name.substr(0, pos);
-
-	if (pos == std::string::npos)
-	{
-		model_path_.clear();
-	}
-
-	return std::make_unique<sg::Scene>(load_scene(scene_index));
-
+	return nullptr;
 }
 
 sg::Scene GltfLoader::load_scene(int scene_index)
@@ -892,11 +917,6 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 	}
 
 	return scene;
-}
-
-std::unique_ptr<sg::SubMesh> GltfLoader::load_model(uint32_t index, bool storage_buffer)
-{
-	
 }
 
 std::unique_ptr<sg::Node> GltfLoader::parse_node(const tinygltf::Node &gltf_node, size_t index) const

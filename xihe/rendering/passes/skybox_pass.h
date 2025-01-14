@@ -10,15 +10,15 @@ namespace xihe::rendering
 class SkyboxPass : public RenderPass
 {
   public:
-	SkyboxPass(sg::Mesh &box_mesh, rendering::Texture &cubemap, sg::Camera &camera);
-	SkyboxPass(sg::Mesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera);
+	SkyboxPass(sg::SubMesh &box_mesh, rendering::Texture &cubemap, sg::Camera &camera);
+	SkyboxPass(sg::SubMesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera);
 
 	~SkyboxPass() override = default;
 
 	void execute(backend::CommandBuffer &command_buffer, RenderFrame &active_frame, std::vector<ShaderBindable> input_bindables) override;
 
   private:
-	sg::Mesh    &box_mesh_;
+	sg::SubMesh    &box_mesh_;
 	Texture     *cubemap_{nullptr};
 	sg::Texture *cubemap_sg_{nullptr};
 	sg::Camera  &camera_;

@@ -5,11 +5,11 @@
 
 namespace xihe::rendering
 {
-SkyboxPass::SkyboxPass(sg::Mesh &box_mesh, Texture &cubemap, sg::Camera &camera) :
+SkyboxPass::SkyboxPass(sg::SubMesh &box_mesh, Texture &cubemap, sg::Camera &camera) :
     box_mesh_(box_mesh), cubemap_(&cubemap), camera_(camera)
 {}
 
-SkyboxPass::SkyboxPass(sg::Mesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera) :
+SkyboxPass::SkyboxPass(sg::SubMesh &box_mesh, sg::Texture &cubemap, sg::Camera &camera) :
     box_mesh_(box_mesh), cubemap_sg_(&cubemap), camera_(camera)
 {}
 
@@ -44,18 +44,17 @@ void SkyboxPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &ac
 		command_buffer.bind_image(cubemap_sg_->get_image()->get_vk_image_view(), cubemap_sg_->get_sampler()->vk_sampler_, 0, 2, 0);
 	}
 
-	sg::SubMesh &sub_mesh = *box_mesh_.get_submeshes()[0];
-	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sub_mesh);
+	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, box_mesh_);
 
-	if (sub_mesh.index_count != 0)
+	if (box_mesh_.index_count != 0)
 	{
-		command_buffer.bind_index_buffer(*sub_mesh.index_buffer, sub_mesh.index_offset, sub_mesh.index_type);
+		command_buffer.bind_index_buffer(*box_mesh_.index_buffer, box_mesh_.index_offset, box_mesh_.index_type);
 
-		command_buffer.draw_indexed(sub_mesh.index_count, 1, 0, 0, 0);
+		command_buffer.draw_indexed(box_mesh_.index_count, 1, 0, 0, 0);
 	}
 	else
 	{
-		command_buffer.draw(sub_mesh.vertex_count, 1, 0, 0);
+		command_buffer.draw(box_mesh_.vertex_count, 1, 0, 0);
 	}
 }
 }        // namespace xihe::rendering

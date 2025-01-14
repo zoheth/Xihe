@@ -34,5 +34,7 @@ class PreprocessApp : public XiheApp
 		rendering::Texture irradiance_cube;
 		rendering::Texture prefiltered_cube;
 	} textures_;
+
+	std::unique_ptr<sg::SubMesh> skybox_mesh_;
 };
 }        // namespace xihe

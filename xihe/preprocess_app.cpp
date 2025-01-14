@@ -2,7 +2,10 @@
 
 #include "ktx.h"
 #include "ktxvulkan.h"
+#include "rendering/passes/bloom_pass.h"
+#include "rendering/passes/cascade_shadow_pass.h"
 #include "rendering/passes/geometry_pass.h"
+#include "rendering/passes/lighting_pass.h"
 #include "rendering/passes/skybox_pass.h"
 #include "scene_graph/gltf_loader.h"
 #include "scene_graph/components/image.h"
@@ -161,16 +164,18 @@ bool PreprocessApp::prepare(Window *window)
 		return false;
 	}
 
-	//load_scene("scenes/Box.gltf");
 	load_scene("scenes/helmet.gltf");
-	xihe::GltfLoader loader(*device_);
-	loader.
 
 	assert(scene_ && "Scene not loaded");
 
+	update_bindless_descriptor_sets();
+
+	xihe::GltfLoader loader(*device_);
+	skybox_mesh_ = loader.minimal_read_model("scenes/cube.gltf");
+
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
-	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/concrete.ktx");
+	textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/warm_bar.ktx");
 	// textures_.environment_cube = asset_loader_->load_texture_cube(*scene_, "env_cube", "textures/output.ktx2");
 
 	vk::SamplerCreateInfo default_sampler_info;
@@ -237,7 +242,7 @@ bool PreprocessApp::prepare(Window *window)
 
 			{
 				std::string suffix         = "_mip" + to_string(m) + "_face" + to_string(f);
-				auto        prefilter_pass = std::make_unique<PrefilterPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, m, f, static_cast<PreprocessType>(target));
+				auto        prefilter_pass = std::make_unique<PrefilterPass>(*skybox_mesh_, *textures_.environment_cube, m, f, static_cast<PreprocessType>(target));
 
 				std::string attachment_name;
 
@@ -355,15 +360,154 @@ bool PreprocessApp::prepare(Window *window)
 	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_);
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
-	auto &camera_node = sg::add_free_camera(*scene_, "default_camera", render_context_->get_surface_extent(), 3, 2);
+	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent(), 0.1f, 1.0f);
 	auto  camera      = &camera_node.get_component<sg::Camera>();
 
-	auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], textures_.prefiltered_cube, *camera);
+	auto skybox_pass = std::make_unique<SkyboxPass>(*skybox_mesh_, textures_.prefiltered_cube, *camera);
 	//auto skybox_pass = std::make_unique<SkyboxPass>(*scene_->get_components<sg::Mesh>()[0], *textures_.environment_cube, *camera);
 	graph_builder_->add_pass("skybox_pass", std::move(skybox_pass))
 	    .shader({"skybox.vert", "skybox.frag"})
 	    .present()
 	    .finalize();
+
+	auto  cascade_script   = std::make_unique<sg::CascadeScript>("", *scene_, *dynamic_cast<sg::PerspectiveCamera *>(camera));
+	auto *p_cascade_script = cascade_script.get();
+	scene_->add_component(std::move(cascade_script));
+	// shadow pass
+	{
+		PassAttachment shadow_attachment_0{AttachmentType::kDepth, "shadowmap"};
+		shadow_attachment_0.extent_desc                    = ExtentDescriptor::Fixed({kShadowmapResolution, kShadowmapResolution, 1});
+		shadow_attachment_0.image_properties.array_layers  = 3;
+		shadow_attachment_0.image_properties.current_layer = 0;
+		shadow_attachment_0.image_properties.n_use_layer   = 1;
+
+		PassAttachment shadow_attachment_1                 = shadow_attachment_0;
+		shadow_attachment_1.image_properties.current_layer = 1;
+
+		PassAttachment shadow_attachment_2                 = shadow_attachment_0;
+		shadow_attachment_2.image_properties.current_layer = 2;
+
+		auto shadow_pass_0 = std::make_unique<CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 0);
+		graph_builder_->add_pass("Shadow 0", std::move(shadow_pass_0))
+		    .attachments({{shadow_attachment_0}})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
+		    .finalize();
+
+		auto shadow_pass_1 = std::make_unique<CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 1);
+		graph_builder_->add_pass("Shadow 1", std::move(shadow_pass_1))
+		    .attachments({{shadow_attachment_1}})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
+		    .finalize();
+
+		auto shadow_pass_2 = std::make_unique<CascadeShadowPass>(scene_->get_components<sg::Mesh>(), *p_cascade_script, 2);
+		graph_builder_->add_pass("Shadow 2", std::move(shadow_pass_2))
+		    .attachments({{shadow_attachment_2}})
+		    .shader({"shadow/csm.vert", "shadow/csm.frag"})
+		    .finalize();
+
+	}
+
+	// geometry pass
+	{
+		auto geometry_pass = std::make_unique<GeometryPass>(scene_->get_components<sg::Mesh>(), *camera);
+
+		graph_builder_->add_pass("Geometry", std::move(geometry_pass))
+
+		    .attachments({{AttachmentType::kDepth, "depth"},
+		                  {AttachmentType::kColor, "albedo"},
+		                  {AttachmentType::kColor, "normal", vk::Format::eA2B10G10R10UnormPack32},
+		                  {AttachmentType::kColor, "emission"}})
+
+		    .shader({"deferred/geometry.vert", "deferred/geometry.frag"})
+
+		    .finalize();
+	}
+
+	// lighting pass
+	{
+		auto lighting_pass = std::make_unique<LightingPass>(scene_->get_components<sg::Light>(), *camera, p_cascade_script, &textures_.irradiance_cube, &textures_.prefiltered_cube, &textures_.lut_brdf);
+
+		graph_builder_->add_pass("Lighting", std::move(lighting_pass))
+
+		    .bindables({{BindableType::kSampled, "depth"},
+		                {BindableType::kSampled, "albedo"},
+		                {BindableType::kSampled, "normal"},
+		                {BindableType::kSampled, "emission"},
+		                {BindableType::kSampled, "shadowmap"}})
+
+		    .attachments({{AttachmentType::kColor, "lighting", vk::Format::eR16G16B16A16Sfloat}})
+
+		    .shader({"deferred/lighting.vert", "deferred/lighting.frag"})
+
+		    .finalize();
+	}
+
+	// bloom pass
+	{
+		auto extract_pass = std::make_unique<BloomExtractPass>();
+
+		graph_builder_->add_pass("Bloom Extract", std::move(extract_pass))
+		    .bindables({{BindableType::kSampled, "lighting"},
+		                {BindableType::kStorageWrite, "bloom_extract", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5, 0.5)}})
+		    .shader({"post_processing/bloom/threshold.comp"})
+		    .finalize();
+
+		auto downsample_pass0 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Downsample 0", std::move(downsample_pass0))
+		    .bindables({{BindableType::kSampled, "bloom_extract"},
+		                {BindableType::kStorageWrite, "bloom_down_sample_0", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.25, 0.25)}})
+		    .shader({"post_processing/bloom/blur_down_first.comp"})
+		    .finalize();
+
+		auto downsample_pass1 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Downsample 1", std::move(downsample_pass1))
+		    .bindables({{BindableType::kSampled, "bloom_down_sample_0"},
+		                {BindableType::kStorageWrite, "bloom_down_sample_1", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.125, 0.125)}})
+		    .shader({"post_processing/bloom/blur_down.comp"})
+		    .finalize();
+
+		auto downsample_pass2 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Downsample 2", std::move(downsample_pass2))
+		    .bindables({{BindableType::kSampled, "bloom_down_sample_1"},
+		                {BindableType::kStorageWrite, "bloom_down_sample_2", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.0625, 0.0625)}})
+		    .shader({"post_processing/bloom/blur_down.comp"})
+		    .finalize();
+
+		auto upsample_pass0 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 0", std::move(upsample_pass0))
+		    .bindables({{BindableType::kSampled, "bloom_down_sample_2"},
+		                {BindableType::kStorageWrite, "bloom_up_sample_0", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.125, 0.125)}})
+		    .shader({"post_processing/bloom/blur_up.comp"})
+		    .finalize();
+
+		auto upsample_pass1 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 1", std::move(upsample_pass1))
+		    .bindables({{BindableType::kSampled, "bloom_up_sample_0"},
+		                {BindableType::kStorageWrite, "bloom_up_sample_1", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.25, 0.25)}})
+		    .shader({"post_processing/bloom/blur_up.comp"})
+		    .finalize();
+
+		auto upsample_pass2 = std::make_unique<BloomComputePass>();
+		graph_builder_->add_pass("Bloom Upsample 2", std::move(upsample_pass2))
+		    .bindables({{BindableType::kSampled, "bloom_up_sample_1"},
+		                {BindableType::kStorageWrite, "bloom_up_sample_2", vk::Format::eR16G16B16A16Sfloat, ExtentDescriptor::SwapchainRelative(0.5, 0.5)}})
+		    .shader({"post_processing/bloom/blur_up.comp"})
+		    .finalize();
+	}
+
+	gui_ = std::make_unique<Gui>(*this, *window, stats_.get());
+	// composite pass
+	{
+		auto composite_pass = std::make_unique<BloomCompositePass>();
+		graph_builder_->add_pass("Bloom Composite", std::move(composite_pass))
+		    .bindables({{BindableType::kSampled, "lighting"},
+		                {BindableType::kSampled, "bloom_up_sample_2"}})
+		    .shader({"post_processing/bloom_composite.vert", "post_processing/bloom_composite.frag"})
+		    .gui(gui_.get())
+		    .present()
+		    .finalize();
+	}
+
 
 	graph_builder_->build();
 	return true;

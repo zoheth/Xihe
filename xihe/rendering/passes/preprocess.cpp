@@ -17,7 +17,7 @@ std::vector<glm::mat4> matrices = {
 };
 }
 
-PrefilterPass::PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target) :
+PrefilterPass::PrefilterPass(sg::SubMesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target) :
 	target_(target),
 	cubemap_(cubemap),
 	sky_box_(sky_box),
@@ -57,18 +57,17 @@ void PrefilterPass::execute(backend::CommandBuffer &command_buffer, RenderFrame 
 
 	command_buffer.bind_image(cubemap_.get_image()->get_vk_image_view(), cubemap_.get_sampler()->vk_sampler_, 0, 1, 0);
 
-	sg::SubMesh &sub_mesh = *sky_box_.get_submeshes()[0];
-	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sub_mesh);
+	bind_submesh_vertex_buffers(command_buffer, pipeline_layout, sky_box_);
 
-	if (sub_mesh.index_count != 0)
+	if (sky_box_.index_count != 0)
 	{
-		command_buffer.bind_index_buffer(*sub_mesh.index_buffer, sub_mesh.index_offset, sub_mesh.index_type);
+		command_buffer.bind_index_buffer(*sky_box_.index_buffer, sky_box_.index_offset, sky_box_.index_type);
 
-		command_buffer.draw_indexed(sub_mesh.index_count, 1, 0, 0, 0);
+		command_buffer.draw_indexed(sky_box_.index_count, 1, 0, 0, 0);
 	}
 	else
 	{
-		command_buffer.draw(sub_mesh.vertex_count, 1, 0, 0);
+		command_buffer.draw(sky_box_.vertex_count, 1, 0, 0);
 	}
 }
 

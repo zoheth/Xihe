@@ -27,5 +27,17 @@ void PbrMaterial::set_texture_index(const std::string &name, uint32_t texture_in
 	{
 		texture_indices.x = texture_index;
 	}
+	else if (name == "metallic_roughness_texture")
+	{
+		texture_indices.y = texture_index;
+	}
+	else if (name == "normal_texture")
+	{
+		texture_indices.z = texture_index;
+	}
+	else if (name == "emissive_texture")
+	{
+		texture_indices.w = texture_index;
+	}
 }
 }        // namespace xihe::sg

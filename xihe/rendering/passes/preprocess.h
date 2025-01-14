@@ -16,7 +16,7 @@ enum PreprocessType
 class PrefilterPass : public RenderPass
 {
   public:
-	PrefilterPass(sg::Mesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target);
+	PrefilterPass(sg::SubMesh &sky_box, sg::Texture &cubemap, uint32_t mip, uint32_t face, PreprocessType target);
 
 	~PrefilterPass() override = default;
 
@@ -28,7 +28,7 @@ class PrefilterPass : public RenderPass
 	PreprocessType target_;
 
 	sg::Texture &cubemap_;
-	sg::Mesh    &sky_box_;
+	sg::SubMesh    &sky_box_;
 
 	uint32_t mip_{};
 	uint32_t face_{};

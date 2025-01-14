@@ -25,7 +25,7 @@ CascadeScript::CascadeScript(const std::string &name, sg::Scene &scene, sg::Pers
 		cascade_cameras_[index]->set_node(*directional_light->get_node());
 	}
 
-	calculate_cascade_split_depth();
+	calculate_cascade_split_depth(0.99f);
 }
 
 void CascadeScript::update(float delta_time)

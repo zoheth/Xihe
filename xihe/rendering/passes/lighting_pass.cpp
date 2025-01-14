@@ -33,11 +33,17 @@ void bind_lighting(backend::CommandBuffer &command_buffer, const LightingState &
 	command_buffer.set_specialization_constant(2, to_u32(lighting_state.spot_lights.size()));
 }
 
-LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script) :
-    lights_{std::move(lights)}, camera_(camera), cascade_script_{cascade_script}
+LightingPass::LightingPass(std::vector<sg::Light *> lights, sg::Camera &camera, sg::CascadeScript *cascade_script, Texture *irradiance, Texture *prefiltered, Texture *brdf_lut) :
+    lights_{std::move(lights)}, camera_(camera), cascade_script_{cascade_script}, irradiance_{irradiance}, prefiltered_{prefiltered}, brdf_lut_{brdf_lut}
 {
 	shader_variant_.add_define({"MAX_LIGHT_COUNT " + std::to_string(kMaxLightCount)});
 	shader_variant_cascade_.add_define({"MAX_LIGHT_COUNT " + std::to_string(kMaxLightCount)});
+
+	if (irradiance_)
+	{
+		shader_variant_.add_define("USE_IBL");
+		shader_variant_cascade_.add_define("USE_IBL");
+	}
 
 	shader_variant_.add_definitions(kLightTypeDefinitions);
 	shader_variant_cascade_.add_definitions(kLightTypeDefinitions);
@@ -68,10 +74,19 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 	command_buffer.bind_image(input_bindables[0].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 0, 0);
 	command_buffer.bind_image(input_bindables[1].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 1, 0);
 	command_buffer.bind_image(input_bindables[2].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 2, 0);
+	command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_g_buffer_sampler()), 0, 9, 0);        // emissive texture
+
+	if (irradiance_)
+	{
+		command_buffer.bind_image(*irradiance_->image_view, *irradiance_->sampler, 0, 11, 0);
+		command_buffer.bind_image(*prefiltered_->image_view, *prefiltered_->sampler, 0, 12, 0);
+		command_buffer.bind_image(*brdf_lut_->image_view, *brdf_lut_->sampler, 0, 13, 0);
+	}
 
 	LightUniform light_uniform;
 
 	light_uniform.inv_view_proj = glm::inverse(vulkan_style_projection(camera_.get_projection()) * camera_.get_view());
+	light_uniform.camera_position = glm::vec4(camera_.get_node()->get_transform().get_translation(), 1.0f);
 
 	auto allocation = active_frame.allocate_buffer(vk::BufferUsageFlagBits::eUniformBuffer, sizeof(LightUniform), thread_index_);
 	allocation.update(light_uniform);
@@ -92,12 +107,7 @@ void LightingPass::execute(backend::CommandBuffer &command_buffer, RenderFrame &
 		allocation.update(shadow_uniform);
 		command_buffer.bind_buffer(allocation.get_buffer(), allocation.get_offset(), allocation.get_size(), 0, 5, 0);
 
-		command_buffer.bind_image(input_bindables[3].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
-	}
-
-	if (input_bindables.size() > 4)
-	{
-		command_buffer.bind_image(input_bindables[4].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 10, 0);
+		command_buffer.bind_image(input_bindables[4].image_view(), resource_cache.request_sampler(get_shadowmap_sampler()), 0, 6, 0);
 	}
 
 	command_buffer.draw(3, 1, 0, 0);
