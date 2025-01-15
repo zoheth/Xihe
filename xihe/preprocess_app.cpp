@@ -171,7 +171,7 @@ bool PreprocessApp::prepare(Window *window)
 	update_bindless_descriptor_sets();
 
 	xihe::GltfLoader loader(*device_);
-	skybox_mesh_ = loader.minimal_read_model("scenes/Box.gltf");
+	skybox_mesh_ = loader.minimal_read_model("scenes/cube.gltf");
 
 	asset_loader_ = std::make_unique<AssetLoader>(*device_);
 
@@ -525,12 +525,12 @@ void PreprocessApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 void PreprocessApp::draw_gui()
 {
-	XiheApp::draw_gui();
+	gui_->show_stats(*stats_);
 }
 
 }        // namespace xihe
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::PreprocessApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::PreprocessApp>();
+//}

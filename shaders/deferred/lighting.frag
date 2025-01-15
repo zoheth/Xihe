@@ -104,7 +104,7 @@ void main()
         vec4 world_dir = global_uniform.inv_view_proj * clip;
         vec3 view_dir = normalize(world_dir.xyz / world_dir.w);
     
-        vec3 background = textureLod(samplerIrradiance, view_dir, 10.0).rgb;
+        vec3 background = textureLod(prefilteredMap, view_dir, 1.0).rgb;
         o_color = vec4(reinhard_extended(background, 1.0), 1.0);
         return;
     }
@@ -163,7 +163,7 @@ void main()
 #ifdef USE_IBL
 	vec3 V = normalize(camera_pos - pos);
 	vec3 ibl = calculate_ibl(normal, V, albedo, metallic, roughness);
-	final_color = ibl * 1.0;
+	final_color += ibl * 1.0;
 #else
     final_color += ambient_color;
 #endif

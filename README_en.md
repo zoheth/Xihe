@@ -19,9 +19,10 @@ Xi He is a modern rendering engine developed following the approach outlined in 
 
 #### Rendering Features
 - **Deferred Rendering**
-- **Clustered Deferred Lighting**
 - **Cascaded Shadow Mapping**
 - **Bloom**
+- **PBR IBL**
+- **Clustered Deferred Lighting**
 - **Mesh Shader Shadows** (Add shadows for hundreds of point lights with low performance overhead)
 
 ### Planned Features
@@ -33,6 +34,7 @@ Xi He is a modern rendering engine developed following the approach outlined in 
 
 ## Gallery
 
+![PBR](./assets/images/pbr.png)
 ![Meshlet](./assets/images/meshlet.png)
 ![Point Shadows](./assets/images/meshshader_shadows.png)
 

@@ -350,8 +350,8 @@ void SampleApp::draw_gui()
 	    /* lines = */ 2);
 }
 }        // namespace xihe
-//
-//std::unique_ptr<xihe::Application> create_application()
-//{
-//	return std::make_unique<xihe::SampleApp>();
-//}
+
+std::unique_ptr<xihe::Application> create_application()
+{
+	return std::make_unique<xihe::SampleApp>();
+}

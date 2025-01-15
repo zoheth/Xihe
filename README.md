@@ -20,9 +20,10 @@
 
 #### 渲染功能
 - **延迟渲染**
-- **分簇延迟光照**
 - **级联阴影映射**
 - **泛光**
+- **PBR IBL**
+- **分簇延迟光照**
 - **Mesh Shader 阴影** （低消耗为数百个点光源添加阴影）
 
 ### 待实现功能
@@ -34,6 +35,7 @@
 
 ## 效果展示
 
+![PBR](./assets/images/pbr.png)
 ![Meshlet](./assets/images/meshlet.png)
 ![Point Shadows](./assets/images/meshshader_shadows.png)
 

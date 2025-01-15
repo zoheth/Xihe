@@ -718,11 +718,6 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 				assert(gltf_value.second.TextureIndex() < textures.size());
 				sg::Texture *tex = textures[gltf_value.second.TextureIndex()];
 
-				if (texture_needs_srgb_colorspace(gltf_value.first))
-				{
-					tex->get_image()->coerce_format_to_srgb();
-				}
-
 				material->textures[tex_name] = tex;
 
 				material->set_texture_index(tex_name, gltf_value.second.TextureIndex());
@@ -737,11 +732,6 @@ sg::Scene GltfLoader::load_scene(int scene_index)
 
 				assert(gltf_value.second.TextureIndex() < textures.size());
 				sg::Texture *tex = textures[gltf_value.second.TextureIndex()];
-
-				if (texture_needs_srgb_colorspace(gltf_value.first))
-				{
-					tex->get_image()->coerce_format_to_srgb();
-				}
 
 				material->textures[tex_name] = tex;
 
