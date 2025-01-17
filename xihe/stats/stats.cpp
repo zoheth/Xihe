@@ -120,4 +120,20 @@ void Stats::push_sample(const StatsProvider::Counters &sample)
 		values.back() = measurement * alpha_smoothing + *(values.end() - 2) * (1.0f - alpha_smoothing);
 	}
 }
+
+void Stats::begin_sampling(backend::CommandBuffer &command_buffer)
+{
+	for (auto &provider : providers)
+	{
+		provider->begin_sampling(command_buffer);
+	}
+}
+
+void Stats::end_sampling(backend::CommandBuffer &command_buffer)
+{
+	for (auto &provider : providers)
+	{
+		provider->end_sampling(command_buffer);
+	}
+}
 }        // namespace xihe::stats

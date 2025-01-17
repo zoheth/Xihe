@@ -85,6 +85,8 @@ class Gui
 
 	bool input_event(const InputEvent &input_event);
 
+	void resize(uint32_t width, uint32_t height) const;
+
 	void show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body);
 
 	void show_views_window(std::function<void()> body, const uint32_t lines) const;

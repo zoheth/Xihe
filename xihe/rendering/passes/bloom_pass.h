@@ -15,13 +15,13 @@ struct ExtractPush
 {
 	float threshold      = 1.2f;
 	float soft_threshold = 2.0f;
-	float intensity      = 0.25f;
+	float intensity      = 0.1f;
 	float saturation     = 1.0f;
 };
 
 struct CompositePush
 {
-	float bloom_strength = 0.3f;
+	float bloom_strength = 0.1f;
 	float exposure       = 1.0f;
 };
 

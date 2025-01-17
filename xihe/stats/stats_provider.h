@@ -1,9 +1,8 @@
 #pragma once
+#include <map>
 #include <unordered_map>
 
 #include "stats_common.h"
-
-#include <map>
 
 namespace xihe
 {
@@ -49,7 +48,7 @@ class StatsProvider
 	virtual void end_sampling(backend::CommandBuffer &command_buffer)
 	{}
 
-protected:
+  protected:
 	static std::map<StatIndex, StatGraphData> default_graph_map_;
 };
 }        // namespace stats

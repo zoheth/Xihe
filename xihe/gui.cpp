@@ -1,8 +1,8 @@
 #include "gui.h"
 
+#include "fmt/format.h"
 #include "rendering/pipeline_state.h"
 #include "xihe_app.h"
-#include "fmt/format.h"
 
 #include <numeric>
 
@@ -48,15 +48,15 @@ Gui::Gui(XiheApp &app, Window &window, const stats::Stats *stats, const float fo
 
 	ImGuiStyle &style = ImGui::GetStyle();
 
-// Main colors
+	// Main colors
 	style.Colors[ImGuiCol_WindowBg]      = ImVec4(0.06f, 0.06f, 0.08f, 0.97f);
 	style.Colors[ImGuiCol_TitleBg]       = ImVec4(0.15f, 0.13f, 0.18f, 0.98f);
 	style.Colors[ImGuiCol_TitleBgActive] = ImVec4(0.20f, 0.17f, 0.24f, 1.00f);
-	style.Colors[ImGuiCol_MenuBarBg]     = ImVec4(0.15f, 0.13f, 0.18f, 0.98f); 
+	style.Colors[ImGuiCol_MenuBarBg]     = ImVec4(0.15f, 0.13f, 0.18f, 0.98f);
 
 	// Headers
 	style.Colors[ImGuiCol_Header]        = ImVec4(0.25f, 0.22f, 0.32f, 0.45f);
-	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.30f, 0.26f, 0.37f, 0.55f); 
+	style.Colors[ImGuiCol_HeaderHovered] = ImVec4(0.30f, 0.26f, 0.37f, 0.55f);
 	style.Colors[ImGuiCol_HeaderActive]  = ImVec4(0.35f, 0.30f, 0.42f, 0.65f);
 
 	// Frames
@@ -67,7 +67,7 @@ Gui::Gui(XiheApp &app, Window &window, const stats::Stats *stats, const float fo
 	// Interactive elements
 	style.Colors[ImGuiCol_CheckMark]        = ImVec4(0.43f, 0.35f, 0.58f, 1.00f);
 	style.Colors[ImGuiCol_SliderGrab]       = ImVec4(0.43f, 0.35f, 0.58f, 0.54f);
-	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.43f, 0.35f, 0.58f, 0.84f); 
+	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.43f, 0.35f, 0.58f, 0.84f);
 
 	// Buttons
 	style.Colors[ImGuiCol_Button]        = ImVec4(0.25f, 0.22f, 0.32f, 0.54f);
@@ -516,6 +516,13 @@ bool Gui::input_event(const InputEvent &input_event)
 	return capture_move_event;
 }
 
+void Gui::resize(uint32_t width, uint32_t height) const
+{
+	auto &io         = ImGui::GetIO();
+	io.DisplaySize.x = static_cast<float>(width);
+	io.DisplaySize.y = static_cast<float>(height);
+}
+
 void Gui::show_simple_window(const std::string &name, uint32_t last_fps, const std::function<void()> &body)
 {
 	ImGuiIO &io = ImGui::GetIO();
@@ -557,8 +564,8 @@ void Gui::show_views_window(std::function<void()> body, const uint32_t lines) co
 
 void Gui::show_stats(const stats::Stats &stats)
 {
-	ImGuiIO &io = ImGui::GetIO();
-	ImVec2 pos = ImVec2(io.DisplaySize.x - 200, 10);
+	ImGuiIO &io  = ImGui::GetIO();
+	ImVec2   pos = ImVec2(io.DisplaySize.x - 200, 10);
 	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 
 	ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
@@ -585,8 +592,6 @@ void Gui::show_stats(const stats::Stats &stats)
 
 		ImVec2 graph_size = ImVec2(io.DisplaySize.x - pos.x - 10, stats_view_.graph_height * dpi_factor_);
 
-
-
 		std::stringstream graph_label;
 		float             avg = std::accumulate(graph_elements.begin(), graph_elements.end(), 0.0f) / graph_elements.size();
 
@@ -597,7 +602,7 @@ void Gui::show_stats(const stats::Stats &stats)
 			ImGui::PlotLines(text.c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
 
 			ImGui::Text(text.c_str());
-			ImGui::Separator(); 
+			ImGui::Separator();
 		}
 		else
 		{

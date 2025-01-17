@@ -37,6 +37,8 @@ class XiheApp : public Application
 
 	void input_event(const InputEvent &input_event) override;
 
+	bool resize(const uint32_t width, const uint32_t height) override;
+
 	void finish() override;
 
 	const std::string &get_name() const;

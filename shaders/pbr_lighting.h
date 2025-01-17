@@ -114,36 +114,52 @@ vec3 F_SchlickRoughness(float cosTheta, vec3 F0, float roughness)
 	return F0 + (max(vec3(r1), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
+vec3 srgbToLinear(vec3 srgb)
+{
+	return pow(srgb, vec3(2.2));
+}
+
+// From http://filmicworlds.com/blog/filmic-tonemapping-operators/
+vec3 Uncharted2Tonemap(vec3 color)
+{
+	float A = 0.15;
+	float B = 0.50;
+	float C = 0.10;
+	float D = 0.20;
+	float E = 0.02;
+	float F = 0.30;
+	float W = 11.2;
+	return ((color * (A * color + C * B) + D * E) / (color * (A * color + B) + D * F)) - E / F;
+}
+
+vec4 tonemap(vec4 color)
+{
+	vec3 outcol = Uncharted2Tonemap(color.rgb);
+	outcol      = outcol * (1.0f / Uncharted2Tonemap(vec3(11.2f)));
+	return vec4(pow(outcol, vec3(1.0f / 2.2)), color.a);
+}
+
 vec3 calculate_ibl(vec3 N, vec3 V, vec3 albedo, float metallic, float roughness)
 {
 	vec3  F0  = mix(vec3(0.04), albedo, metallic);
 	float NoV = max(dot(N, V), 0.001);
 
-	// 计算反射向量
 	vec3 R = reflect(-V, N);
 
-	// 1. 漫反射IBL部分
-	vec3 irradiance = texture(samplerIrradiance, N).rgb;
+	vec3 irradiance = srgbToLinear(texture(samplerIrradiance, N).rgb);
 	vec3 diffuse    = irradiance * albedo;
 
-	// 2. 镜面反射IBL部分
-	// 根据粗糙度计算合适的mip level
 	float lod              = roughness * 10;
-	vec3  prefilteredColor = textureLod(prefilteredMap, R, lod).rgb;
+	vec3  prefilteredColor = srgbToLinear(textureLod(prefilteredMap, R, lod).rgb);
 
-	// 3. 从BRDF LUT中获取环境BRDF值
-	vec2 brdf = texture(samplerBRDFLUT, vec2(NoV, roughness)).rg;
+	vec2 brdf = texture(samplerBRDFLUT, vec2(NoV, 1.0 - roughness)).rg;
 
-	// 计算Fresnel项
 	vec3 F = F_SchlickRoughness(NoV, F0, roughness);
 
-	// 计算镜面和漫反射比例
 	vec3 kS = F;
 	vec3 kD = (1.0 - kS) * (1.0 - metallic);
 
-	// 组合漫反射和镜面反射
 	vec3 specular = prefilteredColor * (F * brdf.x + brdf.y);
 
-	// 应用IBL强度系数
 	return (kD * diffuse + specular);
 }

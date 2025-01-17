@@ -230,6 +230,25 @@ void XiheApp::input_event(const InputEvent &input_event)
 	}
 }
 
+bool XiheApp::resize(const uint32_t width, const uint32_t height)
+{
+	if (gui_)
+	{
+		gui_->resize(width, height);
+	}
+
+	if (scene_ && scene_->has_component<sg::Script>())
+	{
+		auto scripts = scene_->get_components<sg::Script>();
+
+		for (auto script : scripts)
+		{
+			script->resize(width, height);
+		}
+	}
+	return true;
+}
+
 void XiheApp::finish()
 {
 	Application::finish();
