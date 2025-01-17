@@ -25,12 +25,15 @@ CascadeScript::CascadeScript(const std::string &name, sg::Scene &scene, sg::Pers
 		cascade_cameras_[index]->set_node(*directional_light->get_node());
 	}
 
-	calculate_cascade_split_depth(0.99f);
+	calculate_cascade_split_depth(0.3f);
 }
 
 void CascadeScript::update(float delta_time)
 {
+	/*glm::mat4 shadow_proj = glm::perspective(camera_.get_field_of_view(), camera_.get_aspect_ratio(), max_shadow_distance_, camera_.get_near_plane());
+	glm::mat4              inverse_view_projection = glm::inverse(shadow_proj * camera_.get_view());*/
 	glm::mat4              inverse_view_projection = glm::inverse(camera_.get_projection() * camera_.get_view());
+
 	std::vector<glm::vec3> corners(8);
 
 	for (uint32_t cascade_index = 0; cascade_index < cascade_count_; ++cascade_index)
@@ -74,6 +77,7 @@ void CascadeScript::calculate_cascade_split_depth(float lambda) const
 {
 	float n = camera_.get_near_plane();
 	float f = camera_.get_far_plane();
+
 	cascade_splits_.resize(cascade_count_ + 1);
 	for (uint32_t index = 0; index < cascade_splits_.size(); ++index)
 	{
@@ -81,8 +85,8 @@ void CascadeScript::calculate_cascade_split_depth(float lambda) const
 		float N = static_cast<float>(cascade_count_);
 
 		// Calculate the logarithmic and linear depth
-		float c_log = n * std::pow((f / n), i / N);
-		float c_lin = n + (i / N) * (f - n);
+		float c_log = n * std::pow((max_shadow_distance_ / n), i / N);
+		float c_lin = n + (i / N) * (max_shadow_distance_ - n);
 
 		// Interpolate between logarithmic and linear depth using lambda
 		float c = lambda * c_log + (1 - lambda) * c_lin;

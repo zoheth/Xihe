@@ -33,6 +33,8 @@ public:
 private:
 	sg::PerspectiveCamera              &camera_;
 
+	float max_shadow_distance_ = 2500.0f; 
+
 	std::vector<std::unique_ptr<sg::OrthographicCamera>> cascade_cameras_{kCascadeCount};
 
 	inline static uint32_t cascade_count_{kCascadeCount};
