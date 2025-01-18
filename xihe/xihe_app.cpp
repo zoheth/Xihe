@@ -30,6 +30,8 @@ XiheApp::XiheApp()
 
 	add_device_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
+
+	add_device_extension(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 }
 
 XiheApp::~XiheApp()
@@ -157,11 +159,11 @@ bool XiheApp::prepare(Window *window)
 	// todo
 	render_context_->prepare(8);
 
-	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_);
-	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
-
 	stats_ = std::make_unique<stats::Stats>(*render_context_);
-	stats_->request_stats({stats::StatIndex::kFrameTimes});
+	stats_->request_stats({stats::StatIndex::kFrameTimes, stats::StatIndex::kInputAssemblyVerts});
+
+	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_, stats_.get());
+	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
 	return true;
 }
@@ -386,6 +388,7 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 	gpu.get_mutable_requested_features().depthClamp                             = VK_TRUE;
 	gpu.get_mutable_requested_features().multiDrawIndirect                      = VK_TRUE;
 	gpu.get_mutable_requested_features().imageCubeArray                         = VK_TRUE;
+	gpu.get_mutable_requested_features().pipelineStatisticsQuery                = VK_TRUE;
 
 	if (gpu.get_features().samplerAnisotropy)
 	{
@@ -404,6 +407,8 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceSynchronization2FeaturesKHR, synchronization2);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceTimelineSemaphoreFeatures, timelineSemaphore);
+
+	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceHostQueryResetFeaturesEXT, hostQueryReset);
 }
 
 void XiheApp::draw_gui()

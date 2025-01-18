@@ -351,7 +351,7 @@ void SampleApp::draw_gui()
 }
 }        // namespace xihe
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::SampleApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::SampleApp>();
+//}

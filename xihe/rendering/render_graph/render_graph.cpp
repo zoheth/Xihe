@@ -12,8 +12,8 @@ void set_viewport_and_scissor(backend::CommandBuffer const &command_buffer, vk::
 	command_buffer.get_handle().setScissor(0, vk::Rect2D({}, extent));
 }
 
-RenderGraph::RenderGraph(RenderContext &render_context) :
-    render_context_{render_context}
+RenderGraph::RenderGraph(RenderContext &render_context, stats::Stats *stats) :
+    render_context_{render_context}, stats_{stats}
 {}
 
 void RenderGraph::execute(bool present)
@@ -59,6 +59,11 @@ void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, boo
 
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
+	if (stats_)
+	{
+		stats_->begin_sampling(command_buffer);
+	}
+
 	for (const auto pass_node : pass_batch.pass_nodes)
 	{
 		RenderTarget *render_target = pass_node->get_render_target();
@@ -71,6 +76,11 @@ void RenderGraph::execute_raster_batch(PassBatch &pass_batch, bool is_first, boo
 		set_viewport_and_scissor(command_buffer, render_target->get_extent());
 
 		pass_node->execute(command_buffer, *render_target, render_context_.get_active_frame());
+	}
+
+	if (stats_)
+	{
+		stats_->end_sampling(command_buffer);
 	}
 
 	command_buffer.end();

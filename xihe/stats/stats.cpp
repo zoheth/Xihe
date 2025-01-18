@@ -1,5 +1,6 @@
 #include "stats.h"
 
+#include "vulkan_stats_provider.h"
 #include "backend/allocated.h"
 #include "backend/device.h"
 #include "rendering/render_context.h"
@@ -51,6 +52,8 @@ void Stats::request_stats(const std::set<StatIndex> &requested_stats, const Coun
 	std::set<StatIndex> stats = requested_stats;
 
 	providers.emplace_back(std::make_unique<FrameTimeProvider>(stats));
+
+	providers.emplace_back(std::make_unique<VulkanStatsProvider>(stats, sampling_config, render_context_));
 
 	for (const auto &stat : requested_stats)
 	{

@@ -357,7 +357,7 @@ bool PreprocessApp::prepare(Window *window)
 	graph_builder_.reset();
 	render_graph_.reset();
 
-	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_);
+	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_, stats_.get());
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
 
 	auto &camera_node = sg::add_free_camera(*scene_, "main_camera", render_context_->get_surface_extent(), 0.1f, 1.0f);
@@ -530,7 +530,7 @@ void PreprocessApp::draw_gui()
 
 }        // namespace xihe
 
-//std::unique_ptr<xihe::Application> create_application()
-//{
-//	return std::make_unique<xihe::PreprocessApp>();
-//}
+std::unique_ptr<xihe::Application> create_application()
+{
+	return std::make_unique<xihe::PreprocessApp>();
+}

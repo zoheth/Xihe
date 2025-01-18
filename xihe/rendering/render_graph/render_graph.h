@@ -25,11 +25,11 @@ struct PassBatch
 class RenderGraph
 {
   public:
-	RenderGraph(RenderContext &render_context);
+	RenderGraph(RenderContext &render_context, stats::Stats *stats = nullptr);
 
 	~RenderGraph() = default;
 
-	void execute(bool present=true);
+	void execute(bool present = true);
 
 	ShaderBindable get_resource_bindable(ResourceHandle handle) const;
 
@@ -53,6 +53,8 @@ class RenderGraph
 	std::vector<std::unique_ptr<backend::Image>>     images_;
 	std::vector<std::unique_ptr<backend::Buffer>>    buffers_;
 	std::vector<std::unique_ptr<backend::ImageView>> image_views_;
+
+	stats::Stats *stats_{nullptr};
 
 	friend GraphBuilder;
 };

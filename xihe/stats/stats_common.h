@@ -8,36 +8,14 @@ namespace xihe::stats
 enum class StatIndex
 {
 	kFrameTimes,
-	kCpuCycles,
-	kCpuInstructions,
-	kCpuCacheMissRatio,
-	kCpuBranchMissRatio,
-	kCpuL1Accesses,
-	kCpuInstrRetired,
-	kCpuL2Accesses,
-	kCpuL3Accesses,
-	kCpuBusReads,
-	kCpuBusWrites,
-	kCpuMemReads,
-	kCpuMemWrites,
-	kCpuAseSpec,
-	kCpuVfpSpec,
-	kCpuCryptoSpec,
 
-	kGpuCycles,
-	kGpuVertexCycles,
-	kGpuLoadStoreCycles,
-	kGpuTiles,
-	kGpuKilledTiles,
-	kGpuFragmentJobs,
-	kGpuFragmentCycles,
-	kGpuExtReads,
-	kGpuExtWrites,
-	kGpuExtReadStalls,
-	kGpuExtWriteStalls,
-	kGpuExtReadBytes,
-	kGpuExtWriteBytes,
-	kGpuTexCycles,
+	kInputAssemblyVerts,
+	kInputAssemblyPrims,
+	kVertexShaderInvocs,
+	kClippingInvocs,
+	kClippingPrims,
+	kFragmentShaderInvocs,
+	kComputeShaderInvocs
 };
 
 struct StatIndexHash

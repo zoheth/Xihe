@@ -319,6 +319,26 @@ void CommandBuffer::set_update_after_bind(bool update_after_bind)
 	update_after_bind_ = update_after_bind;
 }
 
+void CommandBuffer::reset_query_pool(const QueryPool &query_pool, uint32_t first_query, uint32_t query_count)
+{
+	get_handle().resetQueryPool(query_pool.get_handle(), first_query, query_count);
+}
+
+void CommandBuffer::begin_query(const QueryPool &query_pool, uint32_t query, vk::QueryControlFlags flags)
+{
+	get_handle().beginQuery(query_pool.get_handle(), query, flags);
+}
+
+void CommandBuffer::end_query(const QueryPool &query_pool, uint32_t query)
+{
+	get_handle().endQuery(query_pool.get_handle(), query);
+}
+
+void CommandBuffer::write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query)
+{
+	get_handle().writeTimestamp(pipeline_stage, query_pool.get_handle(), query);
+}
+
 void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers, const std::vector<vk::DeviceSize> &offsets)
 {
 	std::vector<vk::Buffer> buffer_handles(buffers.size(), nullptr);

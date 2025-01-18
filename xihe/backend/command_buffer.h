@@ -3,6 +3,7 @@
 #include "common/helpers.h"
 #include "common/vk_common.h"
 #include "image.h"
+#include "query_pool.h"
 #include "rendering/pipeline_state.h"
 #include "rendering/render_target.h"
 #include "resources_management/resource_binding_state.h"
@@ -173,13 +174,13 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void set_update_after_bind(bool update_after_bind);
 
-	/*void reset_query_pool(const QueryPool &query_pool, uint32_t first_query, uint32_t query_count);
+	void reset_query_pool(const QueryPool &query_pool, uint32_t first_query, uint32_t query_count);
 
 	void begin_query(const QueryPool &query_pool, uint32_t query, vk::QueryControlFlags flags);
 
 	void end_query(const QueryPool &query_pool, uint32_t query);
 
-	void write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query);*/
+	void write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query);
 
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);

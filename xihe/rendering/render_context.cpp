@@ -111,6 +111,11 @@ RenderFrame &RenderContext::get_active_frame() const
 	return *frames_[active_frame_index_];
 }
 
+uint32_t RenderContext::get_active_frame_index() const
+{
+	return active_frame_index_;
+}
+
 backend::Device &RenderContext::get_device() const
 {
 	return device_;

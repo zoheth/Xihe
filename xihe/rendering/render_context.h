@@ -39,6 +39,8 @@ class RenderContext
 
 	RenderFrame &get_active_frame() const;
 
+	uint32_t get_active_frame_index() const;
+
 	backend::Device &get_device() const;
 
 	void submit(backend::CommandBuffer &command_buffer);
