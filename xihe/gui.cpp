@@ -565,7 +565,7 @@ void Gui::show_views_window(std::function<void()> body, const uint32_t lines) co
 void Gui::show_stats(const stats::Stats &stats)
 {
 	ImGuiIO &io  = ImGui::GetIO();
-	ImVec2   pos = ImVec2(io.DisplaySize.x - 300, 10);
+	ImVec2   pos = ImVec2(io.DisplaySize.x - 350, 10);
 	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 
 	ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);

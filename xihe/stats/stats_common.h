@@ -8,6 +8,8 @@ namespace xihe::stats
 enum class StatIndex
 {
 	kFrameTimes,
+	kGraphicsPipelineTime,
+	kComputePipelineTime,
 
 	kInputAssemblyVerts,
 	kInputAssemblyPrims,

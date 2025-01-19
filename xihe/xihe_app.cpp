@@ -158,7 +158,15 @@ bool XiheApp::prepare(Window *window)
 	render_context_->prepare(8);
 
 	stats_ = std::make_unique<stats::Stats>(*render_context_);
-	stats_->request_stats({stats::StatIndex::kFrameTimes, stats::StatIndex::kInputAssemblyPrims, stats::StatIndex::kClippingPrims, stats::StatIndex::kVertexShaderInvocs, stats::StatIndex::kFragmentShaderInvocs, stats::StatIndex::kClippingInvocs});
+	stats_->request_stats({stats::StatIndex::kFrameTimes,
+	                       stats::StatIndex::kGraphicsPipelineTime,
+	                       stats::StatIndex::kComputePipelineTime,
+	                       stats::StatIndex::kInputAssemblyPrims,
+	                       stats::StatIndex::kClippingPrims,
+	                       stats::StatIndex::kVertexShaderInvocs,
+	                       stats::StatIndex::kFragmentShaderInvocs,
+	                       stats::StatIndex::kClippingInvocs,
+	                       stats::StatIndex::kComputeShaderInvocs});
 
 	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_, stats_.get());
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);

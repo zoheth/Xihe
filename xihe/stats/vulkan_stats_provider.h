@@ -20,8 +20,12 @@ class VulkanStatsProvider : public StatsProvider
 	{
 		std::unique_ptr<backend::QueryPool> query_pool;
 		std::vector<StatIndex>              stat_indices;
-		uint32_t                            current_query_index = 0;
+		uint32_t                            current_query_index{0};
 		std::vector<uint32_t>               frame_query_counts;
+
+		std::unique_ptr<backend::QueryPool> timestamp_pool;
+
+		float gpu_time{0.0f};
 	};
 
   public:
@@ -55,9 +59,6 @@ class VulkanStatsProvider : public StatsProvider
 
 	bool  has_timestamps_{false};
 	float timestamp_period_{1.0f};
-
-	// Query pool for timestamps
-	std::unique_ptr<backend::QueryPool> timestamp_pool_;
 
 	// An ordered list of the Vulkan counter ids
 	std::vector<uint32_t> counter_indices_;
