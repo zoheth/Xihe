@@ -6,6 +6,51 @@
 
 namespace xihe::stats
 {
+void GpuTimeCalculator::add_time_range(uint64_t start, uint64_t end)
+{
+	if (start > end)
+	{
+		std::swap(start, end);
+	}
+	ranges_.push_back({start, end});
+}
+
+void GpuTimeCalculator::clear()
+{
+	ranges_.clear();
+}
+
+uint64_t GpuTimeCalculator::calculate_total_time()
+{
+	if (ranges_.empty())
+	{
+		return 0;
+	}
+
+	std::sort(ranges_.begin(), ranges_.end());
+
+	uint64_t total_time    = 0;
+	uint64_t current_start = ranges_[0].start;
+	uint64_t current_end   = ranges_[0].end;
+
+	for (size_t i = 1; i < ranges_.size(); ++i)
+	{
+		if (ranges_[i].start <= current_end)
+		{
+			current_end = std::max(current_end, ranges_[i].end);
+		}
+		else
+		{
+			total_time += (current_end - current_start);
+			current_start = ranges_[i].start;
+			current_end   = ranges_[i].end;
+		}
+	}
+	total_time += (current_end - current_start);
+
+	return total_time;
+}
+
 VulkanStatsProvider::VulkanStatsProvider(std::set<StatIndex> &requested_stats, const CounterSamplingConfig &sampling_config, rendering::RenderContext &render_context) :
     render_context_(render_context)
 {
@@ -23,7 +68,7 @@ VulkanStatsProvider::~VulkanStatsProvider()
 
 bool VulkanStatsProvider::is_available(StatIndex index) const
 {
-	return pipeline_stats_data_.contains(index) || index == StatIndex::kGraphicsPipelineTime || index == StatIndex::kComputePipelineTime;
+	return pipeline_stats_data_.contains(index) || index == StatIndex::kGpuTime || index == StatIndex::kGraphicsPipelineTime || index == StatIndex::kComputePipelineTime;
 }
 
 const StatGraphData &VulkanStatsProvider::get_graph_data(StatIndex index) const
@@ -44,6 +89,10 @@ StatsProvider::Counters VulkanStatsProvider::sample(float delta_time)
 
 	out[StatIndex::kGraphicsPipelineTime].result = static_cast<double>(graphics_pipeline_stats_.gpu_time);
 	out[StatIndex::kComputePipelineTime].result  = static_cast<double>(compute_pipeline_stats_.gpu_time);
+
+	float elapsed_ns                = timestamp_period_ * static_cast<float>(time_calculator_.calculate_total_time());
+	out[StatIndex::kGpuTime].result = elapsed_ns * 0.000001f;
+	time_calculator_.clear();
 
 	return out;
 }
@@ -246,41 +295,22 @@ void VulkanStatsProvider::collect_pipeline_stats(PipelineStats &pipeline_stats)
 
 		for (uint32_t i = 0; i < query_count; ++i)
 		{
-			std::array<uint64_t, 4> timestamps;
+			std::array<uint64_t, 2> timestamps;
 			vk::Result              result = pipeline_stats.timestamp_pool->get_results(
                 base_query + i * 2,
                 2,
-                sizeof(uint64_t) * 4,
-                timestamps.data(),
                 sizeof(uint64_t) * 2,
+                timestamps.data(),
+                sizeof(uint64_t),
                 vk::QueryResultFlagBits::e64 |
-                    vk::QueryResultFlagBits::eWait |
-                    vk::QueryResultFlagBits::eWithAvailability);
+                    vk::QueryResultFlagBits::eWait);
 
-			if (result == vk::Result::eSuccess && timestamps[1] && timestamps[3])
+			if (result == vk::Result::eSuccess)
 			{
-				float elapsed_ns = timestamp_period_ * static_cast<float>(timestamps[2] - timestamps[0]);
+				float elapsed_ns = timestamp_period_ * static_cast<float>(timestamps[1] - timestamps[0]);
 				pipeline_stats.gpu_time += elapsed_ns * 0.000001f;        // to ms
-				if (pipeline_stats.gpu_time > 1000)
-				{
-					LOGE("Pipeline stats query excessive time detected:"
-					     "\n    Query index: {}"
-					     "\n    Frame index: {}"
-					     "\n    Start timestamp: {}"
-					     "\n    End timestamp: {}"
-					     "\n    Timestamp difference: {}"
-					     "\n    Timestamp period: {:.3f}ns"
-					     "\n    Elapsed time: {:.3f}ms"
-					     "\n    Accumulated GPU time: {:.3f}ms",
-					     i,
-					     active_frame_index,
-					     timestamps[0],
-					     timestamps[2],
-					     timestamps[2] - timestamps[0],
-					     timestamp_period_,
-					     elapsed_ns * 0.000001f,
-					     pipeline_stats.gpu_time);
-				}
+
+				time_calculator_.add_time_range(timestamps[0], timestamps[1]);
 			}
 			else
 			{

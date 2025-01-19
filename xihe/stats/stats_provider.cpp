@@ -6,6 +6,7 @@ std::map<StatIndex, StatGraphData> StatsProvider::default_graph_map_{
     // clang-format off
 	// StatIndex                        Name shown in graph                            Format           Scale                         Fixed_max Max_value
 	{StatIndex::kFrameTimes,           {"Frame Times",                                "{:3.1f} ms",    1.0f}},
+    {StatIndex::kGpuTime,              {"GPU Time",                                   "{:3.1f} ms",    1.0f}},
     {StatIndex::kGraphicsPipelineTime, {"GPU Graphics Pipeline Time",                 "{:3.1f} ms",    1.0f}},
 	{StatIndex::kComputePipelineTime,  {"GPU Compute Pipeline Time",                  "{:3.1f} ms",    1.0f}},
 	{StatIndex::kInputAssemblyVerts,   {"GPU Input Assembly Vertices",                "{:4.1f}k",      static_cast<float>(1e-3)}},

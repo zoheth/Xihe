@@ -14,6 +14,31 @@ class RenderContext;
 
 namespace stats
 {
+
+class GpuTimeCalculator
+{
+  private:
+	struct TimeRange
+	{
+		uint64_t start;
+		uint64_t end;
+
+		bool operator<(const TimeRange &other) const
+		{
+			return start < other.start;
+		}
+	};
+
+	std::vector<TimeRange> ranges_;
+
+  public:
+	void add_time_range(uint64_t start, uint64_t end);
+
+	void clear();
+
+	uint64_t calculate_total_time();
+};
+
 class VulkanStatsProvider : public StatsProvider
 {
 	struct PipelineStats
@@ -65,6 +90,8 @@ class VulkanStatsProvider : public StatsProvider
 
 	// Vector for storing pipeline statistics results
 	std::unordered_map<StatIndex, uint64_t, StatIndexHash> pipeline_stats_data_{};
+
+	GpuTimeCalculator time_calculator_;
 };
 }        // namespace stats
 }        // namespace xihe
