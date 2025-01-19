@@ -103,10 +103,19 @@ void RenderGraph::execute_compute_batch(PassBatch &pass_batch, bool is_first, bo
 	    backend::CommandBuffer::ResetMode::kResetPool,
 	    vk::CommandBufferLevel::ePrimary, 0);
 	command_buffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+	if (stats_)
+	{
+		stats_->begin_sampling(command_buffer);
+	}
 	for (const auto pass_node : pass_batch.pass_nodes)
 	{
 		pass_node->execute(command_buffer, render_context_.get_active_frame().get_render_target(), render_context_.get_active_frame());
 	}
+	if (stats_)
+	{
+		stats_->end_sampling(command_buffer);
+	}
+
 	command_buffer.end();
 	const auto     last_wait_batch      = pass_batch.wait_batch_index;
 	const uint64_t wait_semaphore_value = last_wait_batch >= 0 ? pass_batches_[last_wait_batch].signal_semaphore_value : 0;

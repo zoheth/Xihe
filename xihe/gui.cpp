@@ -565,7 +565,7 @@ void Gui::show_views_window(std::function<void()> body, const uint32_t lines) co
 void Gui::show_stats(const stats::Stats &stats)
 {
 	ImGuiIO &io  = ImGui::GetIO();
-	ImVec2   pos = ImVec2(io.DisplaySize.x - 200, 10);
+	ImVec2   pos = ImVec2(io.DisplaySize.x - 300, 10);
 	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
 
 	ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
@@ -599,7 +599,7 @@ void Gui::show_stats(const stats::Stats &stats)
 		{
 			graph_label << graph_data.name << ": " << graph_data.format;
 			std::string text = fmt::format(fmt::runtime(graph_label.str()), avg * graph_data.scale_factor);
-			ImGui::PlotLines(text.c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
+			// ImGui::PlotLines(text.c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
 
 			ImGui::Text(text.c_str());
 			ImGui::Separator();

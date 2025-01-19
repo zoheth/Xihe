@@ -30,8 +30,6 @@ XiheApp::XiheApp()
 
 	add_device_extension(VK_KHR_TIMELINE_SEMAPHORE_EXTENSION_NAME);
 	add_device_extension(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
-
-	add_device_extension(VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME);
 }
 
 XiheApp::~XiheApp()
@@ -160,7 +158,7 @@ bool XiheApp::prepare(Window *window)
 	render_context_->prepare(8);
 
 	stats_ = std::make_unique<stats::Stats>(*render_context_);
-	stats_->request_stats({stats::StatIndex::kFrameTimes, stats::StatIndex::kInputAssemblyVerts});
+	stats_->request_stats({stats::StatIndex::kFrameTimes, stats::StatIndex::kInputAssemblyPrims, stats::StatIndex::kClippingPrims, stats::StatIndex::kVertexShaderInvocs, stats::StatIndex::kFragmentShaderInvocs, stats::StatIndex::kClippingInvocs});
 
 	render_graph_  = std::make_unique<rendering::RenderGraph>(*render_context_, stats_.get());
 	graph_builder_ = std::make_unique<rendering::GraphBuilder>(*render_graph_, *render_context_);
@@ -407,8 +405,6 @@ void XiheApp::request_gpu_features(backend::PhysicalDevice &gpu)
 
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceSynchronization2FeaturesKHR, synchronization2);
 	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceTimelineSemaphoreFeatures, timelineSemaphore);
-
-	REQUEST_REQUIRED_FEATURE(gpu, vk::PhysicalDeviceHostQueryResetFeaturesEXT, hostQueryReset);
 }
 
 void XiheApp::draw_gui()

@@ -8,6 +8,7 @@ CommandPool::CommandPool(Device &device, uint32_t queue_family_index, rendering:
     device_{device},
     render_frame_{render_frame},
     thread_index_{thread_index},
+    queue_family_index_{queue_family_index},
     reset_mode_{reset_mode}
 {
 	vk::CommandPoolCreateFlags flags;

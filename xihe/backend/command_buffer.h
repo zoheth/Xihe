@@ -182,6 +182,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	void write_timestamp(vk::PipelineStageFlagBits pipeline_stage, const QueryPool &query_pool, uint32_t query);
 
+	bool is_support_graphics() const;
+
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_point);

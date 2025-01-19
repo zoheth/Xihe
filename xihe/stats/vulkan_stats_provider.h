@@ -16,9 +16,13 @@ namespace stats
 {
 class VulkanStatsProvider : public StatsProvider
 {
-	struct StatData
-	{};
-	using StatDataMap = std::unordered_map<StatIndex, StatData, StatIndexHash>;
+	struct PipelineStats
+	{
+		std::unique_ptr<backend::QueryPool> query_pool;
+		std::vector<StatIndex>              stat_indices;
+		uint32_t                            current_query_index = 0;
+		std::vector<uint32_t>               frame_query_counts;
+	};
 
   public:
 	VulkanStatsProvider(std::set<StatIndex> &requested_stats, const CounterSamplingConfig &sampling_config,
@@ -37,21 +41,29 @@ class VulkanStatsProvider : public StatsProvider
 	void end_sampling(backend::CommandBuffer &command_buffer) override;
 
   private:
-	bool create_query_pools(uint32_t queue_family_index);
+	bool create_query_pools();
+
+	void collect_pipeline_stats(PipelineStats &pipeline_stats);
+
+	// Maximum number of pass batches that can be tracked per frame
+	static constexpr uint32_t queries_per_frame_ = 8;
 
 	rendering::RenderContext &render_context_;
 
-	std::unique_ptr<backend::QueryPool> query_pool_{};
+	PipelineStats graphics_pipeline_stats_{};
+	PipelineStats compute_pipeline_stats_{};
+
+	bool  has_timestamps_{false};
+	float timestamp_period_{1.0f};
+
+	// Query pool for timestamps
+	std::unique_ptr<backend::QueryPool> timestamp_pool_;
 
 	// An ordered list of the Vulkan counter ids
 	std::vector<uint32_t> counter_indices_;
 
 	// Vector for storing pipeline statistics results
-	std::vector<uint64_t>  pipeline_stats_{};
-	std::vector<StatIndex> stat_indices_{};
-
-	// How many queries have been ended?
-	uint32_t queries_ready_ = 0;
+	std::unordered_map<StatIndex, uint64_t, StatIndexHash> pipeline_stats_data_{};
 };
 }        // namespace stats
 }        // namespace xihe

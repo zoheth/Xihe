@@ -339,6 +339,18 @@ void CommandBuffer::write_timestamp(vk::PipelineStageFlagBits pipeline_stage, co
 	get_handle().writeTimestamp(pipeline_stage, query_pool.get_handle(), query);
 }
 
+bool CommandBuffer::is_support_graphics() const
+{
+	auto &physical_device = get_device().get_gpu();
+	auto  queue_families  = physical_device.get_queue_family_properties();
+	uint32_t queue_family_index = command_pool_.get_queue_family_index();
+	if (queue_family_index < queue_families.size())
+	{
+		return static_cast<bool>(queue_families[queue_family_index].queueFlags & vk::QueueFlagBits::eGraphics);
+	}
+	return false;
+}
+
 void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers, const std::vector<vk::DeviceSize> &offsets)
 {
 	std::vector<vk::Buffer> buffer_handles(buffers.size(), nullptr);
