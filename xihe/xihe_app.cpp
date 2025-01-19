@@ -159,6 +159,7 @@ bool XiheApp::prepare(Window *window)
 
 	stats_ = std::make_unique<stats::Stats>(*render_context_);
 	stats_->request_stats({stats::StatIndex::kFrameTimes,
+	                       stats::StatIndex::kDrawCalls,
 	                       stats::StatIndex::kGpuTime,
 	                       stats::StatIndex::kGraphicsPipelineTime,
 	                       stats::StatIndex::kComputePipelineTime,

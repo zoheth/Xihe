@@ -184,6 +184,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 
 	bool is_support_graphics() const;
 
+	uint32_t get_draw_call_count() const;
+
   private:
 	void flush(vk::PipelineBindPoint pipeline_bind_point);
 	void flush_descriptor_state(vk::PipelineBindPoint pipeline_bind_point);
@@ -209,6 +211,8 @@ class CommandBuffer : public VulkanResource<vk::CommandBuffer>
 	bool update_after_bind_ = false;
 
 	std::unordered_map<uint32_t, DescriptorSetLayout const *> descriptor_set_layout_binding_state_;
+
+	uint32_t draw_call_count_{0};
 };
 }        // namespace backend
 }        // namespace xihe

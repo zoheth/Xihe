@@ -58,6 +58,12 @@ struct Font
 class Gui
 {
   public:
+	enum class StatsDisplayMode
+	{
+		kBasic,
+		kDetailed
+	};
+
 	struct StatsView
 	{
 		StatsView(const stats::Stats *stats);
@@ -71,6 +77,16 @@ class Gui
 		float graph_height{50.0f};
 
 		float top_padding{1.1f};
+
+		bool active{false};
+
+		stats::StatIndex selected_graph = stats::StatIndex::kStatCount;
+
+		StatsDisplayMode              display_mode   = StatsDisplayMode::kBasic;
+
+		ImVec2 window_pos    = ImVec2(0, 0);
+		ImVec2 window_size   = ImVec2(0, 0);
+		bool   show_all      = false;
 	};
 
 	Gui(XiheApp &app, Window &window, const stats::Stats *stats = nullptr, const float font_size = 21.0f, bool explicit_update = false);
@@ -141,6 +157,8 @@ class Gui
 	Timer timer_;
 
 	bool prev_visible_{true};
+
+	inline static constexpr double press_time_ms_ = 200.0f;
 };
 
 }        // namespace xihe

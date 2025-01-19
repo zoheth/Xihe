@@ -8,6 +8,7 @@ namespace xihe::stats
 enum class StatIndex
 {
 	kFrameTimes,
+	kDrawCalls,
 	kGpuTime,
 	kGraphicsPipelineTime,
 	kComputePipelineTime,
@@ -18,7 +19,9 @@ enum class StatIndex
 	kClippingInvocs,
 	kClippingPrims,
 	kFragmentShaderInvocs,
-	kComputeShaderInvocs
+	kComputeShaderInvocs,
+
+	kStatCount
 };
 
 struct StatIndexHash

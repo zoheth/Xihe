@@ -511,6 +511,25 @@ bool Gui::input_event(const InputEvent &input_event)
 				}*/
 			}
 		}
+
+		if (press_up)
+		{
+			auto press_delta = timer_.stop<Timer::Milliseconds>();
+			if (press_delta < press_time_ms_)
+			{
+				if (input_event.get_source() == EventSource::Mouse)
+				{
+					const auto &mouse_button = static_cast<const MouseButtonInputEvent &>(input_event);
+					if (mouse_button.get_button() == MouseButton::Right)
+					{
+						stats_view_.active = !stats_view_.active;
+					}
+				}
+				else if (input_event.get_source() == EventSource::Touchscreen)
+				{
+				}
+			}
+		}
 	}
 
 	return capture_move_event;
@@ -564,52 +583,194 @@ void Gui::show_views_window(std::function<void()> body, const uint32_t lines) co
 
 void Gui::show_stats(const stats::Stats &stats)
 {
-	ImGuiIO &io  = ImGui::GetIO();
-	ImVec2   pos = ImVec2(io.DisplaySize.x - 350, 10);
-	ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+	if (!stats_view_.active)
+		return;
 
-	ImGui::Begin("Stats", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize);
+	ImGuiIO    &io    = ImGui::GetIO();
+	ImGuiStyle &style = ImGui::GetStyle();
 
-	for (const auto &stat_index : stats.get_requested_stats())
+	constexpr float alpha             = 0.85f;
+	style.Colors[ImGuiCol_WindowBg].w = alpha;
+
+	ImVec2 target_pos, target_size;
+	if (stats_view_.display_mode == StatsDisplayMode::kDetailed)
 	{
-		auto it = stats_view_.graph_map.find(stat_index);
+		target_pos  = ImVec2(0, 0);
+		target_size = ImVec2(io.DisplaySize.x, io.DisplaySize.y);
+	}
+	else
+	{
+		target_pos  = ImVec2(io.DisplaySize.x - 450, 10);
+		target_size = ImVec2(440, 0);
+	}
 
-		assert(it != stats_view_.graph_map.end() && "StatIndex not implemented in gui graph_map");
+	constexpr float anim_speed = 0.2f;
+	stats_view_.window_pos     = ImLerp(stats_view_.window_pos, target_pos, anim_speed);
+	stats_view_.window_size.x  = ImLerp(stats_view_.window_size.x, target_size.x, anim_speed);
 
-		auto       &graph_data     = it->second;
-		const auto &graph_elements = stats.get_data(stat_index);
-		float       graph_min      = 0.0f;
-		float      &graph_max      = graph_data.max_value;
+	ImGui::SetNextWindowPos(stats_view_.window_pos, ImGuiCond_Always);
+	if (target_size.x > 0)
+	{
+		ImGui::SetNextWindowSize(ImVec2(stats_view_.window_size.x, -1));
+	}
 
-		if (!graph_data.has_fixed_max)
+	ImGui::Begin("Performance Stats", nullptr,
+	             ImGuiWindowFlags_NoDecoration |
+	                 ImGuiWindowFlags_NoNav |
+	                 (stats_view_.display_mode == StatsDisplayMode::kBasic ? ImGuiWindowFlags_AlwaysAutoResize : 0));
+
+	float window_width = ImGui::GetWindowWidth();
+	ImGui::SetCursorPosX(window_width - 85);
+
+	const bool is_detailed = stats_view_.display_mode == StatsDisplayMode::kDetailed;
+
+	// Mode switch button
+	ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(8, 4));
+	if (is_detailed)
+	{
+		if (ImGui::Button("Basic <###mode", ImVec2(80, 0)))
 		{
-			auto new_max = *std::max_element(graph_elements.begin(), graph_elements.end()) * stats_view_.top_padding;
-			if (new_max > graph_max)
+			stats_view_.display_mode   = StatsDisplayMode::kBasic;
+			stats_view_.selected_graph = stats::StatIndex::kStatCount;
+			stats_view_.show_all       = false;        // Reset show all state when switching to basic mode
+		}
+	}
+	else
+	{
+		if (ImGui::Button("Graph >###mode", ImVec2(80, 0)))
+		{
+			stats_view_.display_mode = StatsDisplayMode::kDetailed;
+		}
+	}
+	ImGui::PopStyleVar();
+
+	if (ImGui::IsItemHovered())
+	{
+		ImGui::SetTooltip(is_detailed ? "Switch to Basic View" : "Switch to Graph View");
+	}
+
+	ImGui::Separator();
+
+	const auto &stat_indices = stats.get_requested_stats();
+
+	if (!is_detailed)
+	{
+		// Basic view with show more/less button
+		size_t current_count = 0;
+
+		for (const auto &stat_index : stat_indices)
+		{
+			if (!stats_view_.show_all && current_count >= 3)
+				break;
+
+			current_count++;
+			auto it = stats_view_.graph_map.find(stat_index);
+			if (it == stats_view_.graph_map.end())
+				continue;
+
+			auto       &graph_data     = it->second;
+			const auto &graph_elements = stats.get_data(stat_index);
+
+			if (!stats.is_available(stat_index))
 			{
-				graph_max = new_max;
+				ImGui::TextColored(ImVec4(0.5f, 0.5f, 0.5f, 1.0f),
+				                   "%s: not available", graph_data.name.c_str());
+				continue;
+			}
+
+			float avg = std::accumulate(graph_elements.begin(),
+			                            graph_elements.end(), 0.0f) /
+			            graph_elements.size();
+
+			std::string value_str = fmt::format(fmt::runtime(graph_data.format),
+			                                    avg * graph_data.scale_factor);
+
+			float value_width = ImGui::CalcTextSize(value_str.c_str()).x;
+			float curr_width  = ImGui::GetWindowWidth();
+
+			ImGui::TextUnformatted(graph_data.name.c_str());
+			ImGui::SameLine();
+
+			ImGui::SetCursorPosX(curr_width - value_width - ImGui::GetStyle().ItemSpacing.x * 2);
+			ImGui::Text("%s", value_str.c_str());
+
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip(graph_data.name.c_str());
 			}
 		}
 
-		ImVec2 graph_size = ImVec2(io.DisplaySize.x - pos.x - 10, stats_view_.graph_height * dpi_factor_);
-
-		std::stringstream graph_label;
-		float             avg = std::accumulate(graph_elements.begin(), graph_elements.end(), 0.0f) / graph_elements.size();
-
-		if (stats.is_available(stat_index))
+		if (stat_indices.size() > 3)
 		{
-			graph_label << graph_data.name << ": " << graph_data.format;
-			std::string text = fmt::format(fmt::runtime(graph_label.str()), avg * graph_data.scale_factor);
-			// ImGui::PlotLines(text.c_str(), graph_elements.data(), static_cast<int>(graph_elements.size()), 0, nullptr, graph_min, graph_max, graph_size);
-
-			ImGui::Text(text.c_str());
-			ImGui::Separator();
-		}
-		else
-		{
-			graph_label << graph_data.name << ": not available";
-			ImGui::Text("%s", graph_label.str().c_str());
+			if (ImGui::Button(stats_view_.show_all ? "Show Less" : "Show More"))
+			{
+				stats_view_.show_all = !stats_view_.show_all;
+			}
 		}
 	}
+	else
+	{
+		const float header_height = ImGui::GetFrameHeight() + style.ItemSpacing.y * 2;
+		ImGui::BeginChild("ScrollingRegion", ImVec2(0, io.DisplaySize.y - header_height), false, ImGuiWindowFlags_AlwaysVerticalScrollbar);
+
+		for (const auto &stat_index : stat_indices)
+		{
+			auto it = stats_view_.graph_map.find(stat_index);
+			if (it == stats_view_.graph_map.end())
+				continue;
+
+			auto       &graph_data     = it->second;
+			const auto &graph_elements = stats.get_data(stat_index);
+
+			if (!stats.is_available(stat_index))
+				continue;
+
+			float avg = std::accumulate(graph_elements.begin(),
+			                            graph_elements.end(), 0.0f) /
+			            graph_elements.size();
+
+			float  graph_min = 0.0f;
+			float &graph_max = graph_data.max_value;
+
+			if (!graph_data.has_fixed_max)
+			{
+				auto new_max = *std::ranges::max_element(graph_elements) *
+				               stats_view_.top_padding;
+				if (new_max > graph_max)
+				{
+					graph_max = new_max;
+				}
+			}
+
+			ImVec2 graph_size;
+			if (stats_view_.selected_graph == stat_index)
+			{
+				graph_size = ImVec2(io.DisplaySize.x * 0.90f, io.DisplaySize.y * 0.4f);
+			}
+			else
+			{
+				graph_size = ImVec2(io.DisplaySize.x * 0.85f, io.DisplaySize.y * 0.15f);
+			}
+
+			std::string value_str   = fmt::format(fmt::runtime(graph_data.format),
+			                                      avg * graph_data.scale_factor);
+			std::string graph_label = fmt::format("{}### {}", value_str, graph_data.name);
+
+			ImGui::PlotLines(graph_label.c_str(),
+			                 graph_elements.data(),
+			                 static_cast<int>(graph_elements.size()),
+			                 0, graph_data.name.c_str(), graph_min, graph_max, graph_size);
+
+			if (ImGui::IsItemClicked())
+			{
+				stats_view_.selected_graph =
+				    (stats_view_.selected_graph == stat_index) ? stats::StatIndex::kStatCount : stat_index;
+			}
+		}
+
+		ImGui::EndChild();
+	}
+
 	ImGui::End();
 }
 

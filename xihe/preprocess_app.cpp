@@ -530,7 +530,7 @@ void PreprocessApp::draw_gui()
 
 }        // namespace xihe
 
-std::unique_ptr<xihe::Application> create_application()
-{
-	return std::make_unique<xihe::PreprocessApp>();
-}
+//std::unique_ptr<xihe::Application> create_application()
+//{
+//	return std::make_unique<xihe::PreprocessApp>();
+//}

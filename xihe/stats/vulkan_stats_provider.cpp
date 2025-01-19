@@ -61,6 +61,8 @@ VulkanStatsProvider::VulkanStatsProvider(std::set<StatIndex> &requested_stats, c
 	timestamp_period_ = gpu.get_properties().limits.timestampPeriod;
 
 	create_query_pools();
+
+	pipeline_stats_data_[StatIndex::kDrawCalls]	= 0;
 }
 
 VulkanStatsProvider::~VulkanStatsProvider()
@@ -68,7 +70,11 @@ VulkanStatsProvider::~VulkanStatsProvider()
 
 bool VulkanStatsProvider::is_available(StatIndex index) const
 {
-	return pipeline_stats_data_.contains(index) || index == StatIndex::kGpuTime || index == StatIndex::kGraphicsPipelineTime || index == StatIndex::kComputePipelineTime;
+	return pipeline_stats_data_.contains(index) || 
+		index == StatIndex::kDrawCalls || 
+		index == StatIndex::kGpuTime || 
+		index == StatIndex::kGraphicsPipelineTime ||
+		index == StatIndex::kComputePipelineTime;
 }
 
 const StatGraphData &VulkanStatsProvider::get_graph_data(StatIndex index) const
@@ -93,7 +99,7 @@ StatsProvider::Counters VulkanStatsProvider::sample(float delta_time)
 	float elapsed_ns                = timestamp_period_ * static_cast<float>(time_calculator_.calculate_total_time());
 	out[StatIndex::kGpuTime].result = elapsed_ns * 0.000001f;
 	time_calculator_.clear();
-
+	pipeline_stats_data_[StatIndex::kDrawCalls] = 0;
 	return out;
 }
 
@@ -174,6 +180,7 @@ void VulkanStatsProvider::end_sampling(backend::CommandBuffer &command_buffer)
 	if (command_buffer.is_support_graphics())
 	{
 		handle_pipeline_stats(graphics_pipeline_stats_);
+		pipeline_stats_data_[StatIndex::kDrawCalls] += command_buffer.get_draw_call_count();
 	}
 	else
 	{

@@ -36,6 +36,7 @@ CommandBuffer::~CommandBuffer()
 
 vk::Result CommandBuffer::begin(vk::CommandBufferUsageFlags flags, CommandBuffer *primary_cmd_buf)
 {
+	draw_call_count_ = 0;
 	if (level_ == vk::CommandBufferLevel::eSecondary)
 	{
 		// todo
@@ -190,6 +191,7 @@ void CommandBuffer::draw(uint32_t vertex_count, uint32_t instance_count, uint32_
 {
 	flush(vk::PipelineBindPoint::eGraphics);
 	get_handle().draw(vertex_count, instance_count, first_vertex, first_instance);
+	++draw_call_count_;
 }
 
 void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t instance_count, uint32_t first_index, int32_t vertex_offset, uint32_t first_instance)
@@ -197,6 +199,7 @@ void CommandBuffer::draw_indexed(uint32_t index_count, uint32_t instance_count, 
 	flush(vk::PipelineBindPoint::eGraphics);
 
 	get_handle().drawIndexed(index_count, instance_count, first_index, vertex_offset, first_instance);
+	++draw_call_count_;
 }
 
 void CommandBuffer::draw_indexed_indirect(const backend::Buffer &buffer, vk::DeviceSize offset, uint32_t draw_count, uint32_t stride)
@@ -204,6 +207,7 @@ void CommandBuffer::draw_indexed_indirect(const backend::Buffer &buffer, vk::Dev
 	flush(vk::PipelineBindPoint::eGraphics);
 
 	get_handle().drawIndexedIndirect(buffer.get_handle(), offset, draw_count, stride);
+	++draw_call_count_;
 }
 
 void CommandBuffer::dispatch(uint32_t group_count_x, uint32_t group_count_y, uint32_t group_count_z)
@@ -225,18 +229,21 @@ void CommandBuffer::draw_mesh_tasks(uint32_t group_count_x, uint32_t group_count
 	flush(vk::PipelineBindPoint::eGraphics);
 
 	get_handle().drawMeshTasksEXT(group_count_x, group_count_y, group_count_z);
+	++draw_call_count_;
 }
 
 void CommandBuffer::draw_mesh_tasks_indirect(const backend::Buffer &buffer, vk::DeviceSize offset, uint32_t draw_count, uint32_t stride)
 {
 	flush(vk::PipelineBindPoint::eGraphics);
 	get_handle().drawMeshTasksIndirectEXT(buffer.get_handle(), offset, draw_count, stride);
+	++draw_call_count_;
 }
 
 void CommandBuffer::draw_mesh_tasks_indirect_count(const backend::Buffer &buffer, vk::DeviceSize offset, const backend::Buffer &count_buffer, vk::DeviceSize count_buffer_offset, uint32_t max_draw_count, uint32_t stride)
 {
 	flush(vk::PipelineBindPoint::eGraphics);
 	get_handle().drawMeshTasksIndirectCountEXT(buffer.get_handle(), offset, count_buffer.get_handle(), count_buffer_offset, max_draw_count, stride);
+	++draw_call_count_;
 }
 
 void CommandBuffer::update_buffer(const backend::Buffer &buffer, vk::DeviceSize offset, const std::vector<uint8_t> &data)
@@ -349,6 +356,11 @@ bool CommandBuffer::is_support_graphics() const
 		return static_cast<bool>(queue_families[queue_family_index].queueFlags & vk::QueueFlagBits::eGraphics);
 	}
 	return false;
+}
+
+uint32_t CommandBuffer::get_draw_call_count() const
+{
+	return draw_call_count_;
 }
 
 void CommandBuffer::bind_vertex_buffers(uint32_t first_binding, const std::vector<std::reference_wrapper<const backend::Buffer>> &buffers, const std::vector<vk::DeviceSize> &offsets)
